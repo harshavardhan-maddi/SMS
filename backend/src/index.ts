@@ -48,6 +48,7 @@ async function ensureInitialized() {
 }
 
 app.use(async (req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.url}`);
   try {
     await ensureInitialized();
     next();
@@ -57,9 +58,10 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Routes mapping (Dual mounted for local & Vercel serverless routing)
+// Routes mapping (Multi-mounted for local & Vercel serverless routing)
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
+app.use('/login', authRoutes);
 
 app.use('/api/departments', deptRoutes);
 app.use('/departments', deptRoutes);
