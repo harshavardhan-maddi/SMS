@@ -9,7 +9,6 @@ export const Login: React.FC = () => {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Principal');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -20,7 +19,7 @@ export const Login: React.FC = () => {
 
     setSubmitting(true);
     try {
-      await login(email, password, role, rememberMe);
+      await login(email, password, rememberMe);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
@@ -72,18 +71,6 @@ export const Login: React.FC = () => {
           box-shadow: 
             inset 0 3px 6px rgba(0, 0, 0, 0.7),
             0 0 10px rgba(139, 92, 246, 0.3) !important;
-        }
-
-        .skeuo-select {
-          background: linear-gradient(to bottom, #2d3339 0%, #1d2125 100%) !important;
-          color: #f1f5f9 !important;
-          border: 1px solid #3b424b !important;
-          box-shadow: 
-            0 2px 4px rgba(0,0,0,0.5),
-            inset 0 1px 0 rgba(255,255,255,0.1) !important;
-          border-radius: 12px;
-          cursor: pointer;
-          appearance: none;
         }
 
         .skeuo-btn {
@@ -188,25 +175,6 @@ export const Login: React.FC = () => {
 
         {/* Console Controls Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Role selector dial */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">Select Portal Role</label>
-            <div className="relative">
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="skeuo-select w-full pl-10 pr-4 py-3 text-xs font-bold outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all appearance-none cursor-pointer"
-              >
-                <option value="Principal">Principal</option>
-                <option value="HOD">HOD</option>
-                <option value="Computer Dean">Computer Dean</option>
-                <option value="Hardware Technician">Hardware Technician</option>
-              </select>
-              <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
-            </div>
-          </div>
-
           {/* Email input field */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">Email Address</label>

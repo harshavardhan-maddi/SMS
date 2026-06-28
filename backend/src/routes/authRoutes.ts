@@ -7,9 +7,9 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || '404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970';
 
 router.post('/login', async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email, password } = req.body;
 
-  if (!email || !password || !role) {
+  if (!email || !password) {
     return res.status(400).send('Authentication failed: Missing required fields.');
   }
 
@@ -35,19 +35,6 @@ router.post('/login', async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       return res.status(401).send('Authentication failed: Invalid credentials.');
-    }
-
-    // Role mapping compatibility checks
-    let expectedRolePrefix = `ROLE_${role.replace(/\s+/g, '_').toUpperCase()}`;
-    if (role.toLowerCase() === 'computer dean') {
-      expectedRolePrefix = 'ROLE_DEAN';
-    }
-    if (role.toLowerCase() === 'hardware technician') {
-      expectedRolePrefix = 'ROLE_TECHNICIAN';
-    }
-
-    if (!user.role_name || user.role_name.toUpperCase() !== expectedRolePrefix.toUpperCase()) {
-      return res.status(403).send('Access Denied: Incompatible role selected.');
     }
 
     const token = jwt.sign(
