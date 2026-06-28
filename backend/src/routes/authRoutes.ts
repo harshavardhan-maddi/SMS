@@ -9,7 +9,9 @@ const JWT_SECRET = process.env.JWT_SECRET || '404E635266556A586E3272357538782F41
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!cleanEmail || !password) {
     return res.status(400).send('Authentication failed: Missing required fields.');
   }
 
@@ -19,8 +21,8 @@ router.post('/login', async (req, res) => {
        FROM users u 
        LEFT JOIN roles r ON u.role_id = r.id 
        LEFT JOIN departments d ON u.department_id = d.id 
-       WHERE u.email = ?`,
-      [email]
+       WHERE LOWER(u.email) = ?`,
+      [cleanEmail]
     );
 
     if (!user) {
