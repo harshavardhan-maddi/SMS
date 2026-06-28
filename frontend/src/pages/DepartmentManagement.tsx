@@ -111,6 +111,15 @@ export const DepartmentManagement: React.FC = () => {
     }
   };
 
+  // Filter HODs: hide HODs already assigned to other departments
+  const availableHods = eligibleHods.filter((h: any) => {
+    // If HOD is unassigned (no department), they are available
+    if (!h.department) return true;
+    // If editing an existing department, allow the current HOD assigned to this department
+    if (editingDept && editingDept.hod && h.id === editingDept.hod.id) return true;
+    return false;
+  });
+
   if (loading) return <div className="p-12 text-center text-xs text-brand-textMuted">Loading department registry...</div>;
 
   return (
@@ -228,7 +237,7 @@ export const DepartmentManagement: React.FC = () => {
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
             >
               <option value="">-- Select HOD --</option>
-              {eligibleHods.map((hod) => (
+              {availableHods.map((hod) => (
                 <option key={hod.id} value={hod.id}>
                   {hod.name} ({hod.email})
                 </option>

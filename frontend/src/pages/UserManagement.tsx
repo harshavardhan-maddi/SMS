@@ -329,43 +329,23 @@ export const UserManagement: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">System Role</label>
-              <select
-                value={roleName}
-                onChange={(e) => setRoleName(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
-              >
-                {currentUser?.role === 'ROLE_PRINCIPAL' ? (
-                  <>
-                    <option value="ROLE_HOD">HOD (Department Head)</option>
-                    <option value="ROLE_DEAN">Computer Dean</option>
-                    <option value="ROLE_TECHNICIAN">Hardware Technician</option>
-                  </>
-                ) : (
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">System Role</label>
+            <select
+              value={roleName}
+              onChange={(e) => setRoleName(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+            >
+              {currentUser?.role === 'ROLE_PRINCIPAL' ? (
+                <>
+                  <option value="ROLE_HOD">HOD (Department Head)</option>
+                  <option value="ROLE_DEAN">Computer Dean</option>
                   <option value="ROLE_TECHNICIAN">Hardware Technician</option>
-                )}
-              </select>
-            </div>
-            
-            {roleName === 'ROLE_HOD' && (
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Department</label>
-                <select
-                  value={departmentId}
-                  onChange={(e) => setDepartmentId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
-                >
-                  <option value="">-- Choose Dept --</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.code} - {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+                </>
+              ) : (
+                <option value="ROLE_TECHNICIAN">Hardware Technician</option>
+              )}
+            </select>
           </div>
 
           <button
