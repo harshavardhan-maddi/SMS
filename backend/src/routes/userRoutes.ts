@@ -27,7 +27,7 @@ router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'RO
       `SELECT u.id, u.name, u.email 
        FROM users u
        JOIN roles r ON u.role_id = r.id
-       WHERE r.name = 'ROLE_TECHNICIAN' AND u.active = 1`
+       WHERE r.name = 'ROLE_TECHNICIAN' AND (u.active = true OR u.active = 1)`
     );
     res.json(rows);
   } catch (err) {
@@ -144,12 +144,13 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'),
     const hashedPwd = await bcrypt.hash(password, 10);
     
     let createdUserId: number;
+    const activeVal = db.getDialect() === 'postgres' ? true : 1;
 
     await db.transaction(async () => {
       const result = await db.run(
         `INSERT INTO users (name, email, password, role_id, department_id, active) 
-         VALUES (?, ?, ?, ?, ?, 1)`,
-        [name, email, hashedPwd, role.id, departmentId || null]
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [name, email, hashedPwd, role.id, departmentId || null, activeVal]
       );
       
       createdUserId = result.lastID;
