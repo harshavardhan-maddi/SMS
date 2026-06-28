@@ -770,7 +770,14 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
       return res.status(400).send('User not found');
     }
 
-    const departmentId = requester.department_id;
+    let departmentId = requester.department_id;
+    if (!departmentId) {
+      const deptRow = await db.get('SELECT id FROM departments WHERE hod_id = ?', [requesterId]);
+      if (deptRow) {
+        departmentId = deptRow.id;
+      }
+    }
+
     if (!departmentId) {
       return res.status(400).send('Requester is not assigned to any department');
     }

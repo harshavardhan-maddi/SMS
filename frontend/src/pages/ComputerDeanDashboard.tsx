@@ -212,7 +212,7 @@ export const ComputerDeanDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard
           title="Total Requests"
-          value={totalCount || 35}
+          value={totalCount}
           subtext="12% from last month"
           trend={{ value: '↑ 12%', isPositive: true }}
           icon={FileText}
@@ -221,7 +221,7 @@ export const ComputerDeanDashboard: React.FC = () => {
         />
         <StatCard
           title="In Progress"
-          value={inProgressCount || 13}
+          value={inProgressCount}
           subtext="8% from last month"
           trend={{ value: '↑ 8%', isPositive: true }}
           icon={Wrench}
@@ -230,7 +230,7 @@ export const ComputerDeanDashboard: React.FC = () => {
         />
         <StatCard
           title="Resolved"
-          value={resolvedCount || 18}
+          value={resolvedCount}
           subtext="20% from last month"
           trend={{ value: '↑ 20%', isPositive: true }}
           icon={CheckCircle}
@@ -239,7 +239,7 @@ export const ComputerDeanDashboard: React.FC = () => {
         />
         <StatCard
           title="Dead Stock"
-          value={deadCount || 4}
+          value={deadCount}
           subtext="5% from last month"
           trend={{ value: '↓ 5%', isPositive: false }}
           icon={Trash2}
@@ -248,7 +248,7 @@ export const ComputerDeanDashboard: React.FC = () => {
         />
         <StatCard
           title="Avg. Repair Time"
-          value={`${reportStats.avgRepairTimeDays || 2.6} Days`}
+          value={`${reportStats.avgRepairTimeDays ?? 0} Days`}
           subtext="10% from last month"
           trend={{ value: '↓ 10%', isPositive: true }}
           icon={Clock}
@@ -266,35 +266,35 @@ export const ComputerDeanDashboard: React.FC = () => {
               <FileText className="w-4 h-4 text-blue-500" />
               <span>Total Requests</span>
             </div>
-            <span className="font-bold text-slate-800">{totalCount || 35}</span>
+            <span className="font-bold text-slate-800">{totalCount}</span>
           </div>
           <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
             <div className="flex items-center gap-2.5">
               <CheckCircle className="w-4 h-4 text-emerald-500" />
               <span>Completed</span>
             </div>
-            <span className="font-bold text-slate-800">{resolvedCount || 18}</span>
+            <span className="font-bold text-slate-800">{resolvedCount}</span>
           </div>
           <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
             <div className="flex items-center gap-2.5">
               <Wrench className="w-4 h-4 text-amber-500" />
               <span>In Progress</span>
             </div>
-            <span className="font-bold text-slate-800">{inProgressCount || 13}</span>
+            <span className="font-bold text-slate-800">{inProgressCount}</span>
           </div>
           <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
             <div className="flex items-center gap-2.5">
               <Trash2 className="w-4 h-4 text-red-500" />
               <span>Dead Stock</span>
             </div>
-            <span className="font-bold text-slate-800">{deadCount || 4}</span>
+            <span className="font-bold text-slate-800">{deadCount}</span>
           </div>
           <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
             <div className="flex items-center gap-2.5">
               <Clock className="w-4 h-4 text-purple-500" />
               <span>Pending (Initiated)</span>
             </div>
-            <span className="font-bold text-slate-800">{pendingCount || 14}</span>
+            <span className="font-bold text-slate-800">{pendingCount}</span>
           </div>
         </div>
       </div>
