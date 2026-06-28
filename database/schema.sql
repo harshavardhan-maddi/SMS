@@ -93,46 +93,6 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- SEED DATA
--- Insert default roles
-INSERT INTO roles (id, name) VALUES 
-(1, 'ROLE_PRINCIPAL'),
-(2, 'ROLE_HOD'),
-(3, 'ROLE_DEAN'),
-(4, 'ROLE_TECHNICIAN')
-ON CONFLICT (id) DO NOTHING;
-
--- Insert default departments
-INSERT INTO departments (id, name, code) VALUES
-(1, 'Computer Science Engineering', 'CSE'),
-(2, 'Electronics & Communication', 'ECE'),
-(3, 'Electrical & Electronics', 'EEE'),
-(4, 'Mechanical Engineering', 'MECH'),
-(5, 'Civil Engineering', 'CIVIL'),
-(6, 'Information Technology', 'IT')
-ON CONFLICT (id) DO NOTHING;
-
--- Insert default labs
-INSERT INTO labs (id, name, lab_number, department_id) VALUES
-(1, 'Programming Lab 1', 'LAB-101', 1),
-(2, 'Networking Lab', 'LAB-102', 1),
-(3, 'VLSI Lab', 'LAB-201', 2)
-ON CONFLICT (id) DO NOTHING;
-
--- Insert default users
--- Note: passwords are bcrypt-hashed. Password is 'password' for all.
-INSERT INTO users (id, name, email, password, role_id, department_id, active) VALUES
-(1, 'Principal Office', 'principal@sms.edu', '$2a$10$w0f5u1mBqjKqfD8WvJ6c/u8x4e.i4v4q0rB.D2c9M3B/5Vj4dDKea', 1, NULL, TRUE), -- Principal
-(2, 'HOD CSE', 'hod.cse@sms.edu', '$2a$10$w0f5u1mBqjKqfD8WvJ6c/u8x4e.i4v4q0rB.D2c9M3B/5Vj4dDKea', 2, 1, TRUE),         -- HOD CSE
-(3, 'HOD ECE', 'hod.ece@sms.edu', '$2a$10$w0f5u1mBqjKqfD8WvJ6c/u8x4e.i4v4q0rB.D2c9M3B/5Vj4dDKea', 2, 2, TRUE),         -- HOD ECE
-(4, 'Computer Dean', 'dean@sms.edu', '$2a$10$w0f5u1mBqjKqfD8WvJ6c/u8x4e.i4v4q0rB.D2c9M3B/5Vj4dDKea', 3, NULL, TRUE),   -- Dean
-(5, 'Hardware Technician', 'tech@sms.edu', '$2a$10$w0f5u1mBqjKqfD8WvJ6c/u8x4e.i4v4q0rB.D2c9M3B/5Vj4dDKea', 4, NULL, TRUE) -- Technician
-ON CONFLICT (id) DO NOTHING;
-
--- Set HOD references in departments
-UPDATE departments SET hod_id = 2 WHERE id = 1;
-UPDATE departments SET hod_id = 3 WHERE id = 2;
-
 CREATE TABLE IF NOT EXISTS finalized_hardware_counts (
     department_id INTEGER REFERENCES departments(id) ON DELETE CASCADE,
     lab_id INTEGER REFERENCES labs(id) ON DELETE CASCADE,

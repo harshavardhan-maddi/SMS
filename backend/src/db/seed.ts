@@ -23,11 +23,17 @@ export async function seedData() {
   }
 
   try {
-    // 2. Ensure Departments Exist
-    const dept1 = await db.get("SELECT id FROM departments WHERE id = 1");
-    if (!dept1) {
+    // 2. Initial Departments Seeding (ONLY on fresh database with 0 departments)
+    const deptCountRow = await db.get("SELECT COUNT(*) as count FROM departments");
+    const count = deptCountRow ? parseInt(deptCountRow.count) : 0;
+    if (count === 0) {
+      console.log('Seeding initial department catalog...');
       await db.run("INSERT INTO departments (id, name, code) VALUES (1, 'Computer Science Engineering', 'CSE')");
       await db.run("INSERT INTO departments (id, name, code) VALUES (2, 'Electronics & Communication', 'ECE')");
+      await db.run("INSERT INTO departments (id, name, code) VALUES (3, 'Electrical & Electronics', 'EEE')");
+      await db.run("INSERT INTO departments (id, name, code) VALUES (4, 'Mechanical Engineering', 'MECH')");
+      await db.run("INSERT INTO departments (id, name, code) VALUES (5, 'Civil Engineering', 'CIVIL')");
+      await db.run("INSERT INTO departments (id, name, code) VALUES (6, 'Information Technology', 'IT')");
     }
   } catch (e) {}
 
@@ -42,19 +48,29 @@ export async function seedData() {
 
   for (const u of demoUsers) {
     const existing = await db.get("SELECT id FROM users WHERE email = ?", [u.email]);
+    
+    // Check if assigned deptId actually exists in DB before linking
+    let targetDeptId = u.deptId;
+    if (targetDeptId) {
+      const deptExists = await db.get("SELECT id FROM departments WHERE id = ?", [targetDeptId]);
+      if (!deptExists) targetDeptId = null;
+    }
+
     if (existing) {
       await db.run("UPDATE users SET password = ?, active = true, role_id = ? WHERE email = ?", [hashedPwd, u.roleId, u.email]);
     } else {
       await db.run(
         "INSERT INTO users (id, name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, ?, true)",
-        [u.id, u.name, u.email, hashedPwd, u.roleId, u.deptId]
+        [u.id, u.name, u.email, hashedPwd, u.roleId, targetDeptId]
       );
     }
   }
 
   try {
-    await db.run("UPDATE departments SET hod_id = 2 WHERE id = 1");
-    await db.run("UPDATE departments SET hod_id = 3 WHERE id = 2");
+    const dept1 = await db.get("SELECT id FROM departments WHERE id = 1");
+    if (dept1) await db.run("UPDATE departments SET hod_id = 2 WHERE id = 1");
+    const dept2 = await db.get("SELECT id FROM departments WHERE id = 2");
+    if (dept2) await db.run("UPDATE departments SET hod_id = 3 WHERE id = 2");
   } catch (e) {}
 
   console.log('Demo user accounts synchronized successfully.');
