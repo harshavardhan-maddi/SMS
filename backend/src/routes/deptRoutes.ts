@@ -178,14 +178,31 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
     }
 
     await db.transaction(async () => {
-      // Clear HOD's department reference in users table
+      // 1. Clear linked users
+      try { await db.run('UPDATE users SET department_id = NULL WHERE department_id = ?', [id]); } catch(e){}
       if (dept.hod_id) {
-        await db.run('UPDATE users SET department_id = NULL WHERE id = ?', [dept.hod_id]);
+        try { await db.run('UPDATE users SET department_id = NULL WHERE id = ?', [dept.hod_id]); } catch(e){}
       }
-      await db.run('DELETE FROM inventory WHERE department_id = ?', [id]);
-      await db.run('DELETE FROM finalized_hardware_counts WHERE department_id = ?', [id]);
-      await db.run('DELETE FROM repair_requests WHERE inventory_id IN (SELECT id FROM inventory WHERE department_id = ?)', [id]);
-      await db.run('DELETE FROM labs WHERE department_id = ?', [id]);
+      try { await db.run('UPDATE departments SET hod_id = NULL WHERE id = ?', [id]); } catch(e){}
+
+      // 2. Delete repair history linked to requests in this department
+      try {
+        await db.run('DELETE FROM repair_history WHERE request_id IN (SELECT id FROM repair_requests WHERE inventory_id IN (SELECT id FROM inventory WHERE department_id = ?))', [id]);
+      } catch (e) {}
+
+      // 3. Delete repair requests linked to inventory in this department
+      try {
+        await db.run('DELETE FROM repair_requests WHERE inventory_id IN (SELECT id FROM inventory WHERE department_id = ?)', [id]);
+      } catch (e) {}
+
+      // 4. Delete inventory items
+      try { await db.run('DELETE FROM inventory WHERE department_id = ?', [id]); } catch(e){}
+
+      // 5. Delete finalized hardware counts & labs
+      try { await db.run('DELETE FROM finalized_hardware_counts WHERE department_id = ?', [id]); } catch(e){}
+      try { await db.run('DELETE FROM labs WHERE department_id = ?', [id]); } catch(e){}
+
+      // 6. Delete the department record itself
       await db.run('DELETE FROM departments WHERE id = ?', [id]);
     });
 
