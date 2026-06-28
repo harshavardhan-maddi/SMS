@@ -36,8 +36,8 @@ router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'RO
   }
 });
 
-// 2. Get all users
-router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+// 2. Get all users (Principal & Dean)
+router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code 
@@ -52,8 +52,38 @@ router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, r
   }
 });
 
-// 3. Get user by ID
-router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+// 3. Change own password (all logged in users)
+router.put('/change-password', authenticateJWT, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userReq = (req as any).user;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).send('Missing currentPassword or newPassword');
+  }
+
+  try {
+    const userRow = await db.get('SELECT id, password FROM users WHERE email = ?', [userReq.sub]);
+    if (!userRow) {
+      return res.status(404).send('User not found');
+    }
+
+    const match = await bcrypt.compare(currentPassword, userRow.password);
+    if (!match) {
+      return res.status(400).send('Incorrect current password');
+    }
+
+    const hashedPwd = await bcrypt.hash(newPassword, 10);
+    await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPwd, userRow.id]);
+
+    res.json({ message: 'Password updated successfully!' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(400).send((err as Error).message);
+  }
+});
+
+// 4. Get user by ID
+router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
   const { id } = req.params;
   try {
     const row = await db.get(
@@ -76,12 +106,18 @@ router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req
   }
 });
 
-// 4. Create User
-router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+// 5. Create User (Principal & Dean)
+router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
   const { name, email, password, roleName, departmentId } = req.body;
+  const userReq = (req as any).user;
 
   if (!name || !email || !password || !roleName) {
     return res.status(400).send('Missing required fields');
+  }
+
+  // If Dean is creating a user, ensure it is a Hardware Technician
+  if (userReq.role === 'ROLE_DEAN' && roleName !== 'ROLE_TECHNICIAN') {
+    return res.status(403).send('Deans are authorized to register Hardware Technicians only');
   }
 
   try {

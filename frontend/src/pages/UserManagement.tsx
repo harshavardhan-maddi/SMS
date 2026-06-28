@@ -48,7 +48,7 @@ export const UserManagement: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
 
   const fetchData = async () => {
-    if (!currentUser || currentUser.role !== 'ROLE_PRINCIPAL') {
+    if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
       setLoading(false);
       return;
     }
@@ -69,7 +69,7 @@ export const UserManagement: React.FC = () => {
     fetchData();
   }, [dashboardTick]);
 
-  if (!currentUser || currentUser.role !== 'ROLE_PRINCIPAL') {
+  if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="max-w-md w-full p-8 bg-white border border-slate-200/60 rounded-3xl shadow-premium text-center">
@@ -78,7 +78,7 @@ export const UserManagement: React.FC = () => {
           </div>
           <h3 className="text-base font-bold text-slate-800 mb-1">Access Denied</h3>
           <p className="text-xs text-brand-textMuted mb-6 leading-relaxed">
-            Only the Principal is authorized to view and manage system users.
+            Only authorized administrators (Principal & Dean) are allowed to view and manage system users.
           </p>
           <a
             href="/dashboard"
