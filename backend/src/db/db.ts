@@ -4,30 +4,20 @@ import path from 'path';
 
 dotenv.config();
 
-const dbType = process.env.DB_TYPE || 'sqlite';
+const DEFAULT_DATABASE_URL = 'postgresql://postgres.oacwpbvtbqzbcyvfoitk:25475A4603%40l3@aws-1-ap-south-1.pooler.supabase.com:6543/postgres';
+const dbType = process.env.DB_TYPE || (process.env.VERCEL || process.env.DATABASE_URL ? 'postgres' : 'sqlite');
 const sqliteDbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, '../../../database/sms_db.sqlite');
 
 let pgPool: Pool | null = null;
 let sqliteDb: any = null;
 
 if (dbType === 'postgres') {
-  if (process.env.DATABASE_URL) {
-    pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    });
-    console.log('Using PostgreSQL connection pool via DATABASE_URL (Supabase)');
-  } else {
-    pgPool = new Pool({
-      host: process.env.PG_HOST || 'localhost',
-      port: parseInt(process.env.PG_PORT || '5432'),
-      database: process.env.PG_DATABASE || 'sms_db',
-      user: process.env.PG_USER || 'postgres',
-      password: process.env.PG_PASSWORD || 'postgres',
-      ssl: process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false
-    });
-    console.log('Using PostgreSQL database connection pool');
-  }
+  const connectionString = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
+  pgPool = new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false }
+  });
+  console.log('Using PostgreSQL connection pool via DATABASE_URL (Supabase)');
 } else {
   // Ensure the directory exists
   const fs = require('fs');
