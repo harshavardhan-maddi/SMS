@@ -98,10 +98,6 @@ export const DepartmentManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this department? This will decouple HOD assignments.')) {
-      return;
-    }
-
     try {
       await api.delete(`/departments/${id}`);
       toast.success('Department deleted successfully.');
@@ -120,6 +116,8 @@ export const DepartmentManagement: React.FC = () => {
     return false;
   });
 
+  const isPrincipal = user?.role === 'ROLE_PRINCIPAL' || user?.role === 'Principal' || user?.role?.toUpperCase()?.includes('PRINCIPAL');
+
   if (loading) return <div className="p-12 text-center text-xs text-brand-textMuted">Loading department registry...</div>;
 
   return (
@@ -131,7 +129,7 @@ export const DepartmentManagement: React.FC = () => {
           <p className="text-xs text-brand-textMuted font-medium">Add, update, and manage college departments and HOD allocations</p>
         </div>
         
-        {user?.role === 'ROLE_PRINCIPAL' && (
+        {isPrincipal && (
           <button
             onClick={handleOpenAdd}
             className="px-4 py-2 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all flex items-center gap-1.5 cursor-pointer"
@@ -175,7 +173,7 @@ export const DepartmentManagement: React.FC = () => {
               </div>
             </div>
 
-            {user?.role === 'ROLE_PRINCIPAL' && (
+            {isPrincipal && (
               <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 mt-4">
                 <button
                   onClick={() => handleOpenEdit(dept)}
