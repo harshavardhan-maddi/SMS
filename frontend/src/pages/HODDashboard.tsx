@@ -54,7 +54,10 @@ export const HODDashboard: React.FC = () => {
   const [description, setDescription] = useState('');
 
   const fetchHODData = async () => {
-    if (!user || !user.departmentId) return;
+    if (!user || !user.departmentId) {
+      setLoading(false);
+      return;
+    }
     try {
       // 1. Fetch counts
       const countsRes = await api.get(`/inventory/counts/department/${user.departmentId}`);

@@ -37,13 +37,28 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Authentication failed: Invalid credentials.');
     }
 
+    let deptId = user.department_id;
+    let deptCode = user.dept_code;
+
+    if (!deptId) {
+      const deptRow = await db.get('SELECT id, code FROM departments WHERE hod_id = ?', [user.id]);
+      if (deptRow) {
+        deptId = deptRow.id;
+        deptCode = deptRow.code;
+        try {
+          await db.run('UPDATE users SET department_id = ? WHERE id = ?', [deptId, user.id]);
+        } catch (e) {}
+      }
+    }
+
     const token = jwt.sign(
       {
         sub: user.email,
         role: user.role_name,
         name: user.name,
         userId: user.id,
-        departmentCode: user.dept_code,
+        departmentCode: deptCode || null,
+        departmentId: deptId || null,
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -55,8 +70,8 @@ router.post('/login', async (req, res) => {
       email: user.email,
       name: user.name,
       userId: user.id,
-      departmentCode: user.dept_code || null,
-      departmentId: user.department_id || null,
+      departmentCode: deptCode || null,
+      departmentId: deptId || null,
     });
   } catch (err) {
     console.error('Login error:', err);

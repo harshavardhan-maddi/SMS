@@ -39,13 +39,13 @@ router.get('/', authenticateJWT, async (req, res) => {
     const params: any[] = [];
     const conditions: string[] = [];
     
-    if (departmentId) {
+    if (departmentId && departmentId !== 'undefined' && departmentId !== 'null') {
       conditions.push('i.department_id = ?');
-      params.push(departmentId);
+      params.push(parseInt(departmentId as string));
     }
-    if (labId) {
+    if (labId && labId !== 'undefined' && labId !== 'null') {
       conditions.push('i.lab_id = ?');
-      params.push(labId);
+      params.push(parseInt(labId as string));
     }
 
     if (conditions.length > 0) {
@@ -150,12 +150,13 @@ router.get('/counts', authenticateJWT, async (req, res) => {
 // 3. Get department counts (HOD Dashboard)
 router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
   const { deptId } = req.params;
+  const numericDeptId = parseInt(deptId);
   try {
     const types = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'];
     
     const rows = await db.all(
       'SELECT type, status, COUNT(*) as count FROM inventory WHERE department_id = ? GROUP BY type, status',
-      [deptId]
+      [numericDeptId]
     );
 
     const counts: Record<string, Record<string, number>> = {};
@@ -179,7 +180,7 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
 
     const finalized = await db.all(
       'SELECT type, SUM(total) as total, SUM(working) as working, SUM(not_working) as not_working FROM finalized_hardware_counts WHERE department_id = ? GROUP BY type',
-      [deptId]
+      [numericDeptId]
     );
 
     if (finalized && finalized.length > 0) {
