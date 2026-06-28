@@ -59,10 +59,19 @@ export async function seedData() {
     if (existing) {
       await db.run("UPDATE users SET password = ?, active = true, role_id = ? WHERE email = ?", [hashedPwd, u.roleId, u.email]);
     } else {
-      await db.run(
-        "INSERT INTO users (id, name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, ?, true)",
-        [u.id, u.name, u.email, hashedPwd, u.roleId, targetDeptId]
-      );
+      try {
+        await db.run(
+          "INSERT INTO users (id, name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, ?, true)",
+          [u.id, u.name, u.email, hashedPwd, u.roleId, targetDeptId]
+        );
+      } catch (err) {
+        try {
+          await db.run(
+            "INSERT INTO users (name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, true)",
+            [u.name, u.email, hashedPwd, u.roleId, targetDeptId]
+          );
+        } catch (err2) {}
+      }
     }
   }
 

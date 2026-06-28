@@ -7,6 +7,7 @@ const router = Router();
 
 // Helper to format user row
 function formatUser(row: any) {
+  if (!row) return null;
   return {
     id: row.id,
     name: row.name,

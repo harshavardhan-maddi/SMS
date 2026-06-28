@@ -85,12 +85,15 @@ export const db = {
   },
 
   async run(sql: string, params: any[] = []): Promise<{ changes: number; lastID: any }> {
-    const query = translateSql(sql);
+    let query = translateSql(sql);
     if (dbType === 'postgres') {
+      if (query.trim().toUpperCase().startsWith('INSERT') && !query.toUpperCase().includes('RETURNING')) {
+        query += ' RETURNING id';
+      }
       const res = await pgPool!.query(query, params);
       let lastID = null;
-      if (res.rows.length > 0 && res.rows[0].id !== undefined) {
-        lastID = res.rows[0].id;
+      if (res.rows.length > 0) {
+        lastID = res.rows[0].id !== undefined ? res.rows[0].id : res.rows[0][Object.keys(res.rows[0])[0]];
       }
       return { changes: res.rowCount || 0, lastID };
     } else {
