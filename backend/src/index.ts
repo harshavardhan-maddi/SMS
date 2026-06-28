@@ -32,14 +32,55 @@ app.use(cors({
 // Body parser
 app.use(express.json());
 
-// Routes mapping
+let isInitialized = false;
+let initPromise: Promise<void> | null = null;
+
+async function ensureInitialized() {
+  if (isInitialized) return;
+  if (!initPromise) {
+    initPromise = (async () => {
+      await initSchema();
+      await seedData();
+      isInitialized = true;
+    })();
+  }
+  await initPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureInitialized();
+    next();
+  } catch (err) {
+    console.error('Initialization middleware error:', err);
+    next(err);
+  }
+});
+
+// Routes mapping (Dual mounted for local & Vercel serverless routing)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/departments', deptRoutes);
+app.use('/departments', deptRoutes);
+
 app.use('/api/users', userRoutes);
+app.use('/users', userRoutes);
+
 app.use('/api/inventory', inventoryRoutes);
+app.use('/inventory', inventoryRoutes);
+
 app.use('/api/repairs', repairRoutes);
+app.use('/repairs', repairRoutes);
+
 app.use('/api/notifications', notificationRoutes);
+app.use('/notifications', notificationRoutes);
+
 app.use('/api/reports', reportRoutes);
+app.use('/reports', reportRoutes);
+
+app.get('/api/health', (req, res) => res.send('OK'));
+app.get('/health', (req, res) => res.send('OK'));
 
 // Error fallback handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -53,13 +94,7 @@ setupWebSocket(server);
 
 async function startServer() {
   try {
-    // 1. Initialize schema
-    await initSchema();
-    
-    // 2. Seed data (skipped if database already contains tables/rows)
-    await seedData();
-    
-    // 3. Start server listen
+    await ensureInitialized();
     server.listen(port, () => {
       console.log(`=============================================================`);
       console.log(`College Systems Management System (SMS) Backend Running`);
@@ -69,7 +104,6 @@ async function startServer() {
     });
   } catch (err) {
     console.error('Fatal initialization error:', err);
-    process.exit(1);
   }
 }
 
