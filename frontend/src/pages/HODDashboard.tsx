@@ -1,0 +1,716 @@
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
+import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
+import {
+  HelpCircle,
+  FileText,
+  AlertTriangle,
+  FolderOpen,
+  ArrowRight,
+  Send,
+  PlusCircle,
+  CheckCircle,
+  Clock,
+  Wrench,
+  Laptop
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+import { useNavigate, useLocation } from 'react-router-dom';
+
+export const HODDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const { dashboardTick } = useWebSocket();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [allRequests, setAllRequests] = useState<any[]>([]);
+  const [recentRequests, setRecentRequests] = useState<any[]>([]);
+  const [departmentAssets, setDepartmentAssets] = useState<any[]>([]);
+
+  // Modals state
+  const [reportModalOpen, setReportModalOpen] = useState(location.pathname === '/report-issue');
+  const [myRequestsModalOpen, setMyRequestsModalOpen] = useState(location.pathname === '/my-requests');
+  const [timelineModalOpen, setTimelineModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedTimeline, setSelectedTimeline] = useState<any[]>([]);
+
+  // Wizard States
+  const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number }[]>([]);
+  const [remainingTypes, setRemainingTypes] = useState<string[]>(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
+  const [wizardStage, setWizardStage] = useState<'select_type' | 'enter_total_count' | 'ask_more' | 'final_submit'>('select_type');
+  const [currentType, setCurrentType] = useState('CPU');
+  
+  // Current Type Configuration States
+  const [typeTotalCount, setTypeTotalCount] = useState(1);
+
+  // Report Issue General Form State
+  const [priority, setPriority] = useState('Medium');
+  const [issueTitle, setIssueTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  const fetchHODData = async () => {
+    if (!user || !user.departmentId) return;
+    try {
+      // 1. Fetch counts
+      const countsRes = await api.get(`/inventory/counts/department/${user.departmentId}`);
+      // 2. Fetch recent requests
+      const recentRes = await api.get(`/repairs?departmentId=${user.departmentId}`);
+      // 3. Fetch inventory items to choose in Report Issue
+      const assetsRes = await api.get(`/inventory?departmentId=${user.departmentId}`);
+
+      setStats(countsRes.data);
+      setAllRequests(recentRes.data);
+      setRecentRequests(recentRes.data.slice(0, 5));
+      setDepartmentAssets(assetsRes.data.filter((a: any) => a.status === 'Working' || a.status === 'New Stock'));
+      
+    } catch (err) {
+      console.error('Failed to load HOD metrics', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHODData();
+  }, [user, dashboardTick]);
+
+  useEffect(() => {
+    if (location.pathname === '/report-issue') {
+      handleOpenReportModal();
+    } else if (location.pathname === '/my-requests') {
+      setMyRequestsModalOpen(true);
+    }
+  }, [location.pathname]);
+
+  const handleOpenReportModal = () => {
+    setReportedIssues([]);
+    setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
+    setWizardStage('select_type');
+    setCurrentType('CPU');
+    setTypeTotalCount(1);
+    setIssueTitle('');
+    setDescription('');
+    setReportModalOpen(true);
+  };
+
+  const handleCloseReportModal = () => {
+    setReportModalOpen(false);
+    setReportedIssues([]);
+    setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
+    setWizardStage('select_type');
+    setCurrentType('CPU');
+    setTypeTotalCount(1);
+    setIssueTitle('');
+    setDescription('');
+    if (location.pathname === '/report-issue') {
+      navigate('/dashboard', { replace: true });
+    }
+  };
+
+
+  const handleCloseMyRequestsModal = () => {
+    setMyRequestsModalOpen(false);
+    if (location.pathname === '/my-requests') {
+      navigate('/dashboard', { replace: true });
+    }
+  };
+
+  const handleReportIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (reportedIssues.length === 0) {
+      toast.error('Please report at least one hardware issue.');
+      return;
+    }
+    if (!issueTitle) {
+      toast.error('Please enter a request title.');
+      return;
+    }
+
+    try {
+      await api.post('/repairs/initiate-wizard', {
+        requesterId: user?.userId,
+        priority,
+        title: issueTitle,
+        description,
+        issues: reportedIssues
+      });
+      toast.success('Repair requests successfully submitted!');
+      handleCloseReportModal();
+      fetchHODData();
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to submit repair request.');
+    }
+  };
+
+  const handleViewTimeline = async (req: any) => {
+    try {
+      setSelectedRequest(req);
+      const res = await api.get(`/repairs/${req.id}/history`);
+      setSelectedTimeline(res.data);
+      setTimelineModalOpen(true);
+    } catch (err) {
+      toast.error('Failed to load request timeline.');
+    }
+  };
+
+  if (loading || !stats) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton type="grid" />
+        <LoadingSkeleton type="table" />
+      </div>
+    );
+  }
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'initiated': return 'bg-amber-100 text-amber-700';
+      case 'in progress': return 'bg-blue-100 text-blue-700';
+      case 'resolved': return 'bg-emerald-100 text-emerald-700';
+      case 'dead stock': return 'bg-red-100 text-red-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Component Cards Row (CPU, Monitor, Keyboard, Mouse) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {['CPU', 'Monitor', 'Keyboard', 'Mouse'].map((type) => {
+          const typeData = stats[type] || { Total: 0, Working: 0, Repairing: 0, Dead: 0, NewStock: 0 };
+          return (
+            <div key={type} className="admin-card p-6 bg-white flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 rounded-xl bg-slate-50 text-slate-700">
+                    <Laptop className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 tracking-tight">{type}</h3>
+                    <div className="text-2xl font-black text-slate-800 mt-0.5">{typeData.Total}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold mt-2">
+                  <div className="bg-blue-50/50 p-2 rounded-xl">
+                    <div className="text-blue-600">Working</div>
+                    <div className="text-sm font-extrabold text-blue-700 mt-0.5">{typeData.Working}</div>
+                  </div>
+                  <div className="bg-amber-50/50 p-2 rounded-xl">
+                    <div className="text-amber-600">In Repair</div>
+                    <div className="text-sm font-extrabold text-amber-700 mt-0.5">{typeData.Repairing}</div>
+                  </div>
+                  <div className="bg-red-50/50 p-2 rounded-xl">
+                    <div className="text-red-500">Dead</div>
+                    <div className="text-sm font-extrabold text-red-600 mt-0.5">{typeData.Dead}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 mt-4 text-[10px] font-bold text-blue-600 flex justify-between items-center">
+                <span>New Stock:</span>
+                <span className="bg-blue-50 px-2 py-0.5 rounded-md">{typeData.NewStock}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 2. Middle Row: Quick Actions */}
+      <div className="admin-card p-6 bg-white">
+        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">Quick Actions</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <button
+            onClick={handleOpenReportModal}
+            className="flex items-center justify-between w-full p-3.5 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 rounded-2xl text-left transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                <PlusCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">Report New Issue</div>
+                <div className="text-[10px] text-slate-500 font-medium">Report a new problem with system</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-blue-500 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => setMyRequestsModalOpen(true)}
+            className="flex items-center justify-between w-full p-3.5 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-2xl text-left transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                <FolderOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">View My Requests</div>
+                <div className="text-[10px] text-slate-500 font-medium">Track your repair requests</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          <button className="flex items-center justify-between w-full p-3.5 bg-amber-50/50 hover:bg-amber-50 border border-amber-100 rounded-2xl text-left transition-colors cursor-pointer group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                <Laptop className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">Inventory Overview</div>
+                <div className="text-[10px] text-slate-500 font-medium">View department inventory</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-amber-500 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          <button className="flex items-center justify-between w-full p-3.5 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl text-left transition-colors cursor-pointer group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 text-purple-600 rounded-xl">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">Download Report</div>
+                <div className="text-[10px] text-slate-500 font-medium">Download department report</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-purple-500 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+        </div>
+      </div>
+
+      {/* 3. Recent Repair Requests Table */}
+      <div className="admin-card bg-white p-6">
+        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">Recent Repair Requests</h4>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                <th className="py-3 px-4">ID</th>
+                <th className="py-3 px-4">Item Type</th>
+                <th className="py-3 px-4">Asset ID</th>
+                <th className="py-3 px-4">Priority</th>
+                <th className="py-3 px-4">Issue Title</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Initiated On</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs">
+              {recentRequests.map((req) => (
+                <tr key={req.id} className="hover:bg-slate-50/50">
+                  <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
+                  <td className="py-3.5 px-4 text-slate-500">{req.inventory.type}</td>
+                  <td className="py-3.5 px-4 font-semibold text-slate-600">{req.inventory.id}</td>
+                  <td className="py-3.5 px-4">
+                    <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
+                      req.priority === 'High' ? 'bg-red-50 text-red-600' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {req.priority}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-600 truncate max-w-[150px]">{req.title}</td>
+                  <td className="py-3.5 px-4">
+                    <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
+                      {req.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-500 font-medium">
+                    {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime.substring(0, 5)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right">
+                    <button
+                      onClick={() => handleViewTimeline(req)}
+                      className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* View All Requests Button */}
+        <div className="flex justify-center mt-6">
+          <button className="px-6 py-2 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all">
+            View All Requests
+          </button>
+        </div>
+      </div>
+
+      {/* MODAL 1: Report Issue Form */}
+      <Modal isOpen={reportModalOpen} onClose={handleCloseReportModal} title="Report System Repair Request">
+        <form onSubmit={handleReportIssue} className="text-left">
+          
+          {wizardStage === 'select_type' && (
+            <div className="space-y-4">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 1: Select Hardware</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Which hardware type has an issue?</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Select a category to begin reporting</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {remainingTypes.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setCurrentType(type);
+                      setTypeTotalCount(1);
+                      setWizardStage('enter_total_count');
+                    }}
+                    className="p-5 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
+                  >
+                    <div className="p-3 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
+                      <Laptop className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {wizardStage === 'enter_total_count' && (
+            <div className="space-y-4">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">{currentType} Quantity</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">How many {currentType}s have issues in total?</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Enter the total quantity to be reported for {currentType}</p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 block">Total Quantity</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={typeTotalCount}
+                  onChange={(e) => setTypeTotalCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setWizardStage('select_type')}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer text-center"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newIssue = { type: currentType, brand: 'Standard', count: typeTotalCount };
+                    const finalUpdatedIssues = [...reportedIssues.filter(i => i.type !== currentType), newIssue];
+                    setReportedIssues(finalUpdatedIssues);
+
+                    const nextRemaining = remainingTypes.filter(t => t !== currentType);
+                    setRemainingTypes(nextRemaining);
+
+                    if (nextRemaining.length === 0) {
+                      const generatedTitle = `Repair: ${finalUpdatedIssues.map(i => `${i.type} x${i.count}`).join(', ')}`;
+                      const generatedDesc = `HOD reported the following hardware issues:\n` + 
+                        finalUpdatedIssues.map(i => `- ${i.type}: Quantity: ${i.count}`).join('\n');
+                      setIssueTitle(generatedTitle);
+                      setDescription(generatedDesc);
+                      setWizardStage('final_submit');
+                    } else {
+                      setWizardStage('ask_more');
+                    }
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all cursor-pointer text-center"
+                >
+                  Add Hardware Issue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {wizardStage === 'ask_more' && (
+            <div className="space-y-6 text-center py-2">
+              <div className="pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Multi-item Report</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Any other hardware type has an issue?</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">
+
+                  You've configured {reportedIssues.length} category brands. Add more or submit.
+                </p>
+              </div>
+
+              {/* Current list summary */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200/50 rounded-2xl text-left max-w-sm mx-auto space-y-1">
+                <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Added Items</span>
+                {reportedIssues.map((issue, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-slate-600 font-semibold">
+                    <span>{issue.type} ({issue.brand})</span>
+                    <span className="text-slate-800 font-bold">Qty: {issue.count}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-4 max-w-md mx-auto justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const generatedTitle = `Repair: ${reportedIssues.map(i => `${i.type} (${i.brand}) x${i.count}`).join(', ')}`;
+                    const generatedDesc = `HOD reported the following hardware issues:\n` + 
+                      reportedIssues.map(i => `- ${i.type}: Brand: ${i.brand}, Quantity: ${i.count}`).join('\n');
+                    setIssueTitle(generatedTitle);
+                    setDescription(generatedDesc);
+                    setWizardStage('final_submit');
+                  }}
+                  className="flex-1 py-3.5 px-4 border border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-xs text-slate-600 transition-all flex flex-col items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle className="w-5 h-5 text-slate-400" />
+                  <span>No, Submit Request</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (remainingTypes.length === 1) {
+                      const nextType = remainingTypes[0];
+                      setCurrentType(nextType);
+                      setTypeTotalCount(1);
+                      setWizardStage('enter_total_count');
+                    } else {
+                      setWizardStage('select_type');
+                    }
+                  }}
+                  className="flex-1 py-3.5 px-4 bg-brand-purple hover:bg-brand-purpleHover text-white rounded-2xl font-bold text-xs shadow-md shadow-brand-purple/20 transition-all flex flex-col items-center gap-1.5 cursor-pointer"
+                >
+                  <PlusCircle className="w-5 h-5 text-white/90" />
+                  <span>Yes, Add Another</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {wizardStage === 'final_submit' && (
+            <div className="space-y-4">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Final Step</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Review & Submit Repair Request</h3>
+              </div>
+
+              {/* Items Summary list */}
+              <div className="p-4 bg-slate-50 border border-slate-200/50 rounded-2xl space-y-2">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Issues Summary</span>
+                <div className="flex flex-wrap gap-2">
+                  {reportedIssues.map((issue, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700">
+                      <span className="w-2.5 h-2.5 bg-brand-purple rounded-full"></span>
+                      <span>{issue.type}</span>
+                      <span className="text-[10px] text-slate-400 font-normal">({issue.brand})</span>
+                      <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-bold text-[10px] ml-1">x{issue.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Priority Level</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+                  >
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="High">High Priority</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Issue Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. CPU and Monitor issues in lab"
+                    value={issueTitle}
+                    onChange={(e) => setIssueTitle(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Detailed Description</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Provide a detailed description of the hardware faults to assist the technician."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportedIssues([]);
+                    setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse']);
+                    setWizardStage('select_type');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-red-500 text-xs font-bold transition-all cursor-pointer text-center"
+                >
+                  Start Over
+                </button>
+                
+                <button
+                  type="submit"
+                  className="flex-2 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Submit Repair Request</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </form>
+      </Modal>
+
+      {/* MODAL 2: Request Status Timeline */}
+      <Modal isOpen={timelineModalOpen} onClose={() => setTimelineModalOpen(false)} title={`Request Status Timeline: ${selectedRequest?.id}`}>
+        {selectedRequest && (
+          <div className="space-y-6 text-left">
+            {/* Overview Details */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/50 space-y-2 text-xs">
+              <div><span className="font-bold text-slate-500">Asset:</span> <span className="font-semibold text-slate-700">{selectedRequest.inventory.id} ({selectedRequest.inventory.type})</span></div>
+              <div><span className="font-bold text-slate-500">Fault:</span> <span className="font-semibold text-slate-700">{selectedRequest.title}</span></div>
+              <div><span className="font-bold text-slate-500">Current Status:</span> <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ml-1.5 ${getStatusBadgeClass(selectedRequest.status)}`}>{selectedRequest.status}</span></div>
+            </div>
+
+            {/* Vertical Timeline */}
+            <div className="relative pl-6 border-l border-slate-200 space-y-6 ml-3">
+              {selectedTimeline.map((stage, idx) => (
+                <div key={stage.id} className="relative">
+                  {/* Indicator Dot */}
+                  <span className="absolute -left-[31px] top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white border-2 border-brand-purple">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand-purple"></span>
+                  </span>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-800">{stage.status}</span>
+                      <span className="text-[10px] text-brand-textMuted font-semibold">
+                        {stage.statusDate} {stage.statusTime.substring(0, 5)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-normal">{stage.description}</p>
+                    {stage.updatedBy && (
+                      <div className="text-[10px] text-slate-400 font-medium">Updated by: {stage.updatedBy.name}</div>
+                    )}
+
+                    {/* Stage Specific Fields */}
+                    {stage.status === 'In Progress' && (stage.expectedCompletionDays || stage.requiredParts) && (
+                      <div className="p-2.5 mt-2 bg-blue-50/50 rounded-xl border border-blue-100 text-[10px] space-y-1">
+                        {stage.expectedCompletionDays && <div>• Expected completion: <span className="font-bold text-slate-700">{stage.expectedCompletionDays} Days</span></div>}
+                        {stage.requiredParts && <div>• Required parts: <span className="font-bold text-slate-700">{stage.requiredParts}</span></div>}
+                      </div>
+                    )}
+                    {stage.status === 'Resolved' && (stage.problemFound || stage.partsReplaced || stage.remarks) && (
+                      <div className="p-2.5 mt-2 bg-emerald-50/50 rounded-xl border border-emerald-100 text-[10px] space-y-1">
+                        {stage.problemFound && <div>• Problem: <span className="font-bold text-slate-700">{stage.problemFound}</span></div>}
+                        {stage.solution && <div>• Solution: <span className="font-bold text-slate-700">{stage.solution}</span></div>}
+                        {stage.partsReplaced && <div>• Replaced parts: <span className="font-bold text-slate-700">{stage.partsReplaced}</span></div>}
+                        {stage.remarks && <div>• Remarks: <span className="font-bold text-slate-700">{stage.remarks}</span></div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* MODAL 3: My Submitted Requests */}
+      <Modal isOpen={myRequestsModalOpen} onClose={handleCloseMyRequestsModal} title="My Submitted Requests">
+        <div className="space-y-4 text-left">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  <th className="py-2.5 px-3">ID</th>
+                  <th className="py-2.5 px-3">Item Type</th>
+                  <th className="py-2.5 px-3">Brand</th>
+                  <th className="py-2.5 px-3">Priority</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(() => {
+                  const myRequests = allRequests.filter(r => r.requester?.id === user?.userId);
+                  if (myRequests.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-400 font-medium italic">
+                          You have not submitted any repair requests.
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return myRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 px-3 font-bold text-slate-700">{req.id}</td>
+                      <td className="py-2.5 px-3 text-slate-500">{req.inventory.type}</td>
+                      <td className="py-2.5 px-3 text-slate-600 font-semibold">{req.inventory.brand}</td>
+                      <td className="py-2.5 px-3">
+                        <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
+                          req.priority === 'High' ? 'bg-red-50 text-red-600' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {req.priority}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 font-medium">
+                        {new Date(req.initiatedDate).toLocaleDateString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          onClick={() => {
+                            setMyRequestsModalOpen(false);
+                            handleViewTimeline(req);
+                          }}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
+                        >
+                          Timeline
+                        </button>
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+export default HODDashboard;
