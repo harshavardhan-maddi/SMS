@@ -37,6 +37,34 @@ export async function seedData() {
     }
   } catch (e) {}
 
+  try {
+    // 2b. Initial Labs Seeding
+    const labCountRow = await db.get("SELECT COUNT(*) as count FROM labs");
+    const lCount = labCountRow ? parseInt(labCountRow.count) : 0;
+    if (lCount === 0) {
+      console.log('Seeding initial labs catalog...');
+      const demoLabs = [
+        { name: 'Systems & Software Lab', labNumber: '101', deptId: 1 },
+        { name: 'Advanced AI & Data Lab', labNumber: '102', deptId: 1 },
+        { name: 'Networks & Security Lab', labNumber: '103', deptId: 1 },
+        { name: 'VLSI & Microprocessors Lab', labNumber: '201', deptId: 2 },
+        { name: 'Embedded Systems Lab', labNumber: '202', deptId: 2 },
+        { name: 'Power Electronics Lab', labNumber: '301', deptId: 3 },
+        { name: 'CAD/CAM Simulation Lab', labNumber: '401', deptId: 4 },
+        { name: 'Structural Testing Lab', labNumber: '501', deptId: 5 },
+        { name: 'Web Development & Cloud Lab', labNumber: '601', deptId: 6 }
+      ];
+      for (const lab of demoLabs) {
+        try {
+          await db.run(
+            "INSERT INTO labs (name, lab_number, department_id) VALUES (?, ?, ?)",
+            [lab.name, lab.labNumber, lab.deptId]
+          );
+        } catch (errLab) {}
+      }
+    }
+  } catch (e) {}
+
   // 3. Initial Demo Users Seeding (ONLY on fresh database with 0 users)
   try {
     const userCountRow = await db.get("SELECT COUNT(*) as count FROM users");

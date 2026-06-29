@@ -290,15 +290,64 @@ router.get('/labs/all', authenticateJWT, async (req, res) => {
 
 router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
   const { deptId } = req.params;
+  const authUser = (req as any).user;
+  let numericDeptId = (deptId && deptId !== 'undefined' && deptId !== 'null') ? parseInt(deptId) : 0;
+
+  if (!numericDeptId && authUser?.id) {
+    const userRow = await db.get('SELECT department_id FROM users WHERE id = ?', [authUser.id]);
+    if (userRow && userRow.department_id) {
+      numericDeptId = parseInt(userRow.department_id);
+    } else {
+      const deptRow = await db.get('SELECT id FROM departments WHERE hod_id = ?', [authUser.id]);
+      if (deptRow) {
+        numericDeptId = parseInt(deptRow.id);
+      }
+    }
+  }
+
   try {
-    const rows = await db.all(
-      `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
-       FROM labs l
-       LEFT JOIN departments d ON l.department_id = d.id
-       WHERE l.department_id = ?
-       ORDER BY l.lab_number ASC, l.name ASC`,
-      [deptId]
-    );
+    let rows = [];
+    if (numericDeptId > 0) {
+      rows = await db.all(
+        `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+         FROM labs l
+         LEFT JOIN departments d ON l.department_id = d.id
+         WHERE l.department_id = ?
+         ORDER BY l.lab_number ASC, l.name ASC`,
+        [numericDeptId]
+      );
+
+      // Auto-create default labs if department currently has 0 labs
+      if (!rows || rows.length === 0) {
+        const dept = await db.get('SELECT code FROM departments WHERE id = ?', [numericDeptId]);
+        const code = dept ? dept.code : 'DEPT';
+        const defaultLabs = [
+          { name: `${code} Systems & Computing Lab`, labNumber: '101' },
+          { name: `${code} Hardware & Simulation Lab`, labNumber: '102' }
+        ];
+        for (const dl of defaultLabs) {
+          try {
+            await db.run('INSERT INTO labs (name, lab_number, department_id) VALUES (?, ?, ?)', [dl.name, dl.labNumber, numericDeptId]);
+          } catch (e) {}
+        }
+        rows = await db.all(
+          `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+           FROM labs l
+           LEFT JOIN departments d ON l.department_id = d.id
+           WHERE l.department_id = ?
+           ORDER BY l.lab_number ASC, l.name ASC`,
+          [numericDeptId]
+        );
+      }
+    } else {
+      rows = await db.all(
+        `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+         FROM labs l
+         LEFT JOIN departments d ON l.department_id = d.id
+         ORDER BY l.lab_number ASC, l.name ASC`
+      );
+    }
+
     res.json(rows);
   } catch (err) {
     console.error('Get department labs error:', err);
