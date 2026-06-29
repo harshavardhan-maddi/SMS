@@ -371,29 +371,48 @@ export const HODDashboard: React.FC = () => {
           {wizardStage === 'select_type' && (
             <div className="space-y-4">
               <div className="text-center pb-2 border-b border-slate-100">
-                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 1: Select Hardware</span>
-                <h3 className="text-sm font-bold text-slate-800 mt-1">Which hardware type has an issue?</h3>
-                <p className="text-[11px] text-brand-textMuted mt-0.5">Select a category to begin reporting</p>
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 1: Select Lab & Hardware</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Lab Number & Hardware Category</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Choose which Lab Number has hardware faults to report</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {remainingTypes.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => {
-                      setCurrentType(type);
-                      setTypeTotalCount(1);
-                      setWizardStage('enter_total_count');
-                    }}
-                    className="p-5 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
-                  >
-                    <div className="p-3 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
-                      <Laptop className="w-6 h-6" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
-                  </button>
-                ))}
+              <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">1. Select Lab Number</label>
+                <select
+                  value={selectedLabId}
+                  onChange={(e) => setSelectedLabId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white cursor-pointer"
+                >
+                  {labs.length === 0 && <option value="">-- Main Department / General Systems --</option>}
+                  {labs.map((lab) => (
+                    <option key={lab.id} value={lab.id}>
+                      Lab {lab.labNumber} ({lab.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 block">2. Select Hardware Type</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {remainingTypes.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setCurrentType(type);
+                        setTypeTotalCount(1);
+                        setWizardStage('enter_total_count');
+                      }}
+                      className="p-4 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
+                    >
+                      <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
+                        <Laptop className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
