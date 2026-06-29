@@ -15,7 +15,11 @@ if (dbType === 'postgres') {
   const connectionString = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
   pgPool = new Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 3000,
+    keepAlive: true
   });
   console.log('Using PostgreSQL connection pool via DATABASE_URL (Supabase)');
 } else {
@@ -98,7 +102,14 @@ export const db = {
 
   async exec(sql: string): Promise<void> {
     if (dbType === 'postgres') {
-      await pgPool!.query(sql);
+      const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      for (const stmt of statements) {
+        try {
+          await pgPool!.query(stmt);
+        } catch (err) {
+          // Ignore individual DDL warning errors during initialization
+        }
+      }
     } else {
       sqliteDb.exec(sql);
     }

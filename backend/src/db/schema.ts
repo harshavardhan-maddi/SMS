@@ -107,8 +107,17 @@ export async function initSchema() {
       console.log('Initializing PostgreSQL schema from schema.sql');
       await db.exec(sql);
       try {
-        await db.exec('TRUNCATE TABLE inventory, finalized_hardware_counts, repair_requests, repair_history, notifications CASCADE;');
-      } catch (e) { /* Tables fresh or empty */ }
+        await db.exec(`
+          CREATE INDEX IF NOT EXISTS idx_inventory_dept ON inventory(department_id);
+          CREATE INDEX IF NOT EXISTS idx_inventory_lab ON inventory(lab_id);
+          CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
+          CREATE INDEX IF NOT EXISTS idx_repairs_dept ON repair_requests(inventory_id);
+          CREATE INDEX IF NOT EXISTS idx_repairs_status ON repair_requests(status);
+          CREATE INDEX IF NOT EXISTS idx_repairs_requester ON repair_requests(requester_id);
+          CREATE INDEX IF NOT EXISTS idx_repairs_assigned ON repair_requests(assigned_to_id);
+          CREATE INDEX IF NOT EXISTS idx_history_request ON repair_history(request_id);
+        `);
+      } catch (e) {}
     } else {
       throw new Error(`PostgreSQL schema file not found at ${schemaPath}`);
     }
