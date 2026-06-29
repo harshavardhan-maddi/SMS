@@ -488,62 +488,91 @@ router.post('/finalize-counts', authenticateJWT, async (req, res) => {
 
         // Auto-synchronize inventory items for this lab and hardware type by specifications & workstation
         if (targetLabId > 0 && targetTotal > 0) {
-          const existingItems = await db.all(
-            'SELECT * FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ? ORDER BY workstation_number ASC, id ASC',
-            [numericDeptId, targetLabId, type]
-          );
-
-          const defaultBrands: Record<string, string> = {
-            CPU: 'Dell',
-            Monitor: 'HP',
-            Keyboard: 'Logitech',
-            Mouse: 'Lenovo',
-            Hotspot: 'TP-Link'
-          };
-          const brand = defaultBrands[type] || 'Standard';
-
-          // Create missing items if total count exceeds existing inventory items
-          if (existingItems.length < targetTotal) {
-            const missingCount = targetTotal - existingItems.length;
-            for (let i = 0; i < missingCount; i++) {
-              const wsNum = existingItems.length + i + 1;
-              const assetId = `AST-L${targetLabId}-${type.substring(0, 3).toUpperCase()}-${String(wsNum).padStart(3, '0')}`;
-              const serialNumber = `SN-L${targetLabId}-${type.substring(0, 3).toUpperCase()}-${wsNum}-${Date.now().toString().slice(-4)}`;
-              
-              await db.run(
-                `INSERT INTO inventory (id, department_id, lab_id, workstation_number, type, brand, model, serial_number, purchase_date, warranty_months, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                  assetId,
-                  numericDeptId,
-                  targetLabId,
-                  wsNum,
-                  type,
-                  brand,
-                  `Model v${wsNum}`,
-                  serialNumber,
-                  new Date().toISOString().split('T')[0],
-                  24,
-                  i < targetWorking ? 'Working' : 'Repairing'
-                ]
-              );
-            }
-          }
-
-          // Fetch updated list and assign working / not_working statuses and workstation numbers
-          const allLabTypeItems = await db.all(
-            'SELECT * FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ? ORDER BY workstation_number ASC, id ASC',
-            [numericDeptId, targetLabId, type]
-          );
-
-          for (let idx = 0; idx < allLabTypeItems.length; idx++) {
-            const itemObj = allLabTypeItems[idx];
-            const wsNum = idx + 1;
-            const status = idx < targetWorking ? 'Working' : 'Repairing';
-            await db.run(
-              'UPDATE inventory SET workstation_number = ?, status = ? WHERE id = ?',
-              [wsNum, status, itemObj.id]
+          try {
+            const existingItems = await db.all(
+              'SELECT * FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ? ORDER BY workstation_number ASC, id ASC',
+              [numericDeptId, targetLabId, type]
             );
+
+            const defaultBrands: Record<string, string> = {
+              CPU: 'Dell',
+              Monitor: 'HP',
+              Keyboard: 'Logitech',
+              Mouse: 'Lenovo',
+              Hotspot: 'TP-Link'
+            };
+            const brand = defaultBrands[type] || 'Standard';
+
+            // Create missing items if total count exceeds existing inventory items
+            if (existingItems.length < targetTotal) {
+              const missingCount = targetTotal - existingItems.length;
+              for (let i = 0; i < missingCount; i++) {
+                const wsNum = existingItems.length + i + 1;
+                const randSuffix = Math.floor(1000 + Math.random() * 9000);
+                const assetId = `AST-L${targetLabId}-${type.substring(0, 3).toUpperCase()}-${wsNum}-${randSuffix}`;
+                const serialNumber = `SN-L${targetLabId}-${type.substring(0, 3).toUpperCase()}-${wsNum}-${randSuffix}`;
+                
+                try {
+                  await db.run(
+                    `INSERT INTO inventory (id, department_id, lab_id, workstation_number, type, brand, model, serial_number, purchase_date, warranty_months, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                      assetId,
+                      numericDeptId,
+                      targetLabId,
+                      wsNum,
+                      type,
+                      brand,
+                      `Model v${wsNum}`,
+                      serialNumber,
+                      new Date().toISOString().split('T')[0],
+                      24,
+                      i < targetWorking ? 'Working' : 'Repairing'
+                    ]
+                  );
+                } catch (errIns) {
+                  // Fallback without specifying custom primary key if schema uses serial/auto-id
+                  try {
+                    await db.run(
+                      `INSERT INTO inventory (department_id, lab_id, workstation_number, type, brand, model, serial_number, purchase_date, warranty_months, status)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      [
+                        numericDeptId,
+                        targetLabId,
+                        wsNum,
+                        type,
+                        brand,
+                        `Model v${wsNum}`,
+                        serialNumber,
+                        new Date().toISOString().split('T')[0],
+                        24,
+                        i < targetWorking ? 'Working' : 'Repairing'
+                      ]
+                    );
+                  } catch (errIns2) {}
+                }
+              }
+            }
+
+            // Fetch updated list and assign working / not_working statuses and workstation numbers
+            const allLabTypeItems = await db.all(
+              'SELECT * FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ? ORDER BY workstation_number ASC, id ASC',
+              [numericDeptId, targetLabId, type]
+            );
+
+            for (let idx = 0; idx < allLabTypeItems.length; idx++) {
+              const itemObj = allLabTypeItems[idx];
+              const wsNum = idx + 1;
+              const status = idx < targetWorking ? 'Working' : 'Repairing';
+              try {
+                await db.run(
+                  'UPDATE inventory SET workstation_number = ?, status = ? WHERE id = ?',
+                  [wsNum, status, itemObj.id]
+                );
+              } catch (errUpd) {}
+            }
+          } catch (errSync) {
+            console.error('Inventory sync error during finalization:', errSync);
           }
         }
       }
