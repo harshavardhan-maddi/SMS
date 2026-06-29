@@ -82,12 +82,13 @@ export const db = {
     let query = translateSql(sql);
     if (dbType === 'postgres') {
       if (query.trim().toUpperCase().startsWith('INSERT') && !query.toUpperCase().includes('RETURNING')) {
-        query += ' RETURNING id';
+        query += ' RETURNING *';
       }
       const res = await pgPool!.query(query, params);
       let lastID = null;
-      if (res.rows.length > 0) {
-        lastID = res.rows[0].id !== undefined ? res.rows[0].id : res.rows[0][Object.keys(res.rows[0])[0]];
+      if (res.rows && res.rows.length > 0) {
+        const row = res.rows[0];
+        lastID = row.id !== undefined ? row.id : (row.department_id !== undefined ? row.department_id : Object.values(row)[0]);
       }
       return { changes: res.rowCount || 0, lastID };
     } else {
