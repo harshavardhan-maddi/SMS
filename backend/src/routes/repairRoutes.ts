@@ -758,7 +758,8 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
 
 // 12. Wizard Initiate multiple repair requests (HOD action)
 router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
-  const { requesterId, priority, title, description, issues } = req.body;
+  const { requesterId, labId, priority, title, description, issues } = req.body;
+  const targetLabId = labId ? parseInt(labId) : 0;
 
   if (!requesterId || !priority || !issues || !Array.isArray(issues) || issues.length === 0) {
     return res.status(400).send('Missing required fields or issues array');
@@ -785,6 +786,12 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     const dept = await db.get('SELECT code FROM departments WHERE id = ?', [departmentId]);
     const deptCode = dept ? dept.code : 'N/A';
 
+    let labStr = '';
+    if (targetLabId > 0) {
+      const labRow = await db.get('SELECT lab_number FROM labs WHERE id = ?', [targetLabId]);
+      if (labRow) labStr = `Lab ${labRow.lab_number}`;
+    }
+
     const countRes = await db.get('SELECT COUNT(*) as count FROM repair_requests');
     let currentCount = countRes ? countRes.count : 0;
 
@@ -798,14 +805,17 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
         const brand = issue.brand || 'Standard';
         if (!type || !count || count <= 0) continue;
 
-        // 1. Find matching working/new stock assets in the department
-        let matchingAssets = await db.all(
-          `SELECT id FROM inventory 
-           WHERE department_id = ? AND type = ? AND status IN ('Working', 'New Stock')
-           LIMIT ?`,
-          [departmentId, type, count]
-        );
+        // 1. Find matching working/new stock assets in the department & lab
+        let invQuery = `SELECT id FROM inventory WHERE department_id = ? AND type = ? AND status IN ('Working', 'New Stock')`;
+        const invParams: any[] = [departmentId, type];
+        if (targetLabId > 0) {
+          invQuery += ` AND lab_id = ?`;
+          invParams.push(targetLabId);
+        }
+        invQuery += ` LIMIT ?`;
+        invParams.push(count);
 
+        let matchingAssets = await db.all(invQuery, invParams);
         let assetIds = matchingAssets.map((a: any) => a.id);
 
         // 2. If still not enough assets, auto-generate/insert mock assets in the inventory
@@ -816,19 +826,23 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
 
           for (let k = 0; k < needed; k++) {
             invIndex++;
-            const newAssetId = `${type.substring(0, 3).toUpperCase()}-GEN-${invIndex}`;
-            const serialNumber = `SN-GEN-${type.substring(0, 3).toUpperCase()}-${invIndex}`;
+            const randSuffix = Math.floor(1000 + Math.random() * 9000);
+            const newAssetId = targetLabId > 0 
+              ? `AST-L${targetLabId}-${type.substring(0, 3).toUpperCase()}-${invIndex}-${randSuffix}`
+              : `${type.substring(0, 3).toUpperCase()}-GEN-${invIndex}-${randSuffix}`;
+            const serialNumber = `SN-GEN-${type.substring(0, 3).toUpperCase()}-${invIndex}-${randSuffix}`;
             
-            await db.run(
-              `INSERT INTO inventory (id, department_id, type, brand, model, serial_number, status)
-               VALUES (?, ?, ?, ?, 'Auto-generated for repair', ?, 'Repairing')`,
-              [newAssetId, departmentId, type, brand, serialNumber]
-            );
+            try {
+              await db.run(
+                `INSERT INTO inventory (id, department_id, lab_id, type, brand, model, serial_number, status)
+                 VALUES (?, ?, ?, ?, ?, 'Auto-generated for repair', ?, 'Repairing')`,
+                [newAssetId, departmentId, targetLabId > 0 ? targetLabId : null, type, brand, serialNumber]
+              );
+            } catch (eIns) {}
             
             assetIds.push(newAssetId);
           }
         }
-
 
         // Update status of all matched/generated assets to Repairing
         for (const assetId of assetIds) {
@@ -844,13 +858,14 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
           generatedRequests.push(requestId);
 
           const primaryAssetId = assetIds[0];
+          const labTag = labStr ? ` [${labStr}]` : '';
           const reqTitle = count > 1 
-            ? `${title || 'Batch Repair Request'} - ${count} Units of ${type} (${brand})`
-            : `${title || 'Repair Request'} - ${type} (${brand})`;
+            ? `${title || 'Batch Repair Request'}${labTag} - ${count} Units of ${type} (${brand})`
+            : `${title || 'Repair Request'}${labTag} - ${type} (${brand})`;
 
           const reqDesc = count > 1
-            ? `Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''} [Asset IDs: ${assetIds.join(', ')}]`
-            : `Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
+            ? `Location: ${labStr || 'Department Systems'}. Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''} [Asset IDs: ${assetIds.join(', ')}]`
+            : `Location: ${labStr || 'Department Systems'}. Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
 
           await db.run(
             `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time)

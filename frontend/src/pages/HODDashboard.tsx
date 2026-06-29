@@ -49,6 +49,8 @@ export const HODDashboard: React.FC = () => {
   const [typeTotalCount, setTypeTotalCount] = useState(1);
 
   // Report Issue General Form State
+  const [labs, setLabs] = useState<any[]>([]);
+  const [selectedLabId, setSelectedLabId] = useState<string>('');
   const [priority, setPriority] = useState('Medium');
   const [issueTitle, setIssueTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -65,12 +67,17 @@ export const HODDashboard: React.FC = () => {
       const recentRes = await api.get(`/repairs?departmentId=${user.departmentId}`);
       // 3. Fetch inventory items to choose in Report Issue
       const assetsRes = await api.get(`/inventory?departmentId=${user.departmentId}`);
+      // 4. Fetch labs
+      const labsRes = await api.get(`/departments/${user.departmentId}/labs`);
 
       setStats(countsRes.data);
       setAllRequests(recentRes.data);
       setRecentRequests(recentRes.data.slice(0, 5));
       setDepartmentAssets(assetsRes.data.filter((a: any) => a.status === 'Working' || a.status === 'New Stock'));
-      
+      setLabs(labsRes.data);
+      if (labsRes.data.length > 0 && !selectedLabId) {
+        setSelectedLabId(labsRes.data[0].id.toString());
+      }
     } catch (err) {
       console.error('Failed to load HOD metrics', err);
     } finally {
@@ -98,6 +105,9 @@ export const HODDashboard: React.FC = () => {
     setTypeTotalCount(1);
     setIssueTitle('');
     setDescription('');
+    if (labs.length > 0 && !selectedLabId) {
+      setSelectedLabId(labs[0].id.toString());
+    }
     setReportModalOpen(true);
   };
 
@@ -137,6 +147,7 @@ export const HODDashboard: React.FC = () => {
     try {
       await api.post('/repairs/initiate-wizard', {
         requesterId: user?.userId,
+        labId: selectedLabId ? parseInt(selectedLabId) : null,
         priority,
         title: issueTitle,
         description,
@@ -527,6 +538,22 @@ export const HODDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Select Lab Number</label>
+                  <select
+                    value={selectedLabId}
+                    onChange={(e) => setSelectedLabId(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+                  >
+                    {labs.length === 0 && <option value="">-- Main Department / General Systems --</option>}
+                    {labs.map((lab) => (
+                      <option key={lab.id} value={lab.id}>
+                        Lab {lab.labNumber} ({lab.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Priority Level</label>
                   <select
