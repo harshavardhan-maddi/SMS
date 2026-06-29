@@ -359,13 +359,14 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
 // 8. Get finalized counts for HOD's department (optionally by labId)
 router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, res) => {
   const { deptId } = req.params;
+  const numericDeptId = parseInt(deptId);
   const labId = req.query.labId ? parseInt(req.query.labId as string) : 0;
   try {
     const types = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'];
     
     const rows = await db.all(
       'SELECT type, total, working, not_working FROM finalized_hardware_counts WHERE department_id = ? AND lab_id = ?',
-      [deptId, labId]
+      [numericDeptId, labId]
     );
 
     const counts: Record<string, any> = {};
@@ -386,7 +387,7 @@ router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, 
 
     // Fallback: compute from active inventory for this lab or dept
     let query = 'SELECT type, status, COUNT(*) as count FROM inventory WHERE department_id = ?';
-    const params: any[] = [deptId];
+    const params: any[] = [numericDeptId];
     if (labId > 0) {
       query += ' AND lab_id = ?';
       params.push(labId);
@@ -420,6 +421,7 @@ router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, 
 // 9. Save finalized counts for a department and lab
 router.post('/finalize-counts', authenticateJWT, async (req, res) => {
   const { departmentId, labId, counts } = req.body;
+  const numericDeptId = parseInt(departmentId);
   const targetLabId = labId ? parseInt(labId) : 0;
 
   if (!departmentId || !counts || !Array.isArray(counts)) {
@@ -438,7 +440,7 @@ router.post('/finalize-counts', authenticateJWT, async (req, res) => {
 
         const existing = await db.get(
           'SELECT 1 FROM finalized_hardware_counts WHERE department_id = ? AND lab_id = ? AND type = ?',
-          [departmentId, targetLabId, type]
+          [numericDeptId, targetLabId, type]
         );
 
         if (existing) {
@@ -446,13 +448,13 @@ router.post('/finalize-counts', authenticateJWT, async (req, res) => {
             `UPDATE finalized_hardware_counts 
              SET total = ?, working = ?, not_working = ?, updated_at = CURRENT_TIMESTAMP
              WHERE department_id = ? AND lab_id = ? AND type = ?`,
-            [targetTotal, targetWorking, targetNotWorking, departmentId, targetLabId, type]
+            [targetTotal, targetWorking, targetNotWorking, numericDeptId, targetLabId, type]
           );
         } else {
           await db.run(
             `INSERT INTO finalized_hardware_counts (department_id, lab_id, type, total, working, not_working)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [departmentId, targetLabId, type, targetTotal, targetWorking, targetNotWorking]
+            [numericDeptId, targetLabId, type, targetTotal, targetWorking, targetNotWorking]
           );
         }
 
@@ -460,7 +462,7 @@ router.post('/finalize-counts', authenticateJWT, async (req, res) => {
         if (targetLabId > 0 && targetTotal > 0) {
           const existingItems = await db.all(
             'SELECT * FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ? ORDER BY workstation_number ASC, id ASC',
-            [departmentId, targetLabId, type]
+            [numericDeptId, targetLabId, type]
           );
 
           const defaultBrands: Record<string, string> = {
@@ -485,7 +487,7 @@ router.post('/finalize-counts', authenticateJWT, async (req, res) => {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                   assetId,
-                  departmentId,
+                  numericDeptId,
                   targetLabId,
                   wsNum,
                   type,
@@ -503,7 +505,7 @@ router.post('/finalize-counts', authenticateJWT, async (req, res) => {
           // Fetch updated list and assign working / not_working statuses and workstation numbers
           const allLabTypeItems = await db.all(
             'SELECT * FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ? ORDER BY workstation_number ASC, id ASC',
-            [departmentId, targetLabId, type]
+            [numericDeptId, targetLabId, type]
           );
 
           for (let idx = 0; idx < allLabTypeItems.length; idx++) {
