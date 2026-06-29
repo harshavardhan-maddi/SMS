@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
+import { RailwayTrackTimeline } from '../components/RailwayTrackTimeline';
 
 export const HODDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -692,60 +693,13 @@ export const HODDashboard: React.FC = () => {
         </form>
       </Modal>
 
-      {/* MODAL 2: Request Status Timeline */}
-      <Modal isOpen={timelineModalOpen} onClose={() => setTimelineModalOpen(false)} title={`Request Status Timeline: ${selectedRequest?.id}`}>
-        {selectedRequest && (
-          <div className="space-y-6 text-left">
-            {/* Overview Details */}
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/50 space-y-2 text-xs">
-              <div><span className="font-bold text-slate-500">Asset:</span> <span className="font-semibold text-slate-700">{selectedRequest.inventory.id} ({selectedRequest.inventory.type})</span></div>
-              <div><span className="font-bold text-slate-500">Fault:</span> <span className="font-semibold text-slate-700">{selectedRequest.title}</span></div>
-              <div><span className="font-bold text-slate-500">Current Status:</span> <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ml-1.5 ${getStatusBadgeClass(selectedRequest.status)}`}>{selectedRequest.status}</span></div>
-            </div>
-
-            {/* Vertical Timeline */}
-            <div className="relative pl-6 border-l border-slate-200 space-y-6 ml-3">
-              {selectedTimeline.map((stage, idx) => (
-                <div key={stage.id} className="relative">
-                  {/* Indicator Dot */}
-                  <span className="absolute -left-[31px] top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white border-2 border-brand-purple">
-                    <span className="h-1.5 w-1.5 rounded-full bg-brand-purple"></span>
-                  </span>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-800">{stage.status}</span>
-                      <span className="text-[10px] text-brand-textMuted font-semibold">
-                        {stage.statusDate} {stage.statusTime.substring(0, 5)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600 leading-normal">{stage.description}</p>
-                    {stage.updatedBy && (
-                      <div className="text-[10px] text-slate-400 font-medium">Updated by: {stage.updatedBy.name}</div>
-                    )}
-
-                    {/* Stage Specific Fields */}
-                    {stage.status === 'In Progress' && (stage.expectedCompletionDays || stage.requiredParts) && (
-                      <div className="p-2.5 mt-2 bg-blue-50/50 rounded-xl border border-blue-100 text-[10px] space-y-1">
-                        {stage.expectedCompletionDays && <div>• Expected completion: <span className="font-bold text-slate-700">{stage.expectedCompletionDays} Days</span></div>}
-                        {stage.requiredParts && <div>• Required parts: <span className="font-bold text-slate-700">{stage.requiredParts}</span></div>}
-                      </div>
-                    )}
-                    {stage.status === 'Resolved' && (stage.problemFound || stage.partsReplaced || stage.remarks) && (
-                      <div className="p-2.5 mt-2 bg-emerald-50/50 rounded-xl border border-emerald-100 text-[10px] space-y-1">
-                        {stage.problemFound && <div>• Problem: <span className="font-bold text-slate-700">{stage.problemFound}</span></div>}
-                        {stage.solution && <div>• Solution: <span className="font-bold text-slate-700">{stage.solution}</span></div>}
-                        {stage.partsReplaced && <div>• Replaced parts: <span className="font-bold text-slate-700">{stage.partsReplaced}</span></div>}
-                        {stage.remarks && <div>• Remarks: <span className="font-bold text-slate-700">{stage.remarks}</span></div>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* MODAL 2: Railway Track Request Status Timeline */}
+      <RailwayTrackTimeline
+        isOpen={timelineModalOpen}
+        onClose={() => setTimelineModalOpen(false)}
+        request={selectedRequest}
+        timelineData={selectedTimeline}
+      />
 
       {/* MODAL 3: My Submitted Requests */}
       <Modal isOpen={myRequestsModalOpen} onClose={handleCloseMyRequestsModal} title="My Submitted Requests">
