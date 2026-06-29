@@ -246,15 +246,6 @@ export const Login: React.FC = () => {
             {submitting ? 'Authenticating...' : 'Sign In to Portal'}
           </button>
         </form>
-
-        {/* Demo Credentials Panel */}
-        <div className="skeuo-credentials-plate mt-6 p-4 text-[10px] text-slate-400 font-semibold space-y-1">
-          <p className="font-bold text-slate-300 uppercase tracking-wide text-[9px] border-b border-slate-800 pb-1.5 mb-2">Demo Logins (Password is 'password'):</p>
-          <p>• Principal: <span className="font-bold text-slate-300">principal@sms.edu</span></p>
-          <p>• HOD (CSE): <span className="font-bold text-slate-300">hod.cse@sms.edu</span></p>
-          <p>• Computer Dean: <span className="font-bold text-slate-300">dean@sms.edu</span></p>
-          <p>• Hardware Technician: <span className="font-bold text-slate-300">tech@sms.edu</span></p>
-        </div>
       </div>
     </div>
   );
