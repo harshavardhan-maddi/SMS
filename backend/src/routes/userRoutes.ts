@@ -27,8 +27,8 @@ router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'RO
     const rows = await db.all(
       `SELECT u.id, u.name, u.email 
        FROM users u
-       JOIN roles r ON u.role_id = r.id
-       WHERE r.name = 'ROLE_TECHNICIAN' AND (u.active = true OR u.active = 1)`
+       LEFT JOIN roles r ON u.role_id = r.id
+       WHERE (r.name = 'ROLE_TECHNICIAN' OR u.role_id = 4)`
     );
     res.json(rows);
   } catch (err) {

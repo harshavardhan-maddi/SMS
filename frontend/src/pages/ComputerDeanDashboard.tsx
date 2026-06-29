@@ -312,6 +312,7 @@ export const ComputerDeanDashboard: React.FC = () => {
                 <th className="py-3 px-4">Item Type</th>
                 <th className="py-3 px-4">Issue</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Assigned Technician</th>
                 <th className="py-3 px-4">Initiated On</th>
                 <th className="py-3 px-4 text-center">Action</th>
               </tr>
@@ -321,17 +322,26 @@ export const ComputerDeanDashboard: React.FC = () => {
                 <tr key={req.id} className="hover:bg-slate-50/50">
                   <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
                   <td className="py-3.5 px-4 font-semibold text-slate-600">
-                    {req.inventory.department.code}
+                    {req.inventory?.department?.code || 'N/A'}
                   </td>
-                  <td className="py-3.5 px-4 text-slate-500">{req.inventory.type}</td>
+                  <td className="py-3.5 px-4 text-slate-500">{req.inventory?.type || 'Hardware'}</td>
                   <td className="py-3.5 px-4 text-slate-600 truncate max-w-[200px]">{req.title}</td>
                   <td className="py-3.5 px-4">
                     <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
                       {req.status}
                     </span>
                   </td>
+                  <td className="py-3.5 px-4 font-semibold text-slate-700">
+                    {req.assignedTo?.name ? (
+                      <span className="inline-flex items-center gap-1 text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                        {req.assignedTo.name}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic text-[11px]">Unassigned</span>
+                    )}
+                  </td>
                   <td className="py-3.5 px-4 text-slate-500 font-medium">
-                    {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime.substring(0, 5)}
+                    {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime ? req.initiatedTime.substring(0, 5) : ''}
                   </td>
                   <td className="py-3.5 px-4 text-center relative">
                     <div className="inline-flex items-center gap-1">
@@ -341,7 +351,9 @@ export const ComputerDeanDashboard: React.FC = () => {
                         <button
                           onClick={() => {
                             setSelectedReq(req);
-                            if (technicians.length > 0) {
+                            if (req.assignedTo?.id) {
+                              setSelectedTechId(req.assignedTo.id.toString());
+                            } else if (technicians.length > 0) {
                               setSelectedTechId(technicians[0].id.toString());
                             }
                             setStartModalOpen(true);
