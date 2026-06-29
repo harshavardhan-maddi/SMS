@@ -18,6 +18,7 @@ import { FinalizeCounts } from './pages/FinalizeCounts';
 import { LabsPage } from './pages/LabsPage';
 import { DeadStockPage } from './pages/DeadStockPage';
 import { MyDepartmentPage } from './pages/MyDepartmentPage';
+import { PortalIntroAnimation } from './components/PortalIntroAnimation';
 
 // 1. Route Guard for Authenticated Session
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,10 +50,13 @@ const DynamicDashboard: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  const [showIntro, setShowIntro] = React.useState(true);
+
   return (
     <BrowserRouter>
       <AuthProvider>
         <WebSocketProvider>
+          {showIntro && <PortalIntroAnimation onComplete={() => setShowIntro(false)} />}
           <Toaster
             position="bottom-center"
             containerStyle={{
