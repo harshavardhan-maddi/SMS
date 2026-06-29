@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/db';
-import { authenticateJWT } from '../middleware/auth';
+import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 import { notificationService } from '../services/notificationService';
 
 const router = Router();
@@ -959,6 +959,100 @@ router.post('/:id/partial-progress', authenticateJWT, async (req, res) => {
   } catch (err) {
     console.error('Partial progress error:', err);
     res.status(400).send((err as Error).message);
+  }
+});
+
+// 14. Delete Repair Requests in Bulk (Principal / Main Admin action)
+router.delete('/bulk', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+  const { requestIds } = req.body;
+
+  if (!requestIds || !Array.isArray(requestIds) || requestIds.length === 0) {
+    return res.status(400).send('Missing or invalid requestIds array');
+  }
+
+  try {
+    await db.transaction(async () => {
+      for (const reqId of requestIds) {
+        // Find repair request to get associated inventory asset ID and status
+        const request = await db.get(
+          'SELECT inventory_id, status FROM repair_requests WHERE id = ?',
+          [reqId]
+        );
+
+        if (request) {
+          const inventoryId = request.inventory_id;
+
+          // Delete from repair_requests (cascades to repair_history)
+          await db.run('DELETE FROM repair_requests WHERE id = ?', [reqId]);
+
+          // Check if there are any remaining active repair requests for this inventory asset
+          if (inventoryId) {
+            const activeCount = await db.get(
+              `SELECT COUNT(*) as count FROM repair_requests 
+               WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')`,
+              [inventoryId]
+            );
+
+            // If no other active repair requests remain, revert inventory status to 'Working'
+            if (!activeCount || activeCount.count === 0) {
+              await db.run("UPDATE inventory SET status = 'Working' WHERE id = ? AND status = 'Repairing'", [inventoryId]);
+            }
+          }
+        }
+      }
+    });
+
+    // Broadcast dashboard refresh to all connected logins
+    notificationService.broadcastDashboardUpdate();
+
+    res.json({ message: `Successfully deleted ${requestIds.length} repair request(s)`, deletedCount: requestIds.length });
+  } catch (err) {
+    console.error('Bulk delete repair requests error:', err);
+    res.status(500).send((err as Error).message);
+  }
+});
+
+// 15. Delete Single Repair Request (Principal / Main Admin action)
+router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const request = await db.get(
+      'SELECT inventory_id, status FROM repair_requests WHERE id = ?',
+      [id]
+    );
+
+    if (!request) {
+      return res.status(404).send('Repair request not found');
+    }
+
+    const inventoryId = request.inventory_id;
+
+    await db.transaction(async () => {
+      // Delete repair request
+      await db.run('DELETE FROM repair_requests WHERE id = ?', [id]);
+
+      // Check remaining active repair requests
+      if (inventoryId) {
+        const activeCount = await db.get(
+          `SELECT COUNT(*) as count FROM repair_requests 
+           WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')`,
+          [inventoryId]
+        );
+
+        if (!activeCount || activeCount.count === 0) {
+          await db.run("UPDATE inventory SET status = 'Working' WHERE id = ? AND status = 'Repairing'", [inventoryId]);
+        }
+      }
+    });
+
+    // Broadcast dashboard refresh to all connected logins
+    notificationService.broadcastDashboardUpdate();
+
+    res.json({ message: `Repair request ${id} successfully deleted` });
+  } catch (err) {
+    console.error('Delete repair request error:', err);
+    res.status(500).send((err as Error).message);
   }
 });
 

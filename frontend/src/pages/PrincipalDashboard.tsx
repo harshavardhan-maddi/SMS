@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useWebSocket } from '../context/WebSocketContext';
-import { LoadingSkeleton } from '../components/ReusableComponents';
+import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
 import {
   Laptop,
   CheckCircle,
@@ -15,7 +15,11 @@ import {
   Calendar,
   Layers,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  CheckSquare,
+  Square,
+  AlertOctagon,
+  Eye
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
@@ -26,20 +30,30 @@ export const PrincipalDashboard: React.FC = () => {
   
   // Dashboard statistics and lists
   const [stats, setStats] = useState<any>(null);
+  const [allRequests, setAllRequests] = useState<any[]>([]);
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
+  const [showAllRequests, setShowAllRequests] = useState<boolean>(false);
   const [deptCount, setDeptCount] = useState<number>(0);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+
+  // Selection & Deletion State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
     try {
       // 1. Fetch counts
       const countsRes = await api.get('/inventory/counts');
-      // 2. Fetch recent requests
+      // 2. Fetch all repairs & recent repairs
+      const repairsRes = await api.get('/repairs');
       const recentRes = await api.get('/repairs/recent');
       // 3. Fetch departments
       const deptsRes = await api.get('/departments');
       
       setStats(countsRes.data);
+      setAllRequests(repairsRes.data);
       setRecentRequests(recentRes.data.slice(0, 5)); // Show top 5
       setDeptCount(deptsRes.data.length);
     } catch (err) {
@@ -62,6 +76,54 @@ export const PrincipalDashboard: React.FC = () => {
       </div>
     );
   }
+
+  const displayedRequests = showAllRequests ? allRequests : recentRequests;
+  const isAllSelected = displayedRequests.length > 0 && displayedRequests.every((req) => selectedIds.includes(req.id));
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(displayedRequests.map((r) => r.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleOpenDeleteModal = (id?: string) => {
+    if (id) {
+      setRequestToDelete(id);
+    } else {
+      setRequestToDelete(null);
+    }
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const idsToDelete = requestToDelete ? [requestToDelete] : selectedIds;
+      if (idsToDelete.length === 1) {
+        await api.delete(`/repairs/${idsToDelete[0]}`);
+      } else {
+        await api.delete('/repairs/bulk', { data: { requestIds: idsToDelete } });
+      }
+      toast.success(`Successfully deleted ${idsToDelete.length} request(s). Live computer counts updated!`);
+      setSelectedIds([]);
+      setRequestToDelete(null);
+      setDeleteModalOpen(false);
+      fetchDashboardData();
+    } catch (err: any) {
+      console.error('Failed to delete request(s)', err);
+      toast.error(err.response?.data || 'Failed to delete repair request(s).');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
@@ -268,8 +330,8 @@ export const PrincipalDashboard: React.FC = () => {
           <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
             <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600"><ClipboardList className="w-4 h-4" /></div>
             <div>
-              <div className="text-xxs text-brand-textMuted">Recent Requests</div>
-              <div className="text-sm font-extrabold text-slate-800">{recentRequests.length}</div>
+              <div className="text-xxs text-brand-textMuted">Total Requests</div>
+              <div className="text-sm font-extrabold text-slate-800">{allRequests.length}</div>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
@@ -282,19 +344,56 @@ export const PrincipalDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Recent Repair Requests Table */}
+      {/* 4. Repair Requests Table & Principal Admin Management */}
       <div className="admin-card bg-white p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Recent Repair Requests</h4>
-          <span className="text-[10px] font-semibold text-brand-purple flex items-center gap-1">
-            Live Feed <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              {showAllRequests ? 'All Repair Requests' : 'Recent Repair Requests'} ({displayedRequests.length})
+            </h4>
+            <span className="text-[10px] font-semibold text-brand-purple flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-full">
+              Live Feed <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {selectedIds.length > 0 && (
+              <button
+                onClick={() => handleOpenDeleteModal()}
+                className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowAllRequests(!showAllRequests)}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <span>{showAllRequests ? 'Show Top 5' : 'View All Requests'}</span>
+              <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showAllRequests ? 'rotate-90' : ''}`} />
+            </button>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                <th className="py-3 px-4 w-10">
+                  <button
+                    onClick={handleSelectAll}
+                    className="flex items-center justify-center text-slate-500 hover:text-brand-purple transition-colors cursor-pointer"
+                    title="Select All / Deselect All"
+                  >
+                    {isAllSelected ? (
+                      <CheckSquare className="w-4 h-4 text-brand-purple" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Department</th>
                 <th className="py-3 px-4">Type</th>
@@ -305,50 +404,113 @@ export const PrincipalDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {recentRequests.map((req) => (
-                <tr key={req.id} className="hover:bg-slate-50/50">
-                  <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-600">
-                    {req.inventory.department.code}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500">{req.inventory.type}</td>
-                  <td className="py-3.5 px-4">
-                    <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
-                      req.priority === 'High' ? 'bg-red-50 text-red-600' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {req.priority}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
-                      {req.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500">
-                    {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime.substring(0, 5)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => setSelectedRequest(req)}
-                      className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
-                    >
-                      View
-                    </button>
+              {displayedRequests.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs font-medium">
+                    No repair requests available.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                displayedRequests.map((req) => {
+                  const isSelected = selectedIds.includes(req.id);
+                  return (
+                    <tr key={req.id} className={`hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-purple-50/40' : ''}`}>
+                      <td className="py-3.5 px-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(req.id)}
+                          className="w-4 h-4 accent-brand-purple rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-600">
+                        {req.inventory?.department?.code || 'N/A'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">{req.inventory?.type || 'N/A'}</td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
+                          req.priority === 'High' ? 'bg-red-50 text-red-600' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {req.priority}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">
+                        {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime ? req.initiatedTime.substring(0, 5) : ''}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedRequest(req)}
+                            className="p-1.5 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-slate-600 transition-all cursor-pointer"
+                            title="View Request Details"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenDeleteModal(req.id)}
+                            className="p-1.5 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg border border-red-200 text-red-600 transition-all cursor-pointer"
+                            title="Delete Request (Main Admin)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-
-        {/* View All Requests Button */}
-        <div className="flex justify-center mt-6">
-          <button className="px-6 py-2 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all flex items-center gap-2">
-            <span>View All Requests</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
       </div>
+
+      {/* Warning Confirmation Modal for Deletion */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="⚠️ Warning: Delete Repair Request(s)"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3.5 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-800">
+            <AlertOctagon className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <h5 className="font-extrabold text-red-900">Are you sure you want to delete?</h5>
+              <p>
+                You are about to delete{' '}
+                <span className="font-bold underline">
+                  {requestToDelete ? `Request ${requestToDelete}` : `${selectedIds.length} selected request(s)`}
+                </span>.
+              </p>
+              <p className="text-red-700">
+                Deleting active repair request(s) will cancel the repair in progress and automatically restore the computer hardware status back to <span className="font-bold">Working</span> across all user logins and dashboards in real-time.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              disabled={isDeleting}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Yes, Delete Request(s)'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Rich Request Details Overlay Modal */}
       <RequestDetailsModal

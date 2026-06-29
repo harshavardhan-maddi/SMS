@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
 import { Notification } from '../types';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 
 const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co';
 const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
@@ -144,9 +146,44 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       )
       .subscribe();
 
+    // 3. SockJS / STOMP connection to local backend broker for broadcast updates
+    let stompClient: any = null;
+    try {
+      const backendUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000/api';
+      const wsUrl = backendUrl.replace('/api', '/ws');
+      const socket = new SockJS(wsUrl);
+      stompClient = new Client({
+        webSocketFactory: () => socket as any,
+        debug: () => {},
+        onConnect: () => {
+          stompClient.subscribe('/topic/dashboard', () => {
+            setDashboardTick((prev) => prev + 1);
+          });
+          stompClient.subscribe(`/topic/notifications/${user.userId}`, (message: any) => {
+            try {
+              const newNotif = JSON.parse(message.body);
+              setNotifications((prev) => [newNotif, ...prev]);
+              setUnreadCount((prev) => prev + 1);
+              toast(newNotif.message, {
+                icon: '🔔',
+                duration: 4000,
+                style: { background: '#0c1a30', color: '#fff', borderRadius: '12px' }
+              });
+            } catch (e) {}
+          });
+        }
+      });
+      stompClient.activate();
+    } catch (e) {
+      console.warn('STOMP client init error:', e);
+    }
+
     return () => {
       supabase.removeChannel(notificationsChannel);
       supabase.removeChannel(dbChangesChannel);
+      if (stompClient) {
+        try { stompClient.deactivate(); } catch (e) {}
+      }
     };
   }, [user]);
 
