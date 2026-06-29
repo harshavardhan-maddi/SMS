@@ -19,6 +19,7 @@ import {
 import { toast } from 'react-hot-toast';
 
 import { useNavigate, useLocation } from 'react-router-dom';
+import { RequestDetailsModal } from '../components/RequestDetailsModal';
 
 export const HODDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -813,6 +814,13 @@ export const HODDashboard: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Rich Request Overview Modal */}
+      <RequestDetailsModal
+        isOpen={Boolean(selectedRequest)}
+        onClose={() => setSelectedRequest(null)}
+        request={selectedRequest}
+      />
     </div>
   );
 };

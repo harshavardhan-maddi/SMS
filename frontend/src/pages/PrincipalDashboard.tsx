@@ -18,6 +18,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { RequestDetailsModal } from '../components/RequestDetailsModal';
 
 export const PrincipalDashboard: React.FC = () => {
   const { dashboardTick } = useWebSocket();
@@ -27,6 +28,7 @@ export const PrincipalDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
   const [deptCount, setDeptCount] = useState<number>(0);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -326,7 +328,10 @@ export const PrincipalDashboard: React.FC = () => {
                     {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime.substring(0, 5)}
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <button className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all">
+                    <button
+                      onClick={() => setSelectedRequest(req)}
+                      className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
+                    >
                       View
                     </button>
                   </td>
@@ -344,6 +349,13 @@ export const PrincipalDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Rich Request Details Overlay Modal */}
+      <RequestDetailsModal
+        isOpen={Boolean(selectedRequest)}
+        onClose={() => setSelectedRequest(null)}
+        request={selectedRequest}
+      />
     </div>
   );
 };

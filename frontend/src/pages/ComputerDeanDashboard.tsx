@@ -16,6 +16,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { RequestDetailsModal } from '../components/RequestDetailsModal';
 
 export const ComputerDeanDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ export const ComputerDeanDashboard: React.FC = () => {
 
   // Modals state
   const [selectedReq, setSelectedReq] = useState<any>(null);
+  const [viewDetailsReq, setViewDetailsReq] = useState<any>(null);
   const [startModalOpen, setStartModalOpen] = useState(false);
   const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const [deadModalOpen, setDeadModalOpen] = useState(false);
@@ -346,6 +348,14 @@ export const ComputerDeanDashboard: React.FC = () => {
                   <td className="py-3.5 px-4 text-center relative">
                     <div className="inline-flex items-center gap-1">
                       
+                      <button
+                        onClick={() => setViewDetailsReq(req)}
+                        className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer mr-1"
+                        title="View Full Request Details & Breakdown"
+                      >
+                        <span>View</span>
+                      </button>
+
                       {/* Action buttons depending on state */}
                       {req.status === 'Initiated' && (
                         <button
@@ -403,15 +413,6 @@ export const ComputerDeanDashboard: React.FC = () => {
                             </div>
                           )}
                         </div>
-                      )}
-
-                      {(req.status === 'Resolved' || req.status === 'Dead Stock') && (
-                        <button
-                          onClick={() => handleViewTimeline(req)}
-                          className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
-                        >
-                          View Details
-                        </button>
                       )}
 
                     </div>
@@ -613,6 +614,13 @@ export const ComputerDeanDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Rich Request Overview Overlay Modal */}
+      <RequestDetailsModal
+        isOpen={Boolean(viewDetailsReq)}
+        onClose={() => setViewDetailsReq(null)}
+        request={viewDetailsReq}
+      />
     </div>
   );
 };
