@@ -232,6 +232,79 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
   }
 });
 
+// 3b. Get lab counts
+router.get('/counts/lab/:labId', authenticateJWT, async (req, res) => {
+  const { labId } = req.params;
+  const numericLabId = parseInt(labId);
+  try {
+    const types = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'];
+    
+    const counts: Record<string, Record<string, number>> = {};
+    for (const type of types) {
+      counts[type] = { Total: 0, Working: 0, Repairing: 0, Dead: 0, NewStock: 0 };
+    }
+
+    const finalized = await db.all(
+      'SELECT type, total, working, not_working FROM finalized_hardware_counts WHERE lab_id = ?',
+      [numericLabId]
+    );
+
+    if (finalized && finalized.length > 0) {
+      for (const row of finalized) {
+        const type = row.type;
+        if (counts[type]) {
+          counts[type].Total = row.total || 0;
+          counts[type].Working = row.working || 0;
+          counts[type].Dead = row.not_working || 0;
+          counts[type].Repairing = 0;
+        }
+      }
+    } else {
+      const rows = await db.all(
+        'SELECT type, status, COUNT(*) as count FROM inventory WHERE lab_id = ? GROUP BY type, status',
+        [numericLabId]
+      );
+
+      for (const row of rows) {
+        const type = row.type;
+        const status = row.status;
+        const countVal = parseInt(row.count);
+
+        if (counts[type]) {
+          counts[type].Total += countVal;
+          if (status === 'Working') counts[type].Working += countVal;
+          else if (status === 'Repairing') counts[type].Repairing += countVal;
+          else if (status === 'Dead Stock') counts[type].Dead += countVal;
+          else if (status === 'New Stock') counts[type].NewStock += countVal;
+        }
+      }
+    }
+
+    const activeRepairRows = await db.all(
+      `SELECT i.type, COUNT(*) as count 
+       FROM repair_requests r 
+       JOIN inventory i ON r.inventory_id = i.id 
+       WHERE i.lab_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')
+       GROUP BY i.type`,
+      [numericLabId]
+    );
+
+    for (const row of activeRepairRows) {
+      const type = row.type;
+      const countVal = parseInt(row.count);
+      if (counts[type]) {
+        counts[type].Repairing += countVal;
+        counts[type].Working = Math.max(0, counts[type].Working - countVal);
+      }
+    }
+
+    res.json(counts);
+  } catch (err) {
+    console.error('Get lab counts error:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
 // 4. Get inventory by ID
 router.get('/:id', authenticateJWT, async (req, res) => {
   const { id } = req.params;

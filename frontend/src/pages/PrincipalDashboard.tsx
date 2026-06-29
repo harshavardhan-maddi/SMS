@@ -44,13 +44,12 @@ export const PrincipalDashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // 1. Fetch counts
-      const countsRes = await api.get('/inventory/counts');
-      // 2. Fetch all repairs & recent repairs
-      const repairsRes = await api.get('/repairs');
-      const recentRes = await api.get('/repairs/recent');
-      // 3. Fetch departments
-      const deptsRes = await api.get('/departments');
+      const [countsRes, repairsRes, recentRes, deptsRes] = await Promise.all([
+        api.get('/inventory/counts'),
+        api.get('/repairs'),
+        api.get('/repairs/recent'),
+        api.get('/departments')
+      ]);
       
       setStats(countsRes.data);
       setAllRequests(repairsRes.data);

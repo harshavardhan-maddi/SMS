@@ -55,16 +55,15 @@ export const ComputerDeanDashboard: React.FC = () => {
 
   const fetchDeanData = async () => {
     try {
-      // 1. Fetch repairs
-      const repairsRes = await api.get('/repairs');
-      setRequests(repairsRes.data);
+      const [repairsRes, statsRes, techsRes] = await Promise.all([
+        api.get('/repairs'),
+        api.get('/reports/dean'),
+        api.get('/users/technicians')
+      ]);
 
-      // 2. Fetch performance stats
-      const statsRes = await api.get('/reports/dean');
+      setRequests(repairsRes.data);
       setReportStats(statsRes.data);
 
-      // 3. Fetch technicians
-      const techsRes = await api.get('/users/technicians');
       const techs = techsRes.data;
       setTechnicians(techs);
       if (techs.length > 0) {

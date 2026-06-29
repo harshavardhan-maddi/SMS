@@ -48,6 +48,15 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
     }
   };
 
+  // Helpers to format timeline dates & times accurately
+  const getStationLog = (statusNames: string[]) => {
+    return timelineData.find((t) => statusNames.map((s) => s.toLowerCase()).includes((t.status || '').toLowerCase()));
+  };
+
+  const acceptedLog = getStationLog(['Accepted']);
+  const inProgressLog = getStationLog(['In Progress', 'Parts Requested']);
+  const terminalLog = getStationLog(['Resolved', 'Dead Stock']);
+
   // Construct standardized Railway Stations from history and current status
   const stations = [
     {
@@ -58,7 +67,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       isCompleted: true, // Always completed if request exists
       isActive: currentStatus === 'initiated',
       date: request.initiatedDate,
-      time: request.initiatedTime ? request.initiatedTime.substring(0, 5) : '09:00',
+      time: request.initiatedTime ? request.initiatedTime.substring(0, 5) : '--:--',
       personnel: request.requester?.name || 'Department HOD',
       role: 'Requester HOD',
       description: request.description || 'Hardware fault reported via HOD portal.',
@@ -75,8 +84,8 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: 'Accepted',
       isCompleted: ['accepted', 'in progress', 'parts requested', 'resolved', 'dead stock'].includes(currentStatus),
       isActive: currentStatus === 'accepted',
-      date: timelineData.find(t => t.status === 'Accepted')?.statusDate || request.initiatedDate,
-      time: timelineData.find(t => t.status === 'Accepted')?.statusTime?.substring(0, 5) || '10:30',
+      date: acceptedLog?.statusDate || request.initiatedDate,
+      time: acceptedLog?.statusTime ? acceptedLog.statusTime.substring(0, 5) : (request.initiatedTime ? request.initiatedTime.substring(0, 5) : '--:--'),
       personnel: request.assignedTo?.name || 'Assigned Technician',
       role: 'Hardware Technician',
       description: 'Computer Dean accepted request and delegated hardware diagnosis to technician.',
@@ -89,14 +98,14 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: 'In Progress',
       isCompleted: ['resolved', 'dead stock'].includes(currentStatus),
       isActive: ['in progress', 'parts requested'].includes(currentStatus),
-      date: timelineData.find(t => t.status === 'In Progress' || t.status === 'Parts Requested')?.statusDate || 'Pending',
-      time: timelineData.find(t => t.status === 'In Progress' || t.status === 'Parts Requested')?.statusTime?.substring(0, 5) || '--:--',
+      date: inProgressLog?.statusDate || 'Pending',
+      time: inProgressLog?.statusTime ? inProgressLog.statusTime.substring(0, 5) : '--:--',
       personnel: request.assignedTo?.name || 'Hardware Technician',
       role: 'Assigned Technician',
       description: 'Diagnostic checks and physical repairs actively underway in workshop.',
       details: {
-        expectedDays: timelineData.find(t => t.expectedCompletionDays)?.expectedCompletionDays || 2,
-        requiredParts: timelineData.find(t => t.requiredParts)?.requiredParts
+        expectedDays: timelineData.find((t) => t.expectedCompletionDays)?.expectedCompletionDays || 2,
+        requiredParts: timelineData.find((t) => t.requiredParts)?.requiredParts
       }
     },
     {
@@ -106,9 +115,9 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: currentStatus === 'dead stock' ? 'Dead Stock' : 'Resolved',
       isCompleted: ['resolved', 'dead stock'].includes(currentStatus),
       isActive: ['resolved', 'dead stock'].includes(currentStatus),
-      date: timelineData.find(t => t.status === 'Resolved' || t.status === 'Dead Stock')?.statusDate || 'Pending Completion',
-      time: timelineData.find(t => t.status === 'Resolved' || t.status === 'Dead Stock')?.statusTime?.substring(0, 5) || '--:--',
-      personnel: timelineData.find(t => t.status === 'Resolved' || t.status === 'Dead Stock')?.updatedBy?.name || request.assignedTo?.name || 'Technician / Dean',
+      date: terminalLog?.statusDate || 'Pending Completion',
+      time: terminalLog?.statusTime ? terminalLog.statusTime.substring(0, 5) : '--:--',
+      personnel: terminalLog?.updatedBy?.name || request.assignedTo?.name || 'Technician / Dean',
       role: 'Resolution Authority',
       description: currentStatus === 'resolved' 
         ? 'All repairs successfully completed, verified, and restored to operational lab inventory.' 
@@ -116,10 +125,10 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
         ? 'Hardware item inspected, confirmed unrepairable, and officially archived into Dead Stock register.'
         : 'Final resolution pending completion of maintenance.',
       details: {
-        problemFound: timelineData.find(t => t.problemFound)?.problemFound,
-        solution: timelineData.find(t => t.solution)?.solution,
-        partsReplaced: timelineData.find(t => t.partsReplaced)?.partsReplaced,
-        remarks: timelineData.find(t => t.remarks)?.remarks
+        problemFound: timelineData.find((t) => t.problemFound)?.problemFound,
+        solution: timelineData.find((t) => t.solution)?.solution,
+        partsReplaced: timelineData.find((t) => t.partsReplaced)?.partsReplaced,
+        remarks: timelineData.find((t) => t.remarks)?.remarks
       }
     }
   ];

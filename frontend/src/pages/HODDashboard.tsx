@@ -60,14 +60,12 @@ export const HODDashboard: React.FC = () => {
   const fetchHODData = async () => {
     const deptIdParam = user?.departmentId || 0;
     try {
-      // 1. Fetch counts
-      const countsRes = await api.get(`/inventory/counts/department/${deptIdParam}`);
-      // 2. Fetch recent requests
-      const recentRes = await api.get(`/repairs?departmentId=${deptIdParam}`);
-      // 3. Fetch inventory items to choose in Report Issue
-      const assetsRes = await api.get(`/inventory?departmentId=${deptIdParam}`);
-      // 4. Fetch labs
-      const labsRes = await api.get(`/departments/${deptIdParam}/labs`);
+      const [countsRes, recentRes, assetsRes, labsRes] = await Promise.all([
+        api.get(`/inventory/counts/department/${deptIdParam}`),
+        api.get(`/repairs?departmentId=${deptIdParam}`),
+        api.get(`/inventory?departmentId=${deptIdParam}`),
+        api.get(`/departments/${deptIdParam}/labs`)
+      ]);
 
       setStats(countsRes.data);
       setAllRequests(recentRes.data);
