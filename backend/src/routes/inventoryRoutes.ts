@@ -93,8 +93,8 @@ router.get('/counts', authenticateJWT, async (req, res) => {
             counts.Working[type] += row.working;
             counts.Working.Total += row.working;
 
-            counts.DeadStock[type] += row.not_working;
-            counts.DeadStock.Total += row.not_working;
+            counts.Repairing[type] += row.not_working;
+            counts.Repairing.Total += row.not_working;
           }
         }
       } else {
@@ -115,9 +115,12 @@ router.get('/counts', authenticateJWT, async (req, res) => {
             if (status === 'Working' || status === 'New Stock') {
               counts.Working[type] += countVal;
               counts.Working.Total += countVal;
-            } else {
+            } else if (status === 'Dead Stock') {
               counts.DeadStock[type] += countVal;
               counts.DeadStock.Total += countVal;
+            } else {
+              counts.Repairing[type] += countVal;
+              counts.Repairing.Total += countVal;
             }
           }
         }
@@ -125,7 +128,7 @@ router.get('/counts', authenticateJWT, async (req, res) => {
     }
 
     const dynamicInv = await db.all(
-      "SELECT type, status, COUNT(*) as count FROM inventory WHERE status IN ('New Stock', 'Repairing') GROUP BY type, status"
+      "SELECT type, status, COUNT(*) as count FROM inventory WHERE status IN ('New Stock', 'Repairing', 'Dead Stock') GROUP BY type, status"
     );
 
     for (const row of dynamicInv) {
@@ -189,9 +192,8 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
         if (counts[type]) {
           counts[type].Total = row.total || 0;
           counts[type].Working = row.working || 0;
-          counts[type].Dead = row.not_working || 0;
-          counts[type].Repairing = 0;
-          counts[type].NewStock = 0;
+          counts[type].Repairing = row.not_working || 0;
+          // Retain actual dead stock count from inventory table if marked dead
         }
       }
     }
