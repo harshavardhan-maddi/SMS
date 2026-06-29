@@ -93,8 +93,8 @@ router.get('/counts', authenticateJWT, async (req, res) => {
             counts.Working[type] += row.working;
             counts.Working.Total += row.working;
 
-            counts.Repairing[type] += row.not_working;
-            counts.Repairing.Total += row.not_working;
+            counts.DeadStock[type] += row.not_working;
+            counts.DeadStock.Total += row.not_working;
           }
         }
       } else {
@@ -127,19 +127,23 @@ router.get('/counts', authenticateJWT, async (req, res) => {
       }
     }
 
-    const dynamicInv = await db.all(
-      "SELECT type, status, COUNT(*) as count FROM inventory WHERE status IN ('New Stock', 'Repairing', 'Dead Stock') GROUP BY type, status"
+    // Add active repair requests to Repairing dynamically and adjust Working
+    const activeRepairs = await db.all(
+      `SELECT i.type, COUNT(*) as count 
+       FROM repair_requests r 
+       JOIN inventory i ON r.inventory_id = i.id 
+       WHERE r.status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested') 
+       GROUP BY i.type`
     );
 
-    for (const row of dynamicInv) {
+    for (const row of activeRepairs) {
       const type = row.type;
-      const status = row.status;
       const countVal = parseInt(row.count);
-
-      const statusKey = status.replace(/\s+/g, '');
-      if (counts[statusKey] && counts[statusKey][type] !== undefined) {
-        counts[statusKey][type] = countVal;
-        counts[statusKey].Total += countVal;
+      if (counts.Repairing[type] !== undefined) {
+        counts.Repairing[type] += countVal;
+        counts.Repairing.Total += countVal;
+        counts.Working[type] = Math.max(0, counts.Working[type] - countVal);
+        counts.Working.Total = Math.max(0, counts.Working.Total - countVal);
       }
     }
 
@@ -157,28 +161,9 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
   try {
     const types = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'];
     
-    const rows = await db.all(
-      'SELECT type, status, COUNT(*) as count FROM inventory WHERE department_id = ? GROUP BY type, status',
-      [numericDeptId]
-    );
-
     const counts: Record<string, Record<string, number>> = {};
     for (const type of types) {
       counts[type] = { Total: 0, Working: 0, Repairing: 0, Dead: 0, NewStock: 0 };
-    }
-
-    for (const row of rows) {
-      const type = row.type;
-      const status = row.status;
-      const countVal = parseInt(row.count);
-
-      if (counts[type]) {
-        counts[type].Total += countVal;
-        if (status === 'Working') counts[type].Working += countVal;
-        else if (status === 'Repairing') counts[type].Repairing += countVal;
-        else if (status === 'Dead Stock') counts[type].Dead += countVal;
-        else if (status === 'New Stock') counts[type].NewStock += countVal;
-      }
     }
 
     const finalized = await db.all(
@@ -190,11 +175,53 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
       for (const row of finalized) {
         const type = row.type;
         if (counts[type]) {
-          counts[type].Total = row.total || 0;
-          counts[type].Working = row.working || 0;
-          counts[type].Repairing = row.not_working || 0;
-          // Retain actual dead stock count from inventory table if marked dead
+          const tot = row.total || 0;
+          const wrk = row.working || 0;
+          const notWrk = row.not_working || 0;
+
+          counts[type].Total = tot;
+          counts[type].Working = wrk;
+          counts[type].Dead = notWrk; // remaining (total - working) are dead stock baseline
+          counts[type].Repairing = 0;
         }
+      }
+    } else {
+      const rows = await db.all(
+        'SELECT type, status, COUNT(*) as count FROM inventory WHERE department_id = ? GROUP BY type, status',
+        [numericDeptId]
+      );
+
+      for (const row of rows) {
+        const type = row.type;
+        const status = row.status;
+        const countVal = parseInt(row.count);
+
+        if (counts[type]) {
+          counts[type].Total += countVal;
+          if (status === 'Working') counts[type].Working += countVal;
+          else if (status === 'Repairing') counts[type].Repairing += countVal;
+          else if (status === 'Dead Stock') counts[type].Dead += countVal;
+          else if (status === 'New Stock') counts[type].NewStock += countVal;
+        }
+      }
+    }
+
+    // Dynamically add active repair requests count to Repairing
+    const activeRepairRows = await db.all(
+      `SELECT i.type, COUNT(*) as count 
+       FROM repair_requests r 
+       JOIN inventory i ON r.inventory_id = i.id 
+       WHERE i.department_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')
+       GROUP BY i.type`,
+      [numericDeptId]
+    );
+
+    for (const row of activeRepairRows) {
+      const type = row.type;
+      const countVal = parseInt(row.count);
+      if (counts[type]) {
+        counts[type].Repairing += countVal;
+        counts[type].Working = Math.max(0, counts[type].Working - countVal);
       }
     }
 
