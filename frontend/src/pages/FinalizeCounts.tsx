@@ -31,9 +31,9 @@ export const FinalizeCounts: React.FC = () => {
   const [hotspotCounts, setHotspotCounts] = useState<HardwareCounts>({ total: 0, working: 0, not_working: 0 });
 
   const fetchLabs = async () => {
-    if (!user || !user.departmentId) return;
+    const deptId = user?.departmentId || 0;
     try {
-      const res = await api.get(`/departments/${user.departmentId}/labs`);
+      const res = await api.get(`/departments/${deptId}/labs`);
       setLabs(res.data);
       if (res.data.length > 0 && !selectedLabId) {
         setSelectedLabId(res.data[0].id.toString());
@@ -44,10 +44,10 @@ export const FinalizeCounts: React.FC = () => {
   };
 
   const fetchCounts = async () => {
-    if (!user || !user.departmentId) return;
+    const deptId = user?.departmentId || 0;
     try {
       const labParam = selectedLabId ? `?labId=${selectedLabId}` : '';
-      const res = await api.get(`/inventory/finalized-counts/department/${user.departmentId}${labParam}`);
+      const res = await api.get(`/inventory/finalized-counts/department/${deptId}${labParam}`);
       const data = res.data;
 
       setCpuCounts(data.CPU || { total: 0, working: 0, not_working: 0 });
@@ -72,7 +72,6 @@ export const FinalizeCounts: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !user.departmentId) return;
     if (!selectedLabId) {
       toast.error('Please select a Lab first to finalize counts.');
       return;
@@ -80,7 +79,7 @@ export const FinalizeCounts: React.FC = () => {
 
     try {
       const payload = {
-        departmentId: user.departmentId,
+        departmentId: user?.departmentId || 0,
         labId: parseInt(selectedLabId),
         counts: [
           { type: 'CPU', ...cpuCounts },
@@ -94,8 +93,9 @@ export const FinalizeCounts: React.FC = () => {
       await api.post('/inventory/finalize-counts', payload);
       toast.success('Hardware counts finalized successfully for selected lab!');
       fetchCounts();
-    } catch (err) {
-      toast.error('Failed to finalize hardware counts.');
+    } catch (err: any) {
+      const msg = err.response?.data || 'Failed to finalize hardware counts.';
+      toast.error(typeof msg === 'string' ? msg : 'Failed to finalize hardware counts.');
     }
   };
 

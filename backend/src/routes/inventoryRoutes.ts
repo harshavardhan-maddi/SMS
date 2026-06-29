@@ -359,7 +359,21 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
 // 8. Get finalized counts for HOD's department (optionally by labId)
 router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, res) => {
   const { deptId } = req.params;
-  const numericDeptId = parseInt(deptId);
+  const authUser = (req as any).user;
+  let numericDeptId = (deptId && deptId !== 'undefined' && deptId !== 'null') ? parseInt(deptId) : 0;
+
+  if (!numericDeptId && authUser?.id) {
+    const userRow = await db.get('SELECT department_id FROM users WHERE id = ?', [authUser.id]);
+    if (userRow && userRow.department_id) {
+      numericDeptId = parseInt(userRow.department_id);
+    } else {
+      const deptRow = await db.get('SELECT id FROM departments WHERE hod_id = ?', [authUser.id]);
+      if (deptRow) {
+        numericDeptId = parseInt(deptRow.id);
+      }
+    }
+  }
+
   const labId = req.query.labId ? parseInt(req.query.labId as string) : 0;
   try {
     const types = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'];
@@ -421,10 +435,24 @@ router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, 
 // 9. Save finalized counts for a department and lab
 router.post('/finalize-counts', authenticateJWT, async (req, res) => {
   const { departmentId, labId, counts } = req.body;
-  const numericDeptId = parseInt(departmentId);
+  const authUser = (req as any).user;
+  let numericDeptId = (departmentId && departmentId !== 'undefined' && departmentId !== 'null') ? parseInt(departmentId) : 0;
+
+  if (!numericDeptId && authUser?.id) {
+    const userRow = await db.get('SELECT department_id FROM users WHERE id = ?', [authUser.id]);
+    if (userRow && userRow.department_id) {
+      numericDeptId = parseInt(userRow.department_id);
+    } else {
+      const deptRow = await db.get('SELECT id FROM departments WHERE hod_id = ?', [authUser.id]);
+      if (deptRow) {
+        numericDeptId = parseInt(deptRow.id);
+      }
+    }
+  }
+
   const targetLabId = labId ? parseInt(labId) : 0;
 
-  if (!departmentId || !counts || !Array.isArray(counts)) {
+  if (!numericDeptId || !counts || !Array.isArray(counts)) {
     return res.status(400).send('Missing departmentId or counts array');
   }
 
