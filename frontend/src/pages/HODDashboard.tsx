@@ -775,6 +775,14 @@ export const HODDashboard: React.FC = () => {
         onClose={() => setSelectedRequest(null)}
         request={selectedRequest}
       />
+
+      {/* Railway Track Timeline Modal */}
+      <RailwayTrackTimeline
+        isOpen={timelineModalOpen}
+        onClose={() => setTimelineModalOpen(false)}
+        request={selectedRequest}
+        timelineData={selectedTimeline}
+      />
     </div>
   );
 };
