@@ -42,7 +42,7 @@ export const HODDashboard: React.FC = () => {
   // Wizard States
   const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number }[]>([]);
   const [remainingTypes, setRemainingTypes] = useState<string[]>(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
-  const [wizardStage, setWizardStage] = useState<'select_type' | 'enter_total_count' | 'ask_more' | 'final_submit'>('select_type');
+  const [wizardStage, setWizardStage] = useState<'select_lab' | 'select_type' | 'enter_total_count' | 'ask_more' | 'final_submit'>('select_lab');
   const [currentType, setCurrentType] = useState('CPU');
   
   // Current Type Configuration States
@@ -56,26 +56,23 @@ export const HODDashboard: React.FC = () => {
   const [description, setDescription] = useState('');
 
   const fetchHODData = async () => {
-    if (!user || !user.departmentId) {
-      setLoading(false);
-      return;
-    }
+    const deptIdParam = user?.departmentId || 0;
     try {
       // 1. Fetch counts
-      const countsRes = await api.get(`/inventory/counts/department/${user.departmentId}`);
+      const countsRes = await api.get(`/inventory/counts/department/${deptIdParam}`);
       // 2. Fetch recent requests
-      const recentRes = await api.get(`/repairs?departmentId=${user.departmentId}`);
+      const recentRes = await api.get(`/repairs?departmentId=${deptIdParam}`);
       // 3. Fetch inventory items to choose in Report Issue
-      const assetsRes = await api.get(`/inventory?departmentId=${user.departmentId}`);
+      const assetsRes = await api.get(`/inventory?departmentId=${deptIdParam}`);
       // 4. Fetch labs
-      const labsRes = await api.get(`/departments/${user.departmentId}/labs`);
+      const labsRes = await api.get(`/departments/${deptIdParam}/labs`);
 
       setStats(countsRes.data);
       setAllRequests(recentRes.data);
       setRecentRequests(recentRes.data.slice(0, 5));
       setDepartmentAssets(assetsRes.data.filter((a: any) => a.status === 'Working' || a.status === 'New Stock'));
       setLabs(labsRes.data);
-      if (labsRes.data.length > 0 && !selectedLabId) {
+      if (labsRes.data && labsRes.data.length > 0 && !selectedLabId) {
         setSelectedLabId(labsRes.data[0].id.toString());
       }
     } catch (err) {
@@ -100,14 +97,20 @@ export const HODDashboard: React.FC = () => {
   const handleOpenReportModal = () => {
     setReportedIssues([]);
     setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
-    setWizardStage('select_type');
+    setWizardStage('select_lab');
     setCurrentType('CPU');
     setTypeTotalCount(1);
     setIssueTitle('');
     setDescription('');
-    if (labs.length > 0 && !selectedLabId) {
-      setSelectedLabId(labs[0].id.toString());
-    }
+    
+    const deptIdParam = user?.departmentId || 0;
+    api.get(`/departments/${deptIdParam}/labs`).then(res => {
+      if (res.data && res.data.length > 0) {
+        setLabs(res.data);
+        if (!selectedLabId) setSelectedLabId(res.data[0].id.toString());
+      }
+    }).catch(() => {});
+
     setReportModalOpen(true);
   };
 
@@ -115,7 +118,7 @@ export const HODDashboard: React.FC = () => {
     setReportModalOpen(false);
     setReportedIssues([]);
     setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
-    setWizardStage('select_type');
+    setWizardStage('select_lab');
     setCurrentType('CPU');
     setTypeTotalCount(1);
     setIssueTitle('');
@@ -368,51 +371,102 @@ export const HODDashboard: React.FC = () => {
       <Modal isOpen={reportModalOpen} onClose={handleCloseReportModal} title="Report System Repair Request">
         <form onSubmit={handleReportIssue} className="text-left">
           
+          {wizardStage === 'select_lab' && (
+            <div className="space-y-5">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2.5 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 1 of 4</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Laboratory Number</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Which lab number has the hardware issue to report?</p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 block">Choose Lab Location</label>
+                {labs.length === 0 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold">
+                    Loading department labs catalog... Default department allocation will be used if unselected.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                    {labs.map((lab) => {
+                      const isSelected = selectedLabId === lab.id.toString();
+                      return (
+                        <div
+                          key={lab.id}
+                          onClick={() => setSelectedLabId(lab.id.toString())}
+                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                            isSelected 
+                              ? 'border-brand-purple bg-brand-purple/5 shadow-xs' 
+                              : 'border-slate-200 hover:border-slate-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl ${isSelected ? 'bg-brand-purple text-white' : 'bg-slate-100 text-slate-600'}`}>
+                              <Laptop className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-800">{lab.name}</h4>
+                              <span className="text-[10px] font-extrabold text-brand-purple">Lab Number: {lab.labNumber}</span>
+                            </div>
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-brand-purple bg-brand-purple text-white' : 'border-slate-300'}`}>
+                            {isSelected && <CheckCircle className="w-3 h-3" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setWizardStage('select_type')}
+                  className="px-5 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <span>Next: Select Hardware Type</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {wizardStage === 'select_type' && (
             <div className="space-y-4">
               <div className="text-center pb-2 border-b border-slate-100">
-                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 1: Select Lab & Hardware</span>
-                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Lab Number & Hardware Category</h3>
-                <p className="text-[11px] text-brand-textMuted mt-0.5">Choose which Lab Number has hardware faults to report</p>
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 2 of 4</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Hardware Category</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Which hardware type has an issue in this lab?</p>
               </div>
 
-              <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">1. Select Lab Number</label>
-                <select
-                  value={selectedLabId}
-                  onChange={(e) => setSelectedLabId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white cursor-pointer"
+              <div className="grid grid-cols-2 gap-3">
+                {remainingTypes.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setCurrentType(type);
+                      setTypeTotalCount(1);
+                      setWizardStage('enter_total_count');
+                    }}
+                    className="p-4 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
+                  >
+                    <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
+                      <Laptop className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-start pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWizardStage('select_lab')}
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer"
                 >
-                  {labs.length === 0 && <option value="">-- Main Department / General Systems --</option>}
-                  {labs.map((lab) => (
-                    <option key={lab.id} value={lab.id}>
-                      Lab {lab.labNumber} ({lab.name})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 block">2. Select Hardware Type</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {remainingTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        setCurrentType(type);
-                        setTypeTotalCount(1);
-                        setWizardStage('enter_total_count');
-                      }}
-                      className="p-4 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
-                    >
-                      <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
-                        <Laptop className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
-                    </button>
-                  ))}
-                </div>
+                  ← Back to Lab Selection
+                </button>
               </div>
             </div>
           )}
