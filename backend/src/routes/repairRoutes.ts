@@ -830,23 +830,32 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
         }
 
 
-        // 4. For each asset ID, create a repair request
+        // Update status of all matched/generated assets to Repairing
         for (const assetId of assetIds) {
-          // Update status to Repairing if it was existing
-          await db.run("UPDATE inventory SET status = 'Repairing' WHERE id = ?", [assetId]);
+          try {
+            await db.run("UPDATE inventory SET status = 'Repairing' WHERE id = ?", [assetId]);
+          } catch (errUpd) {}
+        }
 
-          // Create repair request
+        // Create 1 single batch repair request representing the systems
+        if (assetIds.length > 0) {
           currentCount++;
           const requestId = `REQ-${101 + currentCount}`;
           generatedRequests.push(requestId);
 
-          const reqTitle = `${title || 'Repair Request'} - ${type} (${brand})`;
-          const reqDesc = `Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
+          const primaryAssetId = assetIds[0];
+          const reqTitle = count > 1 
+            ? `${title || 'Batch Repair Request'} - ${count} Units of ${type} (${brand})`
+            : `${title || 'Repair Request'} - ${type} (${brand})`;
+
+          const reqDesc = count > 1
+            ? `Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''} [Asset IDs: ${assetIds.join(', ')}]`
+            : `Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
 
           await db.run(
             `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time)
              VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?)`,
-            [requestId, assetId, requesterId, reqTitle, reqDesc, priority, todayStr, timeStr]
+            [requestId, primaryAssetId, requesterId, reqTitle, reqDesc, priority, todayStr, timeStr]
           );
 
           await db.run(
