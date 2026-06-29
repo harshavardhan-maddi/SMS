@@ -10,12 +10,9 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(() => {
-    return !sessionStorage.getItem('sms_intro_played');
-  });
+  const [showIntro, setShowIntro] = useState(true);
 
   const handleIntroComplete = () => {
-    sessionStorage.setItem('sms_intro_played', 'true');
     setShowIntro(false);
   };
 
