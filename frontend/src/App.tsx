@@ -50,13 +50,20 @@ const DynamicDashboard: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  const [showIntro, setShowIntro] = React.useState(true);
+  const [showIntro, setShowIntro] = React.useState<boolean>(() => {
+    return !sessionStorage.getItem('portal_intro_shown');
+  });
+
+  const handleIntroComplete = () => {
+    sessionStorage.setItem('portal_intro_shown', 'true');
+    setShowIntro(false);
+  };
 
   return (
     <BrowserRouter>
       <AuthProvider>
         <WebSocketProvider>
-          {showIntro && <PortalIntroAnimation onComplete={() => setShowIntro(false)} />}
+          {showIntro && <PortalIntroAnimation onComplete={handleIntroComplete} />}
           <Toaster
             position="bottom-center"
             containerStyle={{

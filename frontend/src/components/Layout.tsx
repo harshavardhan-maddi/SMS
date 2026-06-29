@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PortalIntroAnimation } from './PortalIntroAnimation';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,16 +9,9 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(true);
-
-  const handleIntroComplete = () => {
-    setShowIntro(false);
-  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-brand-lightBg">
-      {showIntro && <PortalIntroAnimation onComplete={handleIntroComplete} />}
-      
       {/* Sidebar Panel */}
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
