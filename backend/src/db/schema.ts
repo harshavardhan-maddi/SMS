@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS repair_requests (
     priority TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'Initiated',
     initiated_date TEXT,
-    initiated_time TEXT
+    initiated_time TEXT,
+    device_count INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS repair_history (
@@ -133,6 +134,10 @@ export async function initSchema() {
 
     try {
       await db.exec('ALTER TABLE inventory ADD COLUMN workstation_number INTEGER DEFAULT 1;');
+    } catch (e) { /* Column already exists */ }
+
+    try {
+      await db.exec('ALTER TABLE repair_requests ADD COLUMN device_count INTEGER DEFAULT 1;');
     } catch (e) { /* Column already exists */ }
 
     try {

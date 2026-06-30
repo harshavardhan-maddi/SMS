@@ -129,7 +129,7 @@ router.get('/counts', authenticateJWT, async (req, res) => {
 
     // Add active repair requests to Repairing dynamically and adjust Working
     const activeRepairs = await db.all(
-      `SELECT i.type, COUNT(*) as count 
+      `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
        FROM repair_requests r 
        JOIN inventory i ON r.inventory_id = i.id 
        WHERE r.status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested') 
@@ -208,7 +208,7 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
 
     // Dynamically add active repair requests count to Repairing
     const activeRepairRows = await db.all(
-      `SELECT i.type, COUNT(*) as count 
+      `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
        FROM repair_requests r 
        JOIN inventory i ON r.inventory_id = i.id 
        WHERE i.department_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')
@@ -281,7 +281,7 @@ router.get('/counts/lab/:labId', authenticateJWT, async (req, res) => {
     }
 
     const activeRepairRows = await db.all(
-      `SELECT i.type, COUNT(*) as count 
+      `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
        FROM repair_requests r 
        JOIN inventory i ON r.inventory_id = i.id 
        WHERE i.lab_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')

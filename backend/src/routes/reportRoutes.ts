@@ -33,6 +33,7 @@ function formatRepairRequest(row: any) {
     status: row.status,
     initiatedDate: row.initiated_date,
     initiatedTime: row.initiated_time,
+    deviceCount: row.device_count !== undefined ? row.device_count : 1,
     inventory: {
       id: row.inventory_id,
       type: row.inv_type,

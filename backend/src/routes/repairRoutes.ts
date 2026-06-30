@@ -28,6 +28,7 @@ function formatRepairRequest(row: any) {
     status: row.status,
     initiatedDate: row.initiated_date,
     initiatedTime: row.initiated_time,
+    deviceCount: row.device_count !== undefined ? row.device_count : 1,
     inventory: {
       id: row.inventory_id,
       type: row.inv_type,
@@ -51,6 +52,26 @@ function formatRepairRequest(row: any) {
       email: row.assigned_email
     } : null
   };
+}
+
+// Extract all asset IDs associated with a request (handles batch requests via the wizard)
+function getAssetIdsFromRequest(request: any): string[] {
+  const assetIds: string[] = [];
+  if (request.inventory_id) {
+    assetIds.push(request.inventory_id);
+  }
+  if (request.description) {
+    const match = request.description.match(/\[Asset IDs:\s*([^\]]+)\]/);
+    if (match && match[1]) {
+      const ids = match[1].split(',').map((id: string) => id.trim());
+      for (const id of ids) {
+        if (id && !assetIds.includes(id)) {
+          assetIds.push(id);
+        }
+      }
+    }
+  }
+  return assetIds;
 }
 
 // 1. Get all repair requests (optionally filtered by departmentId)
@@ -229,8 +250,8 @@ router.post('/initiate', authenticateJWT, async (req, res) => {
 
       // Insert repair request
       await db.run(
-        `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time)
-         VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?)`,
+        `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time, device_count)
+         VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?, 1)`,
         [requestId, assetId, requesterId, title, description || null, priority, todayStr, timeStr]
       );
 
@@ -596,7 +617,7 @@ router.post('/:id/resolve', authenticateJWT, async (req, res) => {
 
   try {
     const request = await db.get(
-      'SELECT r.id, r.requester_id, r.inventory_id, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
+      'SELECT r.id, r.requester_id, r.inventory_id, r.description, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
       [id]
     );
     if (!request) {
@@ -609,8 +630,11 @@ router.post('/:id/resolve', authenticateJWT, async (req, res) => {
       // Set status to Resolved
       await db.run("UPDATE repair_requests SET status = 'Resolved' WHERE id = ?", [id]);
       
-      // Update inventory status back to Working
-      await db.run("UPDATE inventory SET status = 'Working' WHERE id = ?", [request.inventory_id]);
+      // Update inventory status back to Working for all associated assets
+      const assetIds = getAssetIdsFromRequest(request);
+      for (const assetId of assetIds) {
+        await db.run("UPDATE inventory SET status = 'Working' WHERE id = ?", [assetId]);
+      }
 
       // Create history log
       await db.run(
@@ -686,7 +710,7 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
 
   try {
     const request = await db.get(
-      'SELECT r.id, r.requester_id, r.inventory_id, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
+      'SELECT r.id, r.requester_id, r.inventory_id, r.description, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
       [id]
     );
     if (!request) {
@@ -699,8 +723,11 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
       // Set status to Dead Stock
       await db.run("UPDATE repair_requests SET status = 'Dead Stock' WHERE id = ?", [id]);
       
-      // Update inventory status to Dead Stock
-      await db.run("UPDATE inventory SET status = 'Dead Stock' WHERE id = ?", [request.inventory_id]);
+      // Update inventory status to Dead Stock for all associated assets
+      const assetIds = getAssetIdsFromRequest(request);
+      for (const assetId of assetIds) {
+        await db.run("UPDATE inventory SET status = 'Dead Stock' WHERE id = ?", [assetId]);
+      }
 
       // Create history log
       await db.run(
@@ -871,9 +898,9 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
             : `Location: ${labStr || 'Department Systems'}. Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
 
           await db.run(
-            `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time)
-             VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?)`,
-            [requestId, primaryAssetId, requesterId, reqTitle, reqDesc, priority, todayStr, timeStr]
+            `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time, device_count)
+             VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?, ?)`,
+            [requestId, primaryAssetId, requesterId, reqTitle, reqDesc, priority, todayStr, timeStr, count]
           );
 
           await db.run(
@@ -978,27 +1005,27 @@ router.delete('/bulk', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async 
       for (const reqId of requestIds) {
         // Find repair request to get associated inventory asset ID and status
         const request = await db.get(
-          'SELECT inventory_id, status FROM repair_requests WHERE id = ?',
+          'SELECT inventory_id, status, description FROM repair_requests WHERE id = ?',
           [reqId]
         );
 
         if (request) {
-          const inventoryId = request.inventory_id;
+          const assetIds = getAssetIdsFromRequest(request);
 
           // Delete from repair_requests (cascades to repair_history)
           await db.run('DELETE FROM repair_requests WHERE id = ?', [reqId]);
 
           // Check if there are any remaining active repair requests for this inventory asset
-          if (inventoryId) {
+          for (const assetId of assetIds) {
             const activeCount = await db.get(
               `SELECT COUNT(*) as count FROM repair_requests 
                WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')`,
-              [inventoryId]
+              [assetId]
             );
 
             // If no other active repair requests remain, revert inventory status to 'Working'
             if (!activeCount || activeCount.count === 0) {
-              await db.run("UPDATE inventory SET status = 'Working' WHERE id = ? AND status = 'Repairing'", [inventoryId]);
+              await db.run("UPDATE inventory SET status = 'Working' WHERE id = ? AND status = 'Repairing'", [assetId]);
             }
           }
         }
@@ -1021,7 +1048,7 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
 
   try {
     const request = await db.get(
-      'SELECT inventory_id, status FROM repair_requests WHERE id = ?',
+      'SELECT inventory_id, status, description FROM repair_requests WHERE id = ?',
       [id]
     );
 
@@ -1029,22 +1056,22 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
       return res.status(404).send('Repair request not found');
     }
 
-    const inventoryId = request.inventory_id;
-
     await db.transaction(async () => {
+      const assetIds = getAssetIdsFromRequest(request);
+
       // Delete repair request
       await db.run('DELETE FROM repair_requests WHERE id = ?', [id]);
 
       // Check remaining active repair requests
-      if (inventoryId) {
+      for (const assetId of assetIds) {
         const activeCount = await db.get(
           `SELECT COUNT(*) as count FROM repair_requests 
            WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')`,
-          [inventoryId]
+          [assetId]
         );
 
         if (!activeCount || activeCount.count === 0) {
-          await db.run("UPDATE inventory SET status = 'Working' WHERE id = ? AND status = 'Repairing'", [inventoryId]);
+          await db.run("UPDATE inventory SET status = 'Working' WHERE id = ? AND status = 'Repairing'", [assetId]);
         }
       }
     });
