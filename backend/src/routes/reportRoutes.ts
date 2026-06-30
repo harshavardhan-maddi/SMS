@@ -229,7 +229,13 @@ router.get('/dean', authenticateJWT, async (req, res) => {
 
 // 4. Export CSV Endpoint
 router.get('/export/csv', authenticateJWT, async (req, res) => {
-  const { reportType, deptId } = req.query as { reportType: string; deptId?: string };
+  const { reportType, deptId, labId, startDate, endDate } = req.query as { 
+    reportType: string; 
+    deptId?: string; 
+    labId?: string;
+    startDate?: string;
+    endDate?: string;
+  };
 
   if (!reportType) {
     return res.status(400).send('Missing reportType query parameter');
@@ -239,40 +245,68 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.csv"`);
 
   try {
-    if (reportType.toLowerCase() === 'inventory') {
-      res.write('Asset ID,Department,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
+    if (reportType.toLowerCase().includes('inventory')) {
+      res.write('Asset ID,Department,Lab,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
       
       let query = `
-        SELECT i.id, i.type, i.brand, i.model, i.serial_number, i.purchase_date, i.warranty_months, i.status, d.code as dept_code 
+        SELECT i.id, i.type, i.brand, i.model, i.serial_number, i.purchase_date, i.warranty_months, i.status, d.code as dept_code, l.lab_number
         FROM inventory i 
         LEFT JOIN departments d ON i.department_id = d.id
+        LEFT JOIN labs l ON i.lab_id = l.id
+        WHERE 1=1
       `;
       const params: any[] = [];
-      if (deptId) {
-        query += ' WHERE i.department_id = ?';
-        params.push(deptId);
+      if (deptId && deptId !== 'all' && deptId !== 'undefined' && deptId !== 'null') {
+        query += ' AND i.department_id = ?';
+        params.push(parseInt(deptId));
+      }
+      if (labId && labId !== 'all' && labId !== 'undefined' && labId !== 'null') {
+        query += ' AND i.lab_id = ?';
+        params.push(parseInt(labId));
+      }
+      if (startDate) {
+        query += ' AND i.purchase_date >= ?';
+        params.push(startDate);
+      }
+      if (endDate) {
+        query += ' AND i.purchase_date <= ?';
+        params.push(endDate);
       }
 
       const items = await db.all(query, params);
       for (const item of items) {
         res.write(
-          `"${item.id}","${item.dept_code || 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
+          `"${item.id}","${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
         );
       }
     } 
-    else if (reportType.toLowerCase() === 'repairs') {
-      res.write('Request ID,Asset ID,Department,Type,Title,Priority,Status,Initiated On\n');
+    else if (reportType.toLowerCase().includes('repair') || reportType.toLowerCase().includes('history')) {
+      res.write('Request ID,Asset ID,Department,Lab,Type,Title,Priority,Status,Initiated On\n');
       
       let query = `
-        SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, inv.type as inv_type, d.code as dept_code 
+        SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, inv.type as inv_type, d.code as dept_code, l.lab_number 
         FROM repair_requests r 
         LEFT JOIN inventory inv ON r.inventory_id = inv.id 
         LEFT JOIN departments d ON inv.department_id = d.id
+        LEFT JOIN labs l ON inv.lab_id = l.id
+        WHERE 1=1
       `;
       const params: any[] = [];
-      if (deptId) {
-        query += ' WHERE inv.department_id = ?';
-        params.push(deptId);
+      if (deptId && deptId !== 'all' && deptId !== 'undefined' && deptId !== 'null') {
+        query += ' AND inv.department_id = ?';
+        params.push(parseInt(deptId));
+      }
+      if (labId && labId !== 'all' && labId !== 'undefined' && labId !== 'null') {
+        query += ' AND inv.lab_id = ?';
+        params.push(parseInt(labId));
+      }
+      if (startDate) {
+        query += ' AND r.initiated_date >= ?';
+        params.push(startDate);
+      }
+      if (endDate) {
+        query += ' AND r.initiated_date <= ?';
+        params.push(endDate);
       }
 
       const list = await db.all(query, params);
@@ -280,7 +314,7 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
         const titleClean = (r.title || '').replace(/"/g, '""');
         const initiatedOn = `${r.initiated_date} ${r.initiated_time}`;
         res.write(
-          `"${r.id}","${r.inventory_id}","${r.dept_code || 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}"\n`
+          `"${r.id}","${r.inventory_id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}"\n`
         );
       }
     } 
