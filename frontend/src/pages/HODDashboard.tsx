@@ -48,7 +48,7 @@ export const HODDashboard: React.FC = () => {
   const [currentType, setCurrentType] = useState('CPU');
   
   // Current Type Configuration States
-  const [typeTotalCount, setTypeTotalCount] = useState(1);
+  const [typeTotalCount, setTypeTotalCount] = useState<number | string>('');
 
   // Report Issue General Form State
   const [labs, setLabs] = useState<any[]>([]);
@@ -99,7 +99,7 @@ export const HODDashboard: React.FC = () => {
     setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
     setWizardStage('select_lab');
     setCurrentType('CPU');
-    setTypeTotalCount(1);
+    setTypeTotalCount('');
     setIssueTitle('');
     setDescription('');
     
@@ -120,7 +120,7 @@ export const HODDashboard: React.FC = () => {
     setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
     setWizardStage('select_lab');
     setCurrentType('CPU');
-    setTypeTotalCount(1);
+    setTypeTotalCount('');
     setIssueTitle('');
     setDescription('');
     if (location.pathname === '/report-issue') {
@@ -446,7 +446,7 @@ export const HODDashboard: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setCurrentType(type);
-                      setTypeTotalCount(1);
+                      setTypeTotalCount('');
                       setWizardStage('enter_total_count');
                     }}
                     className="p-4 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
@@ -484,9 +484,17 @@ export const HODDashboard: React.FC = () => {
                 <input
                   type="number"
                   required
+                  placeholder="Enter quantity count"
                   min={1}
                   value={typeTotalCount}
-                  onChange={(e) => setTypeTotalCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setTypeTotalCount('');
+                    } else {
+                      setTypeTotalCount(Math.max(1, parseInt(val) || 1));
+                    }
+                  }}
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
                 />
               </div>
@@ -502,7 +510,12 @@ export const HODDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    const newIssue = { type: currentType, brand: 'Standard', count: typeTotalCount };
+                    const parsedCount = parseInt(typeTotalCount as string) || 0;
+                    if (parsedCount <= 0) {
+                      toast.error('Please enter a valid quantity of at least 1.');
+                      return;
+                    }
+                    const newIssue = { type: currentType, brand: 'Standard', count: parsedCount };
                     const finalUpdatedIssues = [...reportedIssues.filter(i => i.type !== currentType), newIssue];
                     setReportedIssues(finalUpdatedIssues);
 
@@ -573,7 +586,7 @@ export const HODDashboard: React.FC = () => {
                     if (remainingTypes.length === 1) {
                       const nextType = remainingTypes[0];
                       setCurrentType(nextType);
-                      setTypeTotalCount(1);
+                      setTypeTotalCount('');
                       setWizardStage('enter_total_count');
                     } else {
                       setWizardStage('select_type');
