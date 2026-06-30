@@ -813,6 +813,31 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
       return res.status(400).send('Requester is not assigned to any department');
     }
 
+    // Validate that the request count does not exceed the actual finalized count in that lab
+    if (targetLabId > 0) {
+      for (const issue of issues) {
+        const { type, count } = issue;
+        if (!type || !count || count <= 0) continue;
+
+        const finalizedRow = await db.get(
+          'SELECT total FROM finalized_hardware_counts WHERE department_id = ? AND lab_id = ? AND type = ?',
+          [departmentId, targetLabId, type]
+        );
+        let actualCount = finalizedRow ? finalizedRow.total : 0;
+        if (!finalizedRow) {
+          const invCountRow = await db.get(
+            'SELECT COUNT(*) as count FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ?',
+            [departmentId, targetLabId, type]
+          );
+          actualCount = invCountRow ? invCountRow.count : 0;
+        }
+
+        if (count > actualCount) {
+          return res.status(400).send('The systems are not present in the lab by your req count');
+        }
+      }
+    }
+
     const dept = await db.get('SELECT code FROM departments WHERE id = ?', [departmentId]);
     const deptCode = dept ? dept.code : 'N/A';
 

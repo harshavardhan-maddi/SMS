@@ -56,6 +56,25 @@ export const HODDashboard: React.FC = () => {
   const [priority, setPriority] = useState('Medium');
   const [issueTitle, setIssueTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedLabCounts, setSelectedLabCounts] = useState<Record<string, any>>({});
+
+  const fetchSelectedLabCounts = async (labId: string) => {
+    if (!labId) {
+      setSelectedLabCounts({});
+      return;
+    }
+    try {
+      const deptIdParam = user?.departmentId || 0;
+      const res = await api.get(`/inventory/finalized-counts/department/${deptIdParam}?labId=${labId}`);
+      setSelectedLabCounts(res.data);
+    } catch (err) {
+      console.error('Failed to load selected lab counts', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSelectedLabCounts(selectedLabId);
+  }, [selectedLabId]);
 
   const fetchHODData = async () => {
     const deptIdParam = user?.departmentId || 0;
@@ -73,7 +92,12 @@ export const HODDashboard: React.FC = () => {
       setDepartmentAssets(assetsRes.data.filter((a: any) => a.status === 'Working' || a.status === 'New Stock'));
       setLabs(labsRes.data);
       if (labsRes.data && labsRes.data.length > 0 && !selectedLabId) {
-        setSelectedLabId(labsRes.data[0].id.toString());
+        const firstFinalized = labsRes.data.find((l: any) => l.hasFinalizedCounts);
+        if (firstFinalized) {
+          setSelectedLabId(firstFinalized.id.toString());
+        } else {
+          setSelectedLabId('');
+        }
       }
     } catch (err) {
       console.error('Failed to load HOD metrics', err);
@@ -107,7 +131,12 @@ export const HODDashboard: React.FC = () => {
     api.get(`/departments/${deptIdParam}/labs`).then(res => {
       if (res.data && res.data.length > 0) {
         setLabs(res.data);
-        if (!selectedLabId) setSelectedLabId(res.data[0].id.toString());
+        const firstFinalized = res.data.find((l: any) => l.hasFinalizedCounts);
+        if (firstFinalized) {
+          setSelectedLabId(firstFinalized.id.toString());
+        } else {
+          setSelectedLabId('');
+        }
       }
     }).catch(() => {});
 
@@ -159,9 +188,10 @@ export const HODDashboard: React.FC = () => {
       toast.success('Repair requests successfully submitted!');
       handleCloseReportModal();
       fetchHODData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Failed to submit repair request.');
+      const errMsg = err.response?.data || 'Failed to submit repair request.';
+      toast.error(errMsg);
     }
   };
 
@@ -389,14 +419,23 @@ export const HODDashboard: React.FC = () => {
                   <div className="grid grid-cols-1 gap-2.5 max-h-56 overflow-y-auto pr-1">
                     {labs.map((lab) => {
                       const isSelected = selectedLabId === lab.id.toString();
+                      const isFinalized = !!lab.hasFinalizedCounts;
                       return (
                         <div
                           key={lab.id}
-                          onClick={() => setSelectedLabId(lab.id.toString())}
-                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                            isSelected 
-                              ? 'border-brand-purple bg-brand-purple/5 shadow-xs' 
-                              : 'border-slate-200 hover:border-slate-300 bg-white'
+                          onClick={() => {
+                            if (isFinalized) {
+                              setSelectedLabId(lab.id.toString());
+                            } else {
+                              toast.error(`Counts for Lab ${lab.labNumber} are not finalized yet.`);
+                            }
+                          }}
+                          className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+                            !isFinalized
+                              ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50'
+                              : isSelected 
+                              ? 'border-brand-purple bg-brand-purple/5 shadow-xs cursor-pointer' 
+                              : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
                           }`}
                         >
                           <div className="flex items-center gap-3">
@@ -405,7 +444,9 @@ export const HODDashboard: React.FC = () => {
                             </div>
                             <div>
                               <h4 className="text-xs font-bold text-slate-800">{lab.name}</h4>
-                              <span className="text-[10px] font-extrabold text-brand-purple">Lab Number: {lab.labNumber}</span>
+                              <span className="text-[10px] font-extrabold text-brand-purple">
+                                {isFinalized ? `Lab Number: ${lab.labNumber}` : `Lab Number: ${lab.labNumber} (Not Finalized)`}
+                              </span>
                             </div>
                           </div>
                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-brand-purple bg-brand-purple text-white' : 'border-slate-300'}`}>
@@ -421,7 +462,13 @@ export const HODDashboard: React.FC = () => {
               <div className="flex justify-end pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setWizardStage('select_type')}
+                  onClick={() => {
+                    if (!selectedLabId) {
+                      toast.error('Please select a finalized lab location.');
+                      return;
+                    }
+                    setWizardStage('select_type');
+                  }}
                   className="px-5 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all cursor-pointer flex items-center gap-2"
                 >
                   <span>Next: Select Hardware Type</span>
@@ -513,6 +560,13 @@ export const HODDashboard: React.FC = () => {
                     const parsedCount = parseInt(typeTotalCount as string) || 0;
                     if (parsedCount <= 0) {
                       toast.error('Please enter a valid quantity of at least 1.');
+                      return;
+                    }
+                    // Validate against actual finalized counts
+                    const limitData = selectedLabCounts[currentType];
+                    const actualLimit = limitData ? limitData.total : 0;
+                    if (parsedCount > actualLimit) {
+                      toast.error('The systems are not present in the lab by your req count');
                       return;
                     }
                     const newIssue = { type: currentType, brand: 'Standard', count: parsedCount };

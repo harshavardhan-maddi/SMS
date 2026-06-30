@@ -270,7 +270,8 @@ router.get('/labs/all', authenticateJWT, async (req, res) => {
   try {
     const departmentId = req.query.departmentId;
     let query = `
-      SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+      SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
+             EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
       FROM labs l
       LEFT JOIN departments d ON l.department_id = d.id
     `;
@@ -281,7 +282,11 @@ router.get('/labs/all', authenticateJWT, async (req, res) => {
     }
     query += ' ORDER BY l.lab_number ASC, l.name ASC';
     const rows = await db.all(query, params);
-    res.json(rows);
+    const mapped = rows.map((row) => ({
+      ...row,
+      hasFinalizedCounts: row.hasFinalizedCounts === 1 || row.hasFinalizedCounts === true || row.hasFinalizedCounts === 't'
+    }));
+    res.json(mapped);
   } catch (err) {
     console.error('Get labs error:', err);
     res.status(500).send('Internal server error');
@@ -309,7 +314,8 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
     let rows = [];
     if (numericDeptId > 0) {
       rows = await db.all(
-        `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+        `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
+                EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
          FROM labs l
          LEFT JOIN departments d ON l.department_id = d.id
          WHERE l.department_id = ?
@@ -331,7 +337,8 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
           } catch (e) {}
         }
         rows = await db.all(
-          `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+          `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
+                  EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
            FROM labs l
            LEFT JOIN departments d ON l.department_id = d.id
            WHERE l.department_id = ?
@@ -341,14 +348,19 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
       }
     } else {
       rows = await db.all(
-        `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode
+        `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
+                EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
          FROM labs l
          LEFT JOIN departments d ON l.department_id = d.id
          ORDER BY l.lab_number ASC, l.name ASC`
       );
     }
 
-    res.json(rows);
+    const mapped = rows.map((row) => ({
+      ...row,
+      hasFinalizedCounts: row.hasFinalizedCounts === 1 || row.hasFinalizedCounts === true || row.hasFinalizedCounts === 't'
+    }));
+    res.json(mapped);
   } catch (err) {
     console.error('Get department labs error:', err);
     res.status(500).send('Internal server error');
