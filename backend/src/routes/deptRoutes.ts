@@ -282,10 +282,18 @@ router.get('/labs/all', authenticateJWT, async (req, res) => {
     }
     query += ' ORDER BY l.lab_number ASC, l.name ASC';
     const rows = await db.all(query, params);
-    const mapped = rows.map((row) => ({
-      ...row,
-      hasFinalizedCounts: row.hasFinalizedCounts === 1 || row.hasFinalizedCounts === true || row.hasFinalizedCounts === 't'
-    }));
+    const mapped = rows.map((row) => {
+      const hasFin = row.hasFinalizedCounts !== undefined ? row.hasFinalizedCounts : row.hasfinalizedcounts;
+      return {
+        id: row.id,
+        name: row.name,
+        labNumber: row.labNumber !== undefined ? row.labNumber : row.labnumber,
+        departmentId: row.departmentId !== undefined ? row.departmentId : row.departmentid,
+        deptName: row.deptName !== undefined ? row.deptName : row.deptname,
+        deptCode: row.deptCode !== undefined ? row.deptCode : row.deptcode,
+        hasFinalizedCounts: hasFin === 1 || hasFin === true || hasFin === 't'
+      };
+    });
     res.json(mapped);
   } catch (err) {
     console.error('Get labs error:', err);
@@ -356,10 +364,18 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
       );
     }
 
-    const mapped = rows.map((row) => ({
-      ...row,
-      hasFinalizedCounts: row.hasFinalizedCounts === 1 || row.hasFinalizedCounts === true || row.hasFinalizedCounts === 't'
-    }));
+    const mapped = rows.map((row) => {
+      const hasFin = row.hasFinalizedCounts !== undefined ? row.hasFinalizedCounts : row.hasfinalizedcounts;
+      return {
+        id: row.id,
+        name: row.name,
+        labNumber: row.labNumber !== undefined ? row.labNumber : row.labnumber,
+        departmentId: row.departmentId !== undefined ? row.departmentId : row.departmentid,
+        deptName: row.deptName !== undefined ? row.deptName : row.deptname,
+        deptCode: row.deptCode !== undefined ? row.deptCode : row.deptcode,
+        hasFinalizedCounts: hasFin === 1 || hasFin === true || hasFin === 't'
+      };
+    });
     res.json(mapped);
   } catch (err) {
     console.error('Get department labs error:', err);
