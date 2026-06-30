@@ -109,6 +109,7 @@ export async function initSchema() {
       await db.exec(sql);
       try {
         await db.exec(`
+          ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS device_count INTEGER DEFAULT 1;
           CREATE INDEX IF NOT EXISTS idx_inventory_dept ON inventory(department_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_lab ON inventory(lab_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
