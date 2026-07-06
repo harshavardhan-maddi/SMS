@@ -457,117 +457,154 @@ export const ProgrammerDashboard: React.FC = () => {
 
       {/* Raise Repair Modal Wizard */}
       <Modal isOpen={reportModalOpen} onClose={handleCloseReportModal} title="Report System Repair Request">
-        <form onSubmit={handleReportIssue} className="space-y-4 text-left">
+        <form onSubmit={handleReportIssue} className="text-left">
+          
           {wizardStage === 'select_lab' && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Select Laboratory</label>
-                <select
-                  value={selectedLabId}
-                  onChange={(e) => setSelectedLabId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple bg-white"
-                >
-                  <option value="">Choose lab room...</option>
-                  {labs.map(l => (
-                    <option key={l.id} value={l.id.toString()}>{l.name} (Room {l.labNumber})</option>
-                  ))}
-                </select>
+            <div className="space-y-5">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2.5 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 1 of 4</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Laboratory Number</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Which lab number has the hardware issue to report?</p>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Priority Level</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple bg-white"
-                >
-                  <option value="Low">Low (Non-urgent diagnostics)</option>
-                  <option value="Medium">Medium (General standard fault)</option>
-                  <option value="High">High (Urgent lab downtime)</option>
-                </select>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 block">Choose Lab Location</label>
+                {labs.length === 0 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold">
+                    Loading department labs catalog... Default department allocation will be used if unselected.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                    {labs.map((lab) => {
+                      const isSelected = selectedLabId === lab.id.toString();
+                      const isFinalized = !!lab.hasFinalizedCounts;
+                      return (
+                        <div
+                          key={lab.id}
+                          onClick={() => {
+                            if (isFinalized) {
+                              setSelectedLabId(lab.id.toString());
+                            } else {
+                              toast.error(`Counts for Lab ${lab.labNumber} are not finalized yet.`);
+                            }
+                          }}
+                          className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+                            !isFinalized
+                              ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50'
+                              : isSelected 
+                              ? 'border-brand-purple bg-brand-purple/5 shadow-xs cursor-pointer' 
+                              : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl ${isSelected ? 'bg-brand-purple text-white' : 'bg-slate-100 text-slate-600'}`}>
+                              <Laptop className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-800">{lab.name}</h4>
+                              <span className="text-[10px] font-extrabold text-brand-purple">
+                                {isFinalized ? `Lab Number: ${lab.labNumber}` : `Lab Number: ${lab.labNumber} (Not Finalized)`}
+                              </span>
+                            </div>
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-brand-purple bg-brand-purple text-white' : 'border-slate-300'}`}>
+                            {isSelected && <CheckCircle className="w-3 h-3" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!selectedLabId) {
-                    toast.error('Please select a laboratory.');
-                    return;
-                  }
-                  setWizardStage('select_type');
-                }}
-                className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold transition-all cursor-pointer text-center"
-              >
-                Continue Setup
-              </button>
+
+              <div className="flex justify-end pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedLabId) {
+                      toast.error('Please select a finalized lab location.');
+                      return;
+                    }
+                    setWizardStage('select_type');
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <span>Next: Select Hardware Type</span>
+                  <span>→</span>
+                </button>
+              </div>
             </div>
           )}
 
           {wizardStage === 'select_type' && (
             <div className="space-y-4">
-              <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Configure Faulty Devices</h4>
-                <div className="text-[10px] text-slate-400 font-medium">Select a device hardware category below to report faulty counts:</div>
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Step 2 of 4</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Hardware Category</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Which hardware type has an issue in this lab?</p>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
-                {remainingTypes.map(t => (
+                {remainingTypes.map((type) => (
                   <button
-                    key={t}
+                    key={type}
                     type="button"
                     onClick={() => {
-                      setCurrentType(t);
+                      setCurrentType(type);
                       setTypeTotalCount('');
                       setWizardStage('enter_total_count');
                     }}
-                    className="p-3 border border-slate-200 hover:border-brand-purple bg-slate-50 hover:bg-purple-50/20 rounded-xl text-xs font-bold text-slate-700 text-center cursor-pointer transition-all"
+                    className="p-4 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
                   >
-                    {t}
+                    <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
+                      <Laptop className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
                   </button>
                 ))}
               </div>
-              {reportedIssues.length > 0 && (
-                <div className="border-t border-slate-100 pt-3">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reported Queue:</span>
-                  <div className="flex flex-wrap gap-2 mt-1.5">
-                    {reportedIssues.map(i => (
-                      <span key={i.type} className="bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-bold px-2.5 py-1 rounded-lg">
-                        {i.type} (x{i.count})
-                      </span>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const generatedTitle = `Repair: ${reportedIssues.map(i => `${i.type} x${i.count}`).join(', ')}`;
-                      const generatedDesc = `Programmer reported the following hardware issues:\n` + 
-                        reportedIssues.map(i => `- ${i.type}: Quantity: ${i.count}`).join('\n');
-                      setIssueTitle(generatedTitle);
-                      setDescription(generatedDesc);
-                      setWizardStage('final_submit');
-                    }}
-                    className="w-full mt-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer text-center"
-                  >
-                    Proceed to Review
-                  </button>
-                </div>
-              )}
+
+              <div className="flex justify-start pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWizardStage('select_lab')}
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer"
+                >
+                  ← Back to Lab Selection
+                </button>
+              </div>
             </div>
           )}
 
           {wizardStage === 'enter_total_count' && (
             <div className="space-y-4">
-              <div>
-                <h4 className="text-xs font-bold text-slate-800">Quantity of Faulty {currentType}s</h4>
-                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Enter the number of devices requiring repair.</p>
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">{currentType} Quantity</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">How many {currentType}s have issues in total?</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Enter the total quantity to be reported for {currentType}</p>
               </div>
-              <input
-                type="number"
-                min={1}
-                required
-                placeholder="e.g. 5"
-                value={typeTotalCount}
-                onChange={(e) => setTypeTotalCount(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple"
-              />
-              <div className="flex gap-3">
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 block">Total Quantity</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="Enter quantity count"
+                  min={1}
+                  value={typeTotalCount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setTypeTotalCount('');
+                    } else {
+                      setTypeTotalCount(Math.max(1, parseInt(val) || 1));
+                    }
+                  }}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
                 <button
                   type="button"
                   onClick={() => setWizardStage('select_type')}
@@ -585,9 +622,9 @@ export const ProgrammerDashboard: React.FC = () => {
                     }
                     // Validate against actual finalized counts
                     const limitData = selectedLabCounts[currentType];
-                    const actualLimit = limitData ? limitData.total : 999;
+                    const actualLimit = limitData ? limitData.total : 0;
                     if (parsedCount > actualLimit) {
-                      toast.error('Quantity exceeds verified systems present in the lab.');
+                      toast.error('The systems are not present in the lab by your req count');
                       return;
                     }
                     const newIssue = { type: currentType, brand: 'Standard', count: parsedCount };
@@ -608,39 +645,68 @@ export const ProgrammerDashboard: React.FC = () => {
                       setWizardStage('ask_more');
                     }
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold transition-all cursor-pointer text-center"
+                  className="flex-1 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all cursor-pointer text-center"
                 >
-                  Add to Queue
+                  Add Hardware Issue
                 </button>
               </div>
             </div>
           )}
 
           {wizardStage === 'ask_more' && (
-            <div className="space-y-4 text-center">
-              <h4 className="text-xs font-bold text-slate-800">Add Another Hardware Issue?</h4>
-              <p className="text-[10px] text-slate-400 font-medium">Would you like to log faults for another device category in this lab?</p>
-              <div className="flex gap-3">
+            <div className="space-y-6 text-center py-2">
+              <div className="pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Multi-item Report</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Any other hardware type has an issue?</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">
+                  You've configured {reportedIssues.length} category brands. Add more or submit.
+                </p>
+              </div>
+
+              {/* Current list summary */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200/50 rounded-2xl text-left max-w-sm mx-auto space-y-1">
+                <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Added Items</span>
+                {reportedIssues.map((issue, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-slate-600 font-semibold">
+                    <span>{issue.type} ({issue.brand})</span>
+                    <span className="text-slate-800 font-bold">Qty: {issue.count}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-4 max-w-md mx-auto justify-center pt-2">
                 <button
                   type="button"
                   onClick={() => {
-                    const generatedTitle = `Repair: ${reportedIssues.map(i => `${i.type} x${i.count}`).join(', ')}`;
+                    const generatedTitle = `Repair: ${reportedIssues.map(i => `${i.type} (${i.brand}) x${i.count}`).join(', ')}`;
                     const generatedDesc = `Programmer reported the following hardware issues:\n` + 
-                      reportedIssues.map(i => `- ${i.type}: Quantity: ${i.count}`).join('\n');
+                      reportedIssues.map(i => `- ${i.type}: Brand: ${i.brand}, Quantity: ${i.count}`).join('\n');
                     setIssueTitle(generatedTitle);
                     setDescription(generatedDesc);
                     setWizardStage('final_submit');
                   }}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all cursor-pointer text-center"
+                  className="flex-1 py-3.5 px-4 border border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-xs text-slate-600 transition-all flex flex-col items-center gap-1.5 cursor-pointer"
                 >
-                  No, Proceed to Review
+                  <CheckCircle className="w-5 h-5 text-slate-400" />
+                  <span>No, Submit Request</span>
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setWizardStage('select_type')}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold transition-all cursor-pointer text-center"
+                  onClick={() => {
+                    if (remainingTypes.length === 1) {
+                      const nextType = remainingTypes[0];
+                      setCurrentType(nextType);
+                      setTypeTotalCount('');
+                      setWizardStage('enter_total_count');
+                    } else {
+                      setWizardStage('select_type');
+                    }
+                  }}
+                  className="flex-1 py-3.5 px-4 bg-brand-purple hover:bg-brand-purpleHover text-white rounded-2xl font-bold text-xs shadow-md shadow-brand-purple/20 transition-all flex flex-col items-center gap-1.5 cursor-pointer"
                 >
-                  Yes, Add Category
+                  <PlusCircle className="w-5 h-5 text-white/90" />
+                  <span>Yes, Add Another</span>
                 </button>
               </div>
             </div>
@@ -648,43 +714,100 @@ export const ProgrammerDashboard: React.FC = () => {
 
           {wizardStage === 'final_submit' && (
             <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Repair Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Brief summary of request"
-                  value={issueTitle}
-                  onChange={(e) => setIssueTitle(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple"
-                />
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Final Step</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Review & Submit Repair Request</h3>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Problem Description & Symptoms</label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Detail fault symptoms..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple"
-                />
+              {/* Items Summary list */}
+              <div className="p-4 bg-slate-50 border border-slate-200/50 rounded-2xl space-y-2">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Issues Summary</span>
+                <div className="flex flex-wrap gap-2">
+                  {reportedIssues.map((issue, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700">
+                      <span className="w-2.5 h-2.5 bg-brand-purple rounded-full"></span>
+                      <span>{issue.type}</span>
+                      <span className="text-[10px] text-slate-400 font-normal">({issue.brand})</span>
+                      <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-bold text-[10px] ml-1">x{issue.count}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Select Lab Number</label>
+                  <select
+                    value={selectedLabId}
+                    onChange={(e) => setSelectedLabId(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+                  >
+                    {labs.length === 0 && <option value="">-- Main Department / General Systems --</option>}
+                    {labs.map((lab) => (
+                      <option key={lab.id} value={lab.id}>
+                        Lab {lab.labNumber} ({lab.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Priority Level</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+                  >
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="High">High Priority</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Issue Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. CPU and Monitor issues in lab"
+                    value={issueTitle}
+                    onChange={(e) => setIssueTitle(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Detailed Description</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Provide a detailed description of the hardware faults to assist the technician."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
                 <button
                   type="button"
-                  onClick={() => setWizardStage('select_type')}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer text-center"
+                  onClick={() => {
+                    setReportedIssues([]);
+                    setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse']);
+                    setWizardStage('select_type');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-red-500 text-xs font-bold transition-all cursor-pointer text-center"
                 >
-                  Back
+                  Start Over
                 </button>
+                
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold transition-all cursor-pointer text-center"
+                  className="flex-2 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Submit Repair Ticket
+                  <Send className="w-4 h-4" />
+                  <span>Submit Repair Request</span>
                 </button>
               </div>
             </div>
