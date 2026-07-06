@@ -28,7 +28,7 @@ export const DeadStockPage: React.FC = () => {
   const fetchDeadStock = async () => {
     try {
       let url = '/inventory';
-      if (user?.role === 'ROLE_HOD' && user.departmentId) {
+      if (user?.role && ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(user.role) && user.departmentId) {
         url = `/inventory?departmentId=${user.departmentId}`;
       }
       const res = await api.get(url);

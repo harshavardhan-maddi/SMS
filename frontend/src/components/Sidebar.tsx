@@ -106,6 +106,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
+  const getProgrammerMenu = () => [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Finalize Count', path: '/finalize-counts', icon: ClipboardCheck },
+    { name: 'Inventory Overview', path: '/inventory', icon: HardDrive },
+    { name: 'Dead Stock', path: '/dead-stock', icon: XCircle },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
 
   const AlertCircleIcon = HelpCircle; // Quick fallback for simple mapping
 
@@ -113,6 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     if (user.role === 'ROLE_PRINCIPAL') return getPrincipalMenu();
     if (user.role === 'ROLE_HOD') return getHodMenu();
     if (user.role === 'ROLE_TECHNICIAN') return getTechnicianMenu();
+    if (user.role === 'ROLE_PROGRAMMER') return getProgrammerMenu();
     return getDeanMenu();
   };
 

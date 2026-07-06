@@ -14,7 +14,8 @@ import {
   CheckCircle,
   Clock,
   Wrench,
-  Laptop
+  Laptop,
+  Users
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -40,6 +41,12 @@ export const HODDashboard: React.FC = () => {
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [selectedTimeline, setSelectedTimeline] = useState<any[]>([]);
+
+  // Programmer Modal States
+  const [programmerModalOpen, setProgrammerModalOpen] = useState(false);
+  const [programmerName, setProgrammerName] = useState('');
+  const [programmerEmail, setProgrammerEmail] = useState('');
+  const [programmerPassword, setProgrammerPassword] = useState('');
 
   // Wizard States
   const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number }[]>([]);
@@ -162,6 +169,28 @@ export const HODDashboard: React.FC = () => {
     setMyRequestsModalOpen(false);
     if (location.pathname === '/my-requests') {
       navigate('/dashboard', { replace: true });
+    }
+  };
+
+  const handleProgrammerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!programmerName || !programmerEmail || !programmerPassword) return;
+
+    try {
+      await api.post('/users', {
+        name: programmerName,
+        email: programmerEmail,
+        password: programmerPassword,
+        roleName: 'ROLE_PROGRAMMER',
+        departmentId: user?.departmentId
+      });
+      toast.success('Programmer account registered successfully.');
+      setProgrammerModalOpen(false);
+      setProgrammerName('');
+      setProgrammerEmail('');
+      setProgrammerPassword('');
+    } catch (err: any) {
+      toast.error(err.response?.data || 'Failed to register programmer.');
     }
   };
 
@@ -330,6 +359,22 @@ export const HODDashboard: React.FC = () => {
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-purple-500 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => setProgrammerModalOpen(true)}
+            className="flex items-center justify-between w-full p-3.5 bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-100 rounded-2xl text-left transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">Register Programmer</div>
+                <div className="text-[10px] text-slate-500 font-medium">Create programmer login</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
         </div>
@@ -848,6 +893,54 @@ export const HODDashboard: React.FC = () => {
         request={selectedRequest}
         timelineData={selectedTimeline}
       />
+
+      {/* Programmer Registration Modal */}
+      <Modal isOpen={programmerModalOpen} onClose={() => setProgrammerModalOpen(false)} title="Register Department Programmer">
+        <form onSubmit={handleProgrammerSubmit} className="space-y-4 text-left">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Full Name</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. John Doe"
+              value={programmerName}
+              onChange={(e) => setProgrammerName(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Email Address</label>
+            <input
+              type="email"
+              required
+              placeholder="e.g. programmer@sms.edu"
+              value={programmerEmail}
+              onChange={(e) => setProgrammerEmail(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Password</label>
+            <input
+              type="password"
+              required
+              placeholder="Min 6 characters"
+              value={programmerPassword}
+              onChange={(e) => setProgrammerPassword(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4"
+          >
+            <span>Register Programmer Account</span>
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -107,8 +107,8 @@ router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'
   }
 });
 
-// 5. Create User (Principal & Dean)
-router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
+// 5. Create User (Principal, Dean & HOD)
+router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 'ROLE_HOD'), async (req, res) => {
   const { name, email, password, roleName, departmentId } = req.body;
   const userReq = (req as any).user;
 
@@ -119,6 +119,16 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'),
   // If Dean is creating a user, ensure it is a Hardware Technician
   if (userReq.role === 'ROLE_DEAN' && roleName !== 'ROLE_TECHNICIAN') {
     return res.status(403).send('Deans are authorized to register Hardware Technicians only');
+  }
+
+  // If HOD is creating a user, ensure it is a Programmer for their own department
+  if (userReq.role === 'ROLE_HOD') {
+    if (roleName !== 'ROLE_PROGRAMMER') {
+      return res.status(403).send('HODs are authorized to register Programmers only');
+    }
+    if (!userReq.departmentId || Number(departmentId) !== Number(userReq.departmentId)) {
+      return res.status(403).send('HODs can only create programmers for their own department');
+    }
   }
 
   try {

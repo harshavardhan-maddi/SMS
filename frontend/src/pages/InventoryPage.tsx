@@ -48,7 +48,7 @@ export const InventoryPage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const url = user?.role === 'ROLE_HOD' ? `/inventory?departmentId=${user.departmentId}` : '/inventory';
+      const url = user?.role && ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(user.role) ? `/inventory?departmentId=${user.departmentId}` : '/inventory';
       const res = await api.get(url);
       setInventory(res.data);
 
@@ -74,7 +74,7 @@ export const InventoryPage: React.FC = () => {
     setSerialNumber('');
     setPurchaseDate(new Date().toISOString().substring(0, 10));
     setWarrantyMonths(12);
-    setStatus(user?.role === 'ROLE_HOD' ? 'New Stock' : 'Working');
+    setStatus(user?.role && ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(user.role) ? 'New Stock' : 'Working');
     setTargetDeptId(user?.departmentId?.toString() || '');
     setModalOpen(true);
   };
@@ -175,7 +175,7 @@ export const InventoryPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-black text-slate-800 tracking-tight">Inventory overview</h2>
           <p className="text-xs text-brand-textMuted font-medium">
-            {user?.role === 'ROLE_HOD' ? `Manage hardware assets allocated to the ${user.departmentCode} Department` : 'Track and audit hardware assets across all departments'}
+            {user?.role && ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(user.role) ? `Manage hardware assets allocated to the ${user.departmentCode} Department` : 'Track and audit hardware assets across all departments'}
           </p>
         </div>
 
@@ -231,7 +231,7 @@ export const InventoryPage: React.FC = () => {
           </select>
 
           {/* Department filter (Principal/Dean only) */}
-          {user?.role !== 'ROLE_HOD' && (
+          {(!user?.role || !['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(user.role)) && (
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
@@ -353,7 +353,7 @@ export const InventoryPage: React.FC = () => {
               <select
                 value={targetDeptId}
                 onChange={(e) => setTargetDeptId(e.target.value)}
-                disabled={user?.role === 'ROLE_HOD'}
+                disabled={Boolean(user?.role && ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(user.role))}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
               >
                 <option value="">-- Choose Dept --</option>

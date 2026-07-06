@@ -9,6 +9,7 @@ import { PrincipalDashboard } from './pages/PrincipalDashboard';
 import { HODDashboard } from './pages/HODDashboard';
 import { ComputerDeanDashboard } from './pages/ComputerDeanDashboard';
 import { HardwareTechnicianDashboard } from './pages/HardwareTechnicianDashboard';
+import { ProgrammerDashboard } from './pages/ProgrammerDashboard';
 import { DepartmentManagement } from './pages/DepartmentManagement';
 import { UserManagement } from './pages/UserManagement';
 import { InventoryPage } from './pages/InventoryPage';
@@ -45,6 +46,9 @@ const DynamicDashboard: React.FC = () => {
   }
   if (user.role === 'ROLE_TECHNICIAN') {
     return <HardwareTechnicianDashboard />;
+  }
+  if (user.role === 'ROLE_PROGRAMMER') {
+    return <ProgrammerDashboard />;
   }
   return <ComputerDeanDashboard />;
 };

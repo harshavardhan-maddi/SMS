@@ -110,7 +110,7 @@ export const UserManagement: React.FC = () => {
         email,
         password,
         roleName,
-        departmentId: roleName === 'ROLE_HOD' && departmentId ? parseInt(departmentId) : null
+        departmentId: ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(roleName) && departmentId ? parseInt(departmentId) : null
       });
       toast.success('User account registered successfully.');
       setCreateModalOpen(false);
@@ -169,6 +169,7 @@ export const UserManagement: React.FC = () => {
     if (role === 'ROLE_DEAN') return 'Computer Dean';
     if (role === 'ROLE_HOD') return 'HOD';
     if (role === 'ROLE_TECHNICIAN') return 'Hardware Technician';
+    if (role === 'ROLE_PROGRAMMER') return 'Programmer';
     return role;
   };
 
@@ -220,7 +221,7 @@ export const UserManagement: React.FC = () => {
                     <td className="py-3.5 px-4 text-slate-500">{u.email}</td>
                     <td className="py-3.5 px-4">
                       <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
-                        u.role.name === 'ROLE_PRINCIPAL' ? 'bg-purple-100 text-purple-700' : u.role.name === 'ROLE_DEAN' ? 'bg-blue-100 text-blue-700' : u.role.name === 'ROLE_TECHNICIAN' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
+                        u.role.name === 'ROLE_PRINCIPAL' ? 'bg-purple-100 text-purple-700' : u.role.name === 'ROLE_DEAN' ? 'bg-blue-100 text-blue-700' : u.role.name === 'ROLE_TECHNICIAN' ? 'bg-amber-100 text-amber-700' : u.role.name === 'ROLE_PROGRAMMER' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'
                       }`}>
                         {getDisplayRoleName(u.role.name)}
                       </span>
@@ -341,12 +342,32 @@ export const UserManagement: React.FC = () => {
                   <option value="ROLE_HOD">HOD (Department Head)</option>
                   <option value="ROLE_DEAN">Computer Dean</option>
                   <option value="ROLE_TECHNICIAN">Hardware Technician</option>
+                  <option value="ROLE_PROGRAMMER">Programmer</option>
                 </>
               ) : (
                 <option value="ROLE_TECHNICIAN">Hardware Technician</option>
               )}
             </select>
           </div>
+
+          {['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(roleName) && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block">Department</label>
+              <select
+                required
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+              >
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name} ({dept.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <button
             type="submit"
