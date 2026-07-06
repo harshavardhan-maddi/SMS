@@ -182,7 +182,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
 
   // Metric calculation for assigned requests
   const assignedCount = myRequests.length;
-  const inProgressCount = myRequests.filter(r => r.status === 'In Progress').length;
+  const inProgressCount = 0;
   const partsRequestedCount = myRequests.filter(r => r.status === 'Parts Requested').length;
   const resolvedCount = myRequests.filter(r => r.status === 'Resolved').length;
 

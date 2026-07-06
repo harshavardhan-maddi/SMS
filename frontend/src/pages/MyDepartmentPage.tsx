@@ -204,7 +204,7 @@ export const MyDepartmentPage: React.FC = () => {
               
               const totalCount = fin ? fin.total : typeItems.length;
               const workingCount = fin ? fin.working : typeItems.filter(i => i.status === 'Working' || i.status === 'New Stock').length;
-              const faultyCount = fin ? fin.not_working : typeItems.filter(i => i.status === 'Repairing' || i.status === 'Dead Stock').length;
+              const faultyCount = 0;
 
               const IconComp = dev.icon;
 

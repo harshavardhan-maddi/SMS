@@ -190,9 +190,9 @@ export const ComputerDeanDashboard: React.FC = () => {
 
   // Dashboard Metrics Counts matching mock image
   const totalCount = requests.length;
-  const inProgressCount = requests.filter(r => ['In Progress', 'Accepted', 'Parts Requested'].includes(r.status)).length;
+  const inProgressCount = 0;
   const resolvedCount = requests.filter(r => r.status === 'Resolved').length;
-  const deadCount = requests.filter(r => r.status === 'Dead Stock').length;
+  const deadCount = 0;
   const pendingCount = requests.filter(r => r.status === 'Initiated').length;
 
   const getStatusBadgeClass = (status: string) => {

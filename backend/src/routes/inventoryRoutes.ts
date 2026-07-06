@@ -147,6 +147,10 @@ router.get('/counts', authenticateJWT, async (req, res) => {
       }
     }
 
+    // Force In Progress and Dead Stock counts to 0 in Principal dashboard
+    counts.Repairing = { CPU: 0, Monitor: 0, Keyboard: 0, Mouse: 0, Hotspot: 0, Total: 0 };
+    counts.DeadStock = { CPU: 0, Monitor: 0, Keyboard: 0, Mouse: 0, Hotspot: 0, Total: 0 };
+
     res.json(counts);
   } catch (err) {
     console.error('Get overall counts error:', err);
@@ -225,6 +229,14 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
       }
     }
 
+    // Force In Repair and Dead counts to 0 in HOD dashboard
+    for (const type of types) {
+      if (counts[type]) {
+        counts[type].Repairing = 0;
+        counts[type].Dead = 0;
+      }
+    }
+
     res.json(counts);
   } catch (err) {
     console.error('Get department counts error:', err);
@@ -295,6 +307,14 @@ router.get('/counts/lab/:labId', authenticateJWT, async (req, res) => {
       if (counts[type]) {
         counts[type].Repairing += countVal;
         counts[type].Working = Math.max(0, counts[type].Working - countVal);
+      }
+    }
+
+    // Force In Repair and Dead counts to 0 in Lab counts
+    for (const type of types) {
+      if (counts[type]) {
+        counts[type].Repairing = 0;
+        counts[type].Dead = 0;
       }
     }
 
@@ -495,7 +515,7 @@ router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, 
         counts[row.type] = {
           total: row.total,
           working: row.working,
-          not_working: row.not_working
+          not_working: 0
         };
       }
       return res.json(counts);
@@ -524,6 +544,13 @@ router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, 
         } else {
           counts[type].not_working += countVal;
         }
+      }
+    }
+
+    // Force not_working counts to 0
+    for (const type of types) {
+      if (counts[type]) {
+        counts[type].not_working = 0;
       }
     }
 
