@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
+import { DeferredLoader } from '../components/DeferredLoader';
 import {
   HelpCircle,
   FileText,
@@ -227,10 +228,12 @@ export const ProgrammerDashboard: React.FC = () => {
 
   if (loading || !stats) {
     return (
-      <div className="space-y-6">
-        <LoadingSkeleton type="grid" />
-        <LoadingSkeleton type="table" />
-      </div>
+      <DeferredLoader loading={loading || !stats} delay={450} message="Loading department overview...">
+        <div className="space-y-6">
+          <LoadingSkeleton type="grid" />
+          <LoadingSkeleton type="table" />
+        </div>
+      </DeferredLoader>
     );
   }
 

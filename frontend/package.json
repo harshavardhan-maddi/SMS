@@ -11,6 +11,7 @@
   "dependencies": {
     "@stomp/stompjs": "^7.0.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@types/three": "^0.185.0",
     "axios": "^1.6.8",
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.475.0",
@@ -20,7 +21,8 @@
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.23.0",
     "recharts": "^2.12.7",
-    "sockjs-client": "^1.6.1"
+    "sockjs-client": "^1.6.1",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
