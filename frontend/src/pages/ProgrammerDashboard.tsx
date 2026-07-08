@@ -48,11 +48,13 @@ export const ProgrammerDashboard: React.FC = () => {
   // Wizard States
   const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number }[]>([]);
   const [remainingTypes, setRemainingTypes] = useState<string[]>(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
-  const [wizardStage, setWizardStage] = useState<'select_lab' | 'select_type' | 'enter_total_count' | 'ask_more' | 'final_submit'>('select_lab');
+  const [wizardStage, setWizardStage] = useState<'select_lab' | 'select_type' | 'enter_custom_type' | 'enter_total_count' | 'ask_more' | 'final_submit' | 'confirm_submit'>('select_lab');
   const [currentType, setCurrentType] = useState('CPU');
   
   // Current Type Configuration States
   const [typeTotalCount, setTypeTotalCount] = useState<number | string>('');
+  const [customTypeName, setCustomTypeName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Report Issue General Form State
   const [labs, setLabs] = useState<any[]>([]);
@@ -151,6 +153,8 @@ export const ProgrammerDashboard: React.FC = () => {
     setTypeTotalCount('');
     setIssueTitle('');
     setDescription('');
+    setCustomTypeName('');
+    setIsSubmitting(false);
     if (location.pathname === '/report-issue') {
       navigate('/dashboard', { replace: true });
     }
@@ -174,6 +178,12 @@ export const ProgrammerDashboard: React.FC = () => {
       return;
     }
 
+    if (wizardStage !== 'confirm_submit') {
+      setWizardStage('confirm_submit');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await api.post('/repairs/initiate-wizard', {
         requesterId: user?.userId,
@@ -189,6 +199,8 @@ export const ProgrammerDashboard: React.FC = () => {
       fetchProgrammerData();
     } catch (err) {
       toast.error('Failed to submit repair request.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -562,6 +574,21 @@ export const ProgrammerDashboard: React.FC = () => {
                     <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
                   </button>
                 ))}
+
+                {/* Special Others category button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomTypeName('');
+                    setWizardStage('enter_custom_type');
+                  }}
+                  className="p-4 border border-dashed border-slate-300 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
+                >
+                  <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">Others</span>
+                </button>
               </div>
 
               <div className="flex justify-start pt-2">
@@ -571,6 +598,54 @@ export const ProgrammerDashboard: React.FC = () => {
                   className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer"
                 >
                   ← Back to Lab Selection
+                </button>
+              </div>
+            </div>
+          )}
+
+          {wizardStage === 'enter_custom_type' && (
+            <div className="space-y-4">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-brand-purple/10 px-2.5 py-0.5 rounded-md text-brand-purple font-bold uppercase tracking-wider">Custom Category</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Specify Hardware Type</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">What is the custom hardware category needing repair?</p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 block">Hardware Category Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Printer, Projector, UPS"
+                  value={customTypeName}
+                  onChange={(e) => setCustomTypeName(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setWizardStage('select_type')}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmed = customTypeName.trim();
+                    if (!trimmed) {
+                      toast.error('Please specify the hardware category name.');
+                      return;
+                    }
+                    setCurrentType(trimmed);
+                    setTypeTotalCount('');
+                    setWizardStage('enter_total_count');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all cursor-pointer text-center"
+                >
+                  Continue
                 </button>
               </div>
             </div>
@@ -607,7 +682,13 @@ export const ProgrammerDashboard: React.FC = () => {
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
                 <button
                   type="button"
-                  onClick={() => setWizardStage('select_type')}
+                  onClick={() => {
+                    if (customTypeName) {
+                      setWizardStage('enter_custom_type');
+                    } else {
+                      setWizardStage('select_type');
+                    }
+                  }}
                   className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer text-center"
                 >
                   Back
@@ -621,9 +702,10 @@ export const ProgrammerDashboard: React.FC = () => {
                       return;
                     }
                     // Validate against actual finalized counts
+                    const isStandard = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'].includes(currentType);
                     const limitData = selectedLabCounts[currentType];
                     const actualLimit = limitData ? limitData.total : 0;
-                    if (parsedCount > actualLimit) {
+                    if (isStandard && parsedCount > actualLimit) {
                       toast.error('The systems are not present in the lab by your req count');
                       return;
                     }
@@ -803,11 +885,97 @@ export const ProgrammerDashboard: React.FC = () => {
                 </button>
                 
                 <button
-                  type="submit"
-                  className="flex-2 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  type="button"
+                  onClick={() => setWizardStage('confirm_submit')}
+                  className="flex-2 py-2.5 px-6 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>Submit Repair Request</span>
+                  <span>Review & Confirm</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {wizardStage === 'confirm_submit' && (
+            <div className="space-y-4">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-emerald-100 px-2.5 py-0.5 rounded-md text-emerald-800 font-bold uppercase tracking-wider">Confirmation</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Confirm Request Details</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Please review the details below before submitting.</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs space-y-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Laboratory Room</span>
+                  <span className="font-bold text-slate-700">
+                    {(() => {
+                      const selectedLab = labs.find(l => l.id.toString() === selectedLabId);
+                      return selectedLab ? `${selectedLab.name} (Room ${selectedLab.labNumber})` : 'General / Main Department';
+                    })()}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Priority</span>
+                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                    priority === 'High' ? 'bg-red-50 text-red-700 border border-red-100' : priority === 'Medium' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-blue-50 text-blue-700 border border-blue-100'
+                  }`}>
+                    {priority}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Request Title</span>
+                  <span className="font-semibold text-slate-700 block mt-0.5">{issueTitle}</span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Detailed Description</span>
+                  <span className="text-slate-600 block mt-0.5 whitespace-pre-wrap">{description}</span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Issues Selected</span>
+                  <div className="flex flex-wrap gap-2">
+                    {reportedIssues.map((issue, idx) => (
+                      <span key={idx} className="bg-white border border-slate-200 px-2.5 py-1 rounded-xl text-slate-700 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-brand-purple rounded-full"></span>
+                        <span>{issue.type}</span>
+                        <span className="bg-slate-100 text-slate-600 px-1.5 py-0.25 rounded-md font-bold text-[9px]">x{issue.count}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setWizardStage('final_submit')}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer text-center disabled:opacity-50"
+                >
+                  Back to Edit
+                </button>
+                
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-2 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Confirm & Submit</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

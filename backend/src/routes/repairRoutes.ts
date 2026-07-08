@@ -814,26 +814,29 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     }
 
     // Validate that the request count does not exceed the actual finalized count in that lab
+    const standardTypes = ['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'];
     if (targetLabId > 0) {
       for (const issue of issues) {
         const { type, count } = issue;
         if (!type || !count || count <= 0) continue;
 
-        const finalizedRow = await db.get(
-          'SELECT total FROM finalized_hardware_counts WHERE department_id = ? AND lab_id = ? AND type = ?',
-          [departmentId, targetLabId, type]
-        );
-        let actualCount = finalizedRow ? finalizedRow.total : 0;
-        if (!finalizedRow) {
-          const invCountRow = await db.get(
-            'SELECT COUNT(*) as count FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ?',
+        if (standardTypes.includes(type)) {
+          const finalizedRow = await db.get(
+            'SELECT total FROM finalized_hardware_counts WHERE department_id = ? AND lab_id = ? AND type = ?',
             [departmentId, targetLabId, type]
           );
-          actualCount = invCountRow ? invCountRow.count : 0;
-        }
+          let actualCount = finalizedRow ? finalizedRow.total : 0;
+          if (!finalizedRow) {
+            const invCountRow = await db.get(
+              'SELECT COUNT(*) as count FROM inventory WHERE department_id = ? AND lab_id = ? AND type = ?',
+              [departmentId, targetLabId, type]
+            );
+            actualCount = invCountRow ? invCountRow.count : 0;
+          }
 
-        if (count > actualCount) {
-          return res.status(400).send('The systems are not present in the lab by your req count');
+          if (count > actualCount) {
+            return res.status(400).send('The systems are not present in the lab by your req count');
+          }
         }
       }
     }
