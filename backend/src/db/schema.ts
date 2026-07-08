@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
     department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    lab_id INTEGER REFERENCES labs(id) ON DELETE SET NULL,
     active INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -109,6 +110,7 @@ export async function initSchema() {
       await db.exec(sql);
       try {
         await db.exec(`
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS lab_id INTEGER REFERENCES labs(id) ON DELETE SET NULL;
           ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS device_count INTEGER DEFAULT 1;
           CREATE INDEX IF NOT EXISTS idx_inventory_dept ON inventory(department_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_lab ON inventory(lab_id);
@@ -129,6 +131,10 @@ export async function initSchema() {
     await db.exec('PRAGMA foreign_keys = ON;');
 
     // Automated lightweight migration for SQLite tables if created under older schema
+    try {
+      await db.exec('ALTER TABLE users ADD COLUMN lab_id INTEGER REFERENCES labs(id) ON DELETE SET NULL;');
+    } catch (e) { /* Column already exists */ }
+
     try {
       await db.exec('ALTER TABLE inventory ADD COLUMN lab_id INTEGER REFERENCES labs(id) ON DELETE SET NULL;');
     } catch (e) { /* Column already exists */ }

@@ -21,6 +21,7 @@ interface User {
   email: string;
   role: Role;
   department?: Department;
+  lab?: { id: number; labNumber: string; name: string };
   active: boolean;
   createdAt: string;
 }
@@ -43,6 +44,8 @@ export const UserManagement: React.FC = () => {
   const [password, setPassword] = useState('');
   const [roleName, setRoleName] = useState('ROLE_HOD');
   const [departmentId, setDepartmentId] = useState('');
+  const [labs, setLabs] = useState<any[]>([]);
+  const [labId, setLabId] = useState('');
 
   // Password Form states
   const [newPassword, setNewPassword] = useState('');
@@ -68,6 +71,23 @@ export const UserManagement: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [dashboardTick]);
+
+  useEffect(() => {
+    const fetchLabsForDept = async () => {
+      if (!departmentId) {
+        setLabs([]);
+        setLabId('');
+        return;
+      }
+      try {
+        const res = await api.get(`/departments/${departmentId}/labs`);
+        setLabs(res.data);
+      } catch (err) {
+        console.error('Failed to fetch labs for department', err);
+      }
+    };
+    fetchLabsForDept();
+  }, [departmentId]);
 
   if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
     return (
@@ -97,6 +117,8 @@ export const UserManagement: React.FC = () => {
     setPassword('');
     setRoleName(currentUser?.role === 'ROLE_DEAN' ? 'ROLE_TECHNICIAN' : 'ROLE_HOD');
     setDepartmentId('');
+    setLabs([]);
+    setLabId('');
     setCreateModalOpen(true);
   };
 
@@ -110,7 +132,8 @@ export const UserManagement: React.FC = () => {
         email,
         password,
         roleName,
-        departmentId: ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(roleName) && departmentId ? parseInt(departmentId) : null
+        departmentId: ['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(roleName) && departmentId ? parseInt(departmentId) : null,
+        labId: roleName === 'ROLE_PROGRAMMER' && labId ? parseInt(labId) : null
       });
       toast.success('User account registered successfully.');
       setCreateModalOpen(false);
@@ -227,7 +250,12 @@ export const UserManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-600">
-                      {u.department ? u.department.code : <span className="text-slate-400 font-normal italic">-</span>}
+                      {u.department ? (
+                        <div>
+                          <span>{u.department.code}</span>
+                          {u.lab && <span className="text-[10px] text-slate-400 font-normal block">Lab: {u.lab.labNumber}</span>}
+                        </div>
+                      ) : <span className="text-slate-400 font-normal italic">-</span>}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
@@ -363,6 +391,25 @@ export const UserManagement: React.FC = () => {
                 {departments.map((dept) => (
                   <option key={dept.id} value={dept.id}>
                     {dept.name} ({dept.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {roleName === 'ROLE_PROGRAMMER' && departmentId && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block">Assigned Lab Room</label>
+              <select
+                required
+                value={labId}
+                onChange={(e) => setLabId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+              >
+                <option value="">Select Lab Room</option>
+                {labs.map((lab) => (
+                  <option key={lab.id} value={lab.id}>
+                    Lab {lab.labNumber} ({lab.name})
                   </option>
                 ))}
               </select>

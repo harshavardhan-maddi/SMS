@@ -48,6 +48,7 @@ export const HODDashboard: React.FC = () => {
   const [programmerName, setProgrammerName] = useState('');
   const [programmerEmail, setProgrammerEmail] = useState('');
   const [programmerPassword, setProgrammerPassword] = useState('');
+  const [programmerLabId, setProgrammerLabId] = useState('');
 
   // Wizard States
   const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number }[]>([]);
@@ -187,13 +188,15 @@ export const HODDashboard: React.FC = () => {
         email: programmerEmail,
         password: programmerPassword,
         roleName: 'ROLE_PROGRAMMER',
-        departmentId: user?.departmentId
+        departmentId: user?.departmentId,
+        labId: programmerLabId ? parseInt(programmerLabId) : null
       });
       toast.success('Programmer account registered successfully.');
       setProgrammerModalOpen(false);
       setProgrammerName('');
       setProgrammerEmail('');
       setProgrammerPassword('');
+      setProgrammerLabId('');
     } catch (err: any) {
       toast.error(err.response?.data || 'Failed to register programmer.');
     }
@@ -1099,6 +1102,23 @@ export const HODDashboard: React.FC = () => {
               onChange={(e) => setProgrammerPassword(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Assigned Lab Room</label>
+            <select
+              required
+              value={programmerLabId}
+              onChange={(e) => setProgrammerLabId(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 bg-white"
+            >
+              <option value="">Select Lab Room</option>
+              {labs.map((lab) => (
+                <option key={lab.id} value={lab.id}>
+                  Lab {lab.labNumber} ({lab.name})
+                </option>
+              ))}
+            </select>
           </div>
 
           <button

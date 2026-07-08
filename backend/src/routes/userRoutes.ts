@@ -18,6 +18,9 @@ function formatUser(row: any) {
     department: row.dept_id
       ? { id: row.dept_id, name: row.dept_name, code: row.dept_code }
       : null,
+    lab: row.lab_id
+      ? { id: row.lab_id, name: row.lab_name, labNumber: row.lab_number }
+      : null,
   };
 }
 
@@ -41,10 +44,11 @@ router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'RO
 router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
   try {
     const rows = await db.all(
-      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code 
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
-       LEFT JOIN departments d ON u.department_id = d.id`
+       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id`
     );
     res.json(rows.map(formatUser));
   } catch (err) {
@@ -88,10 +92,11 @@ router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'
   const { id } = req.params;
   try {
     const row = await db.get(
-      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code 
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id
        WHERE u.id = ?`,
       [id]
     );
@@ -109,7 +114,7 @@ router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'
 
 // 5. Create User (Principal, Dean & HOD)
 router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 'ROLE_HOD'), async (req, res) => {
-  const { name, email, password, roleName, departmentId } = req.body;
+  const { name, email, password, roleName, departmentId, labId } = req.body;
   const userReq = (req as any).user;
 
   if (!name || !email || !password || !roleName) {
@@ -159,9 +164,9 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 
 
     await db.transaction(async () => {
       const result = await db.run(
-        `INSERT INTO users (name, email, password, role_id, department_id, active) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [name, email, hashedPwd, role.id, departmentId || null, activeVal]
+        `INSERT INTO users (name, email, password, role_id, department_id, lab_id, active) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [name, email, hashedPwd, role.id, departmentId || null, labId || null, activeVal]
       );
       
       createdUserId = result.lastID;
@@ -173,10 +178,11 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 
     });
 
     const created = await db.get(
-      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code 
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id
        WHERE u.id = ?`,
       [createdUserId!]
     );
@@ -248,10 +254,11 @@ router.put('/:id/active', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), asy
     await db.run('UPDATE users SET active = ? WHERE id = ?', [activeVal, id]);
 
     const updated = await db.get(
-      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code 
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id
        WHERE u.id = ?`,
       [id]
     );

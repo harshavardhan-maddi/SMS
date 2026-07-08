@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await db.get(
-      `SELECT u.id, u.name, u.email, u.password, u.active, u.department_id, r.name as role_name, d.code as dept_code 
+      `SELECT u.id, u.name, u.email, u.password, u.active, u.department_id, u.lab_id, r.name as role_name, d.code as dept_code 
        FROM users u 
        LEFT JOIN roles r ON u.role_id = r.id 
        LEFT JOIN departments d ON u.department_id = d.id 
@@ -61,6 +61,7 @@ router.post('/login', async (req, res) => {
         userId: user.id,
         departmentCode: deptCode || null,
         departmentId: deptId || null,
+        labId: user.lab_id || null,
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -74,6 +75,7 @@ router.post('/login', async (req, res) => {
       userId: user.id,
       departmentCode: deptCode || null,
       departmentId: deptId || null,
+      labId: user.lab_id || null,
     });
   } catch (err) {
     console.error('Login error:', err);

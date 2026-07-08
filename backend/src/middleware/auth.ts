@@ -12,6 +12,7 @@ export interface AuthRequest extends Request {
     role: string;
     departmentId: number | null;
     departmentCode: string | null;
+    labId: number | null;
   };
 }
 
@@ -32,7 +33,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
       
       // Fetch user details from DB
       const user = await db.get(
-        `SELECT u.id, u.name, u.email, u.active, u.department_id, r.name as role_name, d.code as dept_code 
+        `SELECT u.id, u.name, u.email, u.active, u.department_id, u.lab_id, r.name as role_name, d.code as dept_code 
          FROM users u 
          LEFT JOIN roles r ON u.role_id = r.id 
          LEFT JOIN departments d ON u.department_id = d.id 
@@ -57,6 +58,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
         role: user.role_name,
         departmentId: user.department_id,
         departmentCode: user.dept_code,
+        labId: user.lab_id || null,
       };
       
       next();
