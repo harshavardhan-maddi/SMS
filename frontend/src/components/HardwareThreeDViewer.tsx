@@ -219,13 +219,6 @@ export const HardwareThreeDViewer: React.FC<HardwareThreeDViewerProps> = ({ type
   }, [type]);
 
   return (
-    <div className="flex flex-col items-center justify-center p-3 bg-slate-50/50 border border-slate-200/60 rounded-2xl w-full h-[190px] relative overflow-hidden">
-      <div ref={containerRef} className="w-[170px] h-[170px]" />
-      <div className="absolute bottom-2 text-center">
-        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider bg-slate-200/50 px-2.5 py-0.5 rounded-full">
-          Preview: {type}
-        </span>
-      </div>
-    </div>
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center pointer-events-none" />
   );
 };

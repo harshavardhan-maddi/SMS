@@ -35,7 +35,6 @@ export const HODDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [allRequests, setAllRequests] = useState<any[]>([]);
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
-  const [hoveredType, setHoveredType] = useState<string>('CPU');
   const [departmentAssets, setDepartmentAssets] = useState<any[]>([]);
 
   // Modals state
@@ -547,15 +546,11 @@ export const HODDashboard: React.FC = () => {
                 <p className="text-[11px] text-brand-textMuted mt-0.5">Which hardware type has an issue in this lab?</p>
               </div>
 
-              {/* Dynamic 3D interactive hardware viewer */}
-              <HardwareThreeDViewer type={hoveredType} />
-
               <div className="grid grid-cols-2 gap-3">
                 {remainingTypes.map((type) => (
                   <button
                     key={type}
                     type="button"
-                    onMouseEnter={() => setHoveredType(type)}
                     onClick={() => {
                       setCurrentType(type);
                       setTypeTotalCount('');
@@ -563,8 +558,8 @@ export const HODDashboard: React.FC = () => {
                     }}
                     className="p-4 border border-slate-200 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
                   >
-                    <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
-                      <Laptop className="w-5 h-5" />
+                    <div className="w-20 h-20 flex items-center justify-center">
+                      <HardwareThreeDViewer type={type} />
                     </div>
                     <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">{type}</span>
                   </button>
@@ -573,15 +568,14 @@ export const HODDashboard: React.FC = () => {
                 {/* Special Others category button */}
                 <button
                   type="button"
-                  onMouseEnter={() => setHoveredType('Others')}
                   onClick={() => {
                     setCustomTypeName('');
                     setWizardStage('enter_custom_type');
                   }}
                   className="p-4 border border-dashed border-slate-300 hover:border-brand-purple hover:bg-brand-purple/5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
                 >
-                  <div className="p-2.5 bg-slate-50 text-slate-600 group-hover:bg-brand-purple/10 group-hover:text-brand-purple rounded-xl transition-all">
-                    <Plus className="w-5 h-5" />
+                  <div className="w-20 h-20 flex items-center justify-center">
+                    <HardwareThreeDViewer type="Others" />
                   </div>
                   <span className="text-xs font-bold text-slate-700 group-hover:text-brand-purple transition-all">Others</span>
                 </button>
