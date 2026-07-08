@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
+import { HardwareThreeDViewer } from '../components/HardwareThreeDViewer';
 import {
   HelpCircle,
   FileText,
@@ -34,6 +35,7 @@ export const HODDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [allRequests, setAllRequests] = useState<any[]>([]);
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
+  const [hoveredType, setHoveredType] = useState<string>('CPU');
   const [departmentAssets, setDepartmentAssets] = useState<any[]>([]);
 
   // Modals state
@@ -545,11 +547,15 @@ export const HODDashboard: React.FC = () => {
                 <p className="text-[11px] text-brand-textMuted mt-0.5">Which hardware type has an issue in this lab?</p>
               </div>
 
+              {/* Dynamic 3D interactive hardware viewer */}
+              <HardwareThreeDViewer type={hoveredType} />
+
               <div className="grid grid-cols-2 gap-3">
                 {remainingTypes.map((type) => (
                   <button
                     key={type}
                     type="button"
+                    onMouseEnter={() => setHoveredType(type)}
                     onClick={() => {
                       setCurrentType(type);
                       setTypeTotalCount('');
@@ -567,6 +573,7 @@ export const HODDashboard: React.FC = () => {
                 {/* Special Others category button */}
                 <button
                   type="button"
+                  onMouseEnter={() => setHoveredType('Others')}
                   onClick={() => {
                     setCustomTypeName('');
                     setWizardStage('enter_custom_type');
