@@ -4,8 +4,6 @@ import bcrypt from 'bcryptjs';
 export async function seedData() {
   console.log('Verifying and seeding demo user accounts...');
 
-  const hashedPwd = await bcrypt.hash('password', 10);
-
   try {
     // 1. Ensure Roles Exist
     await db.run("INSERT INTO roles (id, name) VALUES (1, 'ROLE_PRINCIPAL') ON CONFLICT (id) DO NOTHING");
@@ -74,6 +72,7 @@ export async function seedData() {
 
     if (uCount === 0) {
       console.log('Seeding initial demo user accounts...');
+      const hashedPwd = await bcrypt.hash('password', 10);
       const demoUsers = [
         { id: 1, name: 'Dr. Robert Carter', email: 'principal@sms.edu', roleId: 1, deptId: null },
         { id: 2, name: 'Dr. Alan Turing', email: 'hod.cse@sms.edu', roleId: 2, deptId: 1 },

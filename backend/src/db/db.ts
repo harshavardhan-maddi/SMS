@@ -34,6 +34,8 @@ if (dbType === 'postgres') {
   try {
     const { DatabaseSync } = require('node:sqlite');
     sqliteDb = new DatabaseSync(sqliteDbPath);
+    sqliteDb.exec('PRAGMA journal_mode = WAL;');
+    sqliteDb.exec('PRAGMA foreign_keys = ON;');
     console.log('Opened SQLite database using node:sqlite at:', sqliteDbPath);
   } catch (err) {
     console.error('Failed to load built-in node:sqlite module. Make sure you are using Node.js v22.5.0 or later.', err);
