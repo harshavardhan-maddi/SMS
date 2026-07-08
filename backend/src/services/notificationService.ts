@@ -11,24 +11,17 @@ export const notificationService = {
         [message, type, userId]
       );
       
-      const notifId = result.lastID;
-      const savedNotif = await db.get(
-        'SELECT id, message, type, read_status as readStatus, user_id as userId, created_at as createdAt FROM notifications WHERE id = ?',
-        [notifId]
-      );
+      // Construct notification client payload immediately without secondary db query
+      const formatted = {
+        id: result.lastID,
+        message: message,
+        type: type,
+        readStatus: false,
+        userId: userId,
+        createdAt: new Date().toISOString()
+      };
       
-      if (savedNotif) {
-        // Format to match frontend Notification interface
-        const formatted = {
-          id: savedNotif.id,
-          message: savedNotif.message,
-          type: savedNotif.type,
-          readStatus: savedNotif.readStatus === 1 || savedNotif.readStatus === true,
-          userId: savedNotif.userId,
-          createdAt: savedNotif.createdAt
-        };
-        sendToTopic(`/topic/notifications/${userId}`, formatted);
-      }
+      sendToTopic(`/topic/notifications/${userId}`, formatted);
     } catch (err) {
       console.error('Failed to send notification to user:', err);
     }
@@ -45,9 +38,37 @@ export const notificationService = {
         [roleName]
       );
       
-      for (const u of users) {
-        await this.sendToUser(u.id, message, type);
-      }
+      if (users.length === 0) return;
+
+      // Batch insert all notifications in a single transaction write lock
+      const placeholders = users.map(() => '(?, ?, 0, ?)').join(', ');
+      const params: any[] = [];
+      users.forEach(u => {
+        params.push(message, type, u.id);
+      });
+
+      const result = await db.run(
+        `INSERT INTO notifications (message, type, read_status, user_id) VALUES ${placeholders}`,
+        params
+      );
+
+      const lastId = result.lastID || 0;
+      const count = users.length;
+      const firstId = lastId - count + 1;
+      const now = new Date().toISOString();
+
+      // Dispatch WebSockets in parallel
+      users.forEach((u, index) => {
+        const formatted = {
+          id: firstId + index,
+          message: message,
+          type: type,
+          readStatus: false,
+          userId: u.id,
+          createdAt: now
+        };
+        sendToTopic(`/topic/notifications/${u.id}`, formatted);
+      });
     } catch (err) {
       console.error('Failed to send notification to role:', err);
     }

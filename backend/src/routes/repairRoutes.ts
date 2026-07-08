@@ -853,6 +853,8 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     const { todayStr, timeStr } = getLocalDates();
 
     const generatedRequests: string[] = [];
+    const invCountRes = await db.get('SELECT COUNT(*) as count FROM inventory');
+    let invIndex = invCountRes ? invCountRes.count : 0;
 
     await db.transaction(async () => {
       for (const issue of issues) {
@@ -876,8 +878,6 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
         // 2. If still not enough assets, auto-generate/insert mock assets in the inventory
         if (assetIds.length < count) {
           const needed = count - assetIds.length;
-          const invCountRes = await db.get('SELECT COUNT(*) as count FROM inventory');
-          let invIndex = invCountRes ? invCountRes.count : 0;
 
           for (let k = 0; k < needed; k++) {
             invIndex++;
@@ -899,10 +899,14 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
           }
         }
 
-        // Update status of all matched/generated assets to Repairing
-        for (const assetId of assetIds) {
+        // Batch update status of all matched/generated assets to Repairing
+        if (assetIds.length > 0) {
+          const placeholders = assetIds.map(() => '?').join(', ');
           try {
-            await db.run("UPDATE inventory SET status = 'Repairing' WHERE id = ?", [assetId]);
+            await db.run(
+              `UPDATE inventory SET status = 'Repairing' WHERE id IN (${placeholders})`,
+              assetIds
+            );
           } catch (errUpd) {}
         }
 
