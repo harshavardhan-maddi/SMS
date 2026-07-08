@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useWebSocket } from '../context/WebSocketContext';
 import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
-import { DeferredLoader } from '../components/DeferredLoader';
 import {
   Laptop,
   CheckCircle,
@@ -70,12 +69,10 @@ export const PrincipalDashboard: React.FC = () => {
 
   if (loading || !stats) {
     return (
-      <DeferredLoader loading={loading || !stats} delay={450} message="Loading college overview...">
-        <div className="space-y-6">
-          <LoadingSkeleton type="grid" />
-          <LoadingSkeleton type="table" />
-        </div>
-      </DeferredLoader>
+      <div className="space-y-6">
+        <LoadingSkeleton type="grid" />
+        <LoadingSkeleton type="table" />
+      </div>
     );
   }
 

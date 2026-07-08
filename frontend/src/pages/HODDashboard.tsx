@@ -3,7 +3,6 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
-import { DeferredLoader } from '../components/DeferredLoader';
 import {
   HelpCircle,
   FileText,
@@ -91,17 +90,15 @@ export const HODDashboard: React.FC = () => {
   const fetchHODData = async () => {
     const deptIdParam = user?.departmentId || 0;
     try {
-      const [countsRes, recentRes, assetsRes, labsRes] = await Promise.all([
+      const [countsRes, recentRes, labsRes] = await Promise.all([
         api.get(`/inventory/counts/department/${deptIdParam}`),
         api.get(`/repairs?departmentId=${deptIdParam}`),
-        api.get(`/inventory?departmentId=${deptIdParam}`),
         api.get(`/departments/${deptIdParam}/labs`)
       ]);
 
       setStats(countsRes.data);
       setAllRequests(recentRes.data);
       setRecentRequests(recentRes.data.slice(0, 5));
-      setDepartmentAssets(assetsRes.data.filter((a: any) => a.status === 'Working' || a.status === 'New Stock'));
       setLabs(labsRes.data);
       if (labsRes.data && labsRes.data.length > 0 && !selectedLabId) {
         const firstFinalized = labsRes.data.find((l: any) => l.hasFinalizedCounts);
@@ -254,12 +251,10 @@ export const HODDashboard: React.FC = () => {
 
   if (loading || !stats) {
     return (
-      <DeferredLoader loading={loading || !stats} delay={450} message="Loading department overview...">
-        <div className="space-y-6">
-          <LoadingSkeleton type="grid" />
-          <LoadingSkeleton type="table" />
-        </div>
-      </DeferredLoader>
+      <div className="space-y-6">
+        <LoadingSkeleton type="grid" />
+        <LoadingSkeleton type="table" />
+      </div>
     );
   }
 

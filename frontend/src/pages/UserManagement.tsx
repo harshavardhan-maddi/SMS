@@ -3,7 +3,6 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { Modal } from '../components/ReusableComponents';
-import { DeferredLoader } from '../components/DeferredLoader';
 import { Users, Plus, Key, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -199,9 +198,7 @@ export const UserManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <DeferredLoader loading={loading} delay={450} message="Loading user directories...">
-        <div className="p-12 text-center text-xs text-brand-textMuted font-bold">Loading user directories...</div>
-      </DeferredLoader>
+      <div className="p-12 text-center text-xs text-brand-textMuted font-bold">Loading user directories...</div>
     );
   }
 
