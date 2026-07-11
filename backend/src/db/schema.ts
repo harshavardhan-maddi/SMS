@@ -226,6 +226,27 @@ export async function initSchema() {
   } catch (e) {
     console.error('Migration backfill error:', e);
   }
+
+  // One-time hardware cleanup reset
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS settings (key VARCHAR(100) PRIMARY KEY, value VARCHAR(100));
+    `);
+    const resetDone = await db.get("SELECT value FROM settings WHERE key = 'hardware_reset_done'");
+    if (!resetDone) {
+      await db.exec(`
+        DELETE FROM repair_history;
+        DELETE FROM repair_requests;
+        DELETE FROM inventory;
+        DELETE FROM finalized_hardware_counts;
+        DELETE FROM notifications;
+        INSERT INTO settings (key, value) VALUES ('hardware_reset_done', 'true');
+      `);
+      console.log("Database reset completed successfully: cleared all hardware, repairs, and notifications.");
+    }
+  } catch (e) {
+    console.error("Cleanup reset error:", e);
+  }
 }
 
 
