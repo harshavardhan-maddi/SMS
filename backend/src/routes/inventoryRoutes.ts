@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/db';
-import { authenticateJWT } from '../middleware/auth';
+import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
 const router = Router();
 
@@ -566,7 +566,7 @@ router.get('/finalized-counts/department/:deptId', authenticateJWT, async (req, 
 });
 
 // 9. Save finalized counts for a department and lab
-router.post('/finalize-counts', authenticateJWT, async (req, res) => {
+router.post('/finalize-counts', authenticateJWT, authorizeRoles('ROLE_HOD'), async (req, res) => {
   const { departmentId, labId, counts } = req.body;
   const authUser = (req as any).user;
   let numericDeptId = (departmentId && departmentId !== 'undefined' && departmentId !== 'null') ? parseInt(departmentId) : 0;

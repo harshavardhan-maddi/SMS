@@ -137,6 +137,8 @@ export const FinalizeCounts: React.FC = () => {
     return <div className="p-12 text-center text-xs text-brand-textMuted font-bold">Loading counts registry...</div>;
   }
 
+  const isHOD = user?.role === 'ROLE_HOD';
+
   const renderRow = (type: 'CPU' | 'Monitor' | 'Keyboard' | 'Mouse' | 'Hotspot', counts: HardwareCounts) => (
     <tr key={type} className="hover:bg-slate-50/50">
       <td className="py-4 px-4 font-bold text-slate-700 flex items-center gap-2.5">
@@ -151,7 +153,8 @@ export const FinalizeCounts: React.FC = () => {
           min={0}
           value={counts.total}
           onChange={(e) => updateCountField(type, 'total', parseInt(e.target.value) || 0)}
-          className="w-28 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+          disabled={!isHOD}
+          className="w-28 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 disabled:opacity-75 disabled:bg-slate-50"
         />
       </td>
       <td className="py-4 px-4">
@@ -161,7 +164,8 @@ export const FinalizeCounts: React.FC = () => {
           max={counts.total}
           value={counts.working}
           onChange={(e) => updateCountField(type, 'working', parseInt(e.target.value) || 0)}
-          className="w-28 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+          disabled={!isHOD}
+          className="w-28 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 disabled:opacity-75 disabled:bg-slate-50"
         />
       </td>
       <td className="py-4 px-4">
@@ -228,13 +232,19 @@ export const FinalizeCounts: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="px-6 py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all flex items-center gap-1.5 cursor-pointer"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Finalize & Save counts</span>
-        </button>
+        {isHOD ? (
+          <button
+            type="submit"
+            className="px-6 py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Finalize & Save counts</span>
+          </button>
+        ) : (
+          <div className="p-4 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl text-xs font-semibold max-w-lg">
+            ⚠️ You are logged in as a Programmer. Only the department Head of Department (HOD) is authorized to finalize and modify laboratory hardware counts.
+          </div>
+        )}
       </form>
     </div>
   );
