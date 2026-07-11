@@ -124,6 +124,10 @@ export const ProgrammerDashboard: React.FC = () => {
   }, [location.pathname]);
 
   const handleOpenReportModal = () => {
+    if (!user?.labId) {
+      toast.error('You do not have an assigned laboratory. Please contact your HOD to assign one.');
+      return;
+    }
     setReportedIssues([]);
     setRemainingTypes(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
     setWizardStage('select_lab');
@@ -131,15 +135,7 @@ export const ProgrammerDashboard: React.FC = () => {
     setTypeTotalCount('');
     setIssueTitle('');
     setDescription('');
-    
-    // Auto-select lab
-    const firstFinalized = labs.find((l: any) => l.hasFinalizedCounts);
-    if (firstFinalized) {
-      setSelectedLabId(firstFinalized.id.toString());
-    } else if (labs.length > 0) {
-      setSelectedLabId(labs[0].id.toString());
-    }
-
+    setSelectedLabId(user.labId.toString());
     setReportModalOpen(true);
   };
 
@@ -501,10 +497,15 @@ export const ProgrammerDashboard: React.FC = () => {
                     {labs.map((lab) => {
                       const isSelected = selectedLabId === lab.id.toString();
                       const isFinalized = !!lab.hasFinalizedCounts;
+                      const isAssigned = user?.labId ? lab.id === user.labId : false;
                       return (
                         <div
                           key={lab.id}
                           onClick={() => {
+                            if (!isAssigned) {
+                              toast.error(`You are only authorized to report issues for your assigned lab (Lab ${labs.find(l => l.id === user?.labId)?.labNumber || 'N/A'}).`);
+                              return;
+                            }
                             if (isFinalized) {
                               setSelectedLabId(lab.id.toString());
                             } else {
@@ -512,7 +513,9 @@ export const ProgrammerDashboard: React.FC = () => {
                             }
                           }}
                           className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                            !isFinalized
+                            !isAssigned
+                              ? 'opacity-40 cursor-not-allowed border-slate-200 bg-slate-50/50'
+                              : !isFinalized
                               ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50'
                               : isSelected 
                               ? 'border-brand-purple bg-brand-purple/5 shadow-xs cursor-pointer' 
@@ -525,9 +528,16 @@ export const ProgrammerDashboard: React.FC = () => {
                             </div>
                             <div>
                               <h4 className="text-xs font-bold text-slate-800">{lab.name}</h4>
-                              <span className="text-[10px] font-extrabold text-brand-purple">
-                                {isFinalized ? `Lab Number: ${lab.labNumber}` : `Lab Number: ${lab.labNumber} (Not Finalized)`}
-                              </span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-extrabold text-brand-purple">
+                                  {isFinalized ? `Lab Number: ${lab.labNumber}` : `Lab Number: ${lab.labNumber} (Not Finalized)`}
+                                </span>
+                                {isAssigned && (
+                                  <span className="text-[9px] bg-green-50 text-green-700 border border-green-100 px-1.5 py-0.25 rounded-md font-bold uppercase tracking-wider">
+                                    Assigned Lab
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-brand-purple bg-brand-purple text-white' : 'border-slate-300'}`}>

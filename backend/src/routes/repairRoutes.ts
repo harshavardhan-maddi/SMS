@@ -715,6 +715,14 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     return res.status(400).send('Missing required fields or issues array');
   }
 
+  // Enforce that a programmer can only raise a request for their assigned lab
+  const authUser = (req as any).user;
+  if (authUser && authUser.role === 'ROLE_PROGRAMMER') {
+    if (!authUser.labId || Number(targetLabId) !== Number(authUser.labId)) {
+      return res.status(403).send('Programmers are only authorized to raise repair requests for their assigned lab.');
+    }
+  }
+
   try {
     const requester = await db.get('SELECT id, name, department_id FROM users WHERE id = ?', [requesterId]);
     if (!requester) {

@@ -9,6 +9,7 @@ interface UserSession {
   role: string; // ROLE_PRINCIPAL, ROLE_HOD, ROLE_DEAN
   departmentCode?: string;
   departmentId?: number;
+  labId?: number | null;
 }
 
 interface AuthContextType {
@@ -50,7 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: data.email,
         role: data.role,
         departmentCode: data.departmentCode,
-        departmentId: data.departmentId
+        departmentId: data.departmentId,
+        labId: data.labId
       };
 
       setToken(data.token);
