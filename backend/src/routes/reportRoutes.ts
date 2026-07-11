@@ -23,6 +23,19 @@ function formatInventory(row: any) {
   };
 }
 
+const BASE_REPAIR_QUERY = `
+  SELECT r.*, 
+         inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id, inv.lab_id as lab_id,
+         dept.name as dept_name, dept.code as dept_code,
+         u.name as req_name, u.email as req_email,
+         l.lab_number as lab_number, l.name as lab_name
+  FROM repair_requests r
+  LEFT JOIN inventory inv ON r.inventory_id = inv.id
+  LEFT JOIN departments dept ON inv.department_id = dept.id
+  LEFT JOIN users u ON r.requester_id = u.id
+  LEFT JOIN labs l ON inv.lab_id = l.id
+`;
+
 // Helper to format repair request
 function formatRepairRequest(row: any) {
   return {
@@ -33,6 +46,8 @@ function formatRepairRequest(row: any) {
     status: row.status,
     initiatedDate: row.initiated_date,
     initiatedTime: row.initiated_time,
+    completedDate: row.completed_date || null,
+    completedTime: row.completed_time || null,
     deviceCount: row.device_count !== undefined ? row.device_count : 1,
     inventory: {
       id: row.inventory_id,
@@ -44,6 +59,11 @@ function formatRepairRequest(row: any) {
         id: row.inv_dept_id,
         name: row.dept_name,
         code: row.dept_code
+      } : null,
+      lab: row.lab_id ? {
+        id: row.lab_id,
+        name: row.lab_name,
+        labNumber: row.lab_number
       } : null
     },
     requester: row.requester_id ? {
@@ -63,16 +83,7 @@ router.get('/principal', authenticateJWT, async (req, res) => {
       LEFT JOIN departments d ON i.department_id = d.id
     `;
     
-    const reqQuery = `
-      SELECT r.*, 
-             inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-             dept.name as dept_name, dept.code as dept_code,
-             u.name as req_name, u.email as req_email
-      FROM repair_requests r
-      LEFT JOIN inventory inv ON r.inventory_id = inv.id
-      LEFT JOIN departments dept ON inv.department_id = dept.id
-      LEFT JOIN users u ON r.requester_id = u.id
-    `;
+    const reqQuery = BASE_REPAIR_QUERY;
 
     const [allInv, allReq] = await Promise.all([
       db.all(invQuery),
@@ -105,17 +116,7 @@ router.get('/hod/:deptId', authenticateJWT, async (req, res) => {
       WHERE i.department_id = ?
     `;
     
-    const reqQuery = `
-      SELECT r.*, 
-             inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-             dept.name as dept_name, dept.code as dept_code,
-             u.name as req_name, u.email as req_email
-      FROM repair_requests r
-      LEFT JOIN inventory inv ON r.inventory_id = inv.id
-      LEFT JOIN departments dept ON inv.department_id = dept.id
-      LEFT JOIN users u ON r.requester_id = u.id
-      WHERE inv.department_id = ?
-    `;
+    const reqQuery = BASE_REPAIR_QUERY + ' WHERE inv.department_id = ?';
 
     const [deptItems, deptRequests] = await Promise.all([
       db.all(invQuery, [deptId]),

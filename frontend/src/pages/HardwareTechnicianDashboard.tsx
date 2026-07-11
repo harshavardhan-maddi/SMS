@@ -239,10 +239,12 @@ export const HardwareTechnicianDashboard: React.FC = () => {
                 <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                   <th className="py-3 px-4">Request ID</th>
                   <th className="py-3 px-4">Department</th>
+                  <th className="py-3 px-4">Lab Number</th>
                   <th className="py-3 px-4">Item Type</th>
                   <th className="py-3 px-4">Issue Description</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Date Initiated</th>
+                  <th className="py-3 px-4">Initiated Date</th>
+                  <th className="py-3 px-4">Completed Date</th>
                   <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
@@ -253,6 +255,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
                     <td className="py-3.5 px-4 font-semibold text-slate-600">
                       {req.inventory.department?.code || 'N/A'}
                     </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-600">
+                      {req.inventory?.lab?.labNumber || '---'}
+                    </td>
                     <td className="py-3.5 px-4 text-slate-500">{req.inventory.type}</td>
                     <td className="py-3.5 px-4 text-slate-600 truncate max-w-[200px]" title={req.title}>{req.title}</td>
                     <td className="py-3.5 px-4">
@@ -261,7 +266,10 @@ export const HardwareTechnicianDashboard: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 font-medium">
-                      {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime.substring(0, 5)}
+                      {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500 font-medium">
+                      {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
                     </td>
                     <td className="py-3.5 px-4 text-center relative">
                       <div className="inline-flex items-center gap-1">

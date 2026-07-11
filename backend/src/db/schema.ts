@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS repair_requests (
     status TEXT NOT NULL DEFAULT 'Initiated',
     initiated_date TEXT,
     initiated_time TEXT,
-    device_count INTEGER DEFAULT 1
+    device_count INTEGER DEFAULT 1,
+    completed_date TEXT,
+    completed_time TEXT
 );
 
 CREATE TABLE IF NOT EXISTS repair_history (
@@ -112,6 +114,8 @@ export async function initSchema() {
         await db.exec(`
           ALTER TABLE users ADD COLUMN IF NOT EXISTS lab_id INTEGER REFERENCES labs(id) ON DELETE SET NULL;
           ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS device_count INTEGER DEFAULT 1;
+          ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS completed_date DATE;
+          ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS completed_time TIME;
           CREATE INDEX IF NOT EXISTS idx_inventory_dept ON inventory(department_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_lab ON inventory(lab_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
@@ -145,6 +149,14 @@ export async function initSchema() {
 
     try {
       await db.exec('ALTER TABLE repair_requests ADD COLUMN device_count INTEGER DEFAULT 1;');
+    } catch (e) { /* Column already exists */ }
+
+    try {
+      await db.exec('ALTER TABLE repair_requests ADD COLUMN completed_date TEXT;');
+    } catch (e) { /* Column already exists */ }
+
+    try {
+      await db.exec('ALTER TABLE repair_requests ADD COLUMN completed_time TEXT;');
     } catch (e) { /* Column already exists */ }
 
     try {
@@ -200,6 +212,19 @@ export async function initSchema() {
         await db.exec('DELETE FROM inventory;');
       }
     } catch (e) { /* Table fresh or initialized */ }
+  }
+
+  // Backfill completed_date and completed_time for existing Resolved or Dead Stock requests
+  try {
+    await db.exec(`
+      UPDATE repair_requests 
+      SET 
+        completed_date = (SELECT MIN(status_date) FROM repair_history WHERE request_id = repair_requests.id AND (status = 'Resolved' OR status = 'Dead Stock')),
+        completed_time = (SELECT MIN(status_time) FROM repair_history WHERE request_id = repair_requests.id AND (status = 'Resolved' OR status = 'Dead Stock'))
+      WHERE (status = 'Resolved' OR status = 'Dead Stock') AND completed_date IS NULL;
+    `);
+  } catch (e) {
+    console.error('Migration backfill error:', e);
   }
 }
 

@@ -406,10 +406,12 @@ export const HODDashboard: React.FC = () => {
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Item Type</th>
                 <th className="py-3 px-4">Asset ID</th>
+                <th className="py-3 px-4">Lab Number</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Issue Title</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Initiated On</th>
+                <th className="py-3 px-4">Initiated Date</th>
+                <th className="py-3 px-4">Completed Date</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
@@ -419,6 +421,9 @@ export const HODDashboard: React.FC = () => {
                   <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
                   <td className="py-3.5 px-4 text-slate-500">{req.inventory.type}</td>
                   <td className="py-3.5 px-4 font-semibold text-slate-600">{req.inventory.id}</td>
+                  <td className="py-3.5 px-4 font-semibold text-slate-600">
+                    {req.inventory?.lab?.labNumber || '---'}
+                  </td>
                   <td className="py-3.5 px-4">
                     <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
                       req.priority === 'High' ? 'bg-red-50 text-red-600' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
@@ -433,7 +438,10 @@ export const HODDashboard: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-slate-500 font-medium">
-                    {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime.substring(0, 5)}
+                    {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-500 font-medium">
+                    {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <button
@@ -991,9 +999,11 @@ export const HODDashboard: React.FC = () => {
                   <th className="py-2.5 px-3">ID</th>
                   <th className="py-2.5 px-3">Item Type</th>
                   <th className="py-2.5 px-3">Brand</th>
+                  <th className="py-2.5 px-3">Lab Number</th>
                   <th className="py-2.5 px-3">Priority</th>
                   <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Initiated Date</th>
+                  <th className="py-2.5 px-3">Completed Date</th>
                   <th className="py-2.5 px-3 text-right">Action</th>
                 </tr>
               </thead>
@@ -1003,7 +1013,7 @@ export const HODDashboard: React.FC = () => {
                   if (myRequests.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400 font-medium italic">
+                        <td colSpan={9} className="py-8 text-center text-slate-400 font-medium italic">
                           You have not submitted any repair requests.
                         </td>
                       </tr>
@@ -1014,6 +1024,9 @@ export const HODDashboard: React.FC = () => {
                       <td className="py-2.5 px-3 font-bold text-slate-700">{req.id}</td>
                       <td className="py-2.5 px-3 text-slate-500">{req.inventory.type}</td>
                       <td className="py-2.5 px-3 text-slate-600 font-semibold">{req.inventory.brand}</td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-600">
+                        {req.inventory?.lab?.labNumber || '---'}
+                      </td>
                       <td className="py-2.5 px-3">
                         <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
                           req.priority === 'High' ? 'bg-red-50 text-red-600' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
@@ -1027,7 +1040,10 @@ export const HODDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-slate-500 font-medium">
-                        {new Date(req.initiatedDate).toLocaleDateString()}
+                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 font-medium">
+                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button

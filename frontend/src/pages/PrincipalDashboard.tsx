@@ -395,17 +395,19 @@ export const PrincipalDashboard: React.FC = () => {
                 </th>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Department</th>
+                <th className="py-3 px-4">Lab Number</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Initiated On</th>
+                <th className="py-3 px-4">Initiated Date</th>
+                <th className="py-3 px-4">Completed Date</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {displayedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 text-xs font-medium">
+                  <td colSpan={10} className="py-8 text-center text-slate-400 text-xs font-medium">
                     No repair requests available.
                   </td>
                 </tr>
@@ -416,15 +418,18 @@ export const PrincipalDashboard: React.FC = () => {
                     <tr key={req.id} className={`hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-purple-50/40' : ''}`}>
                       <td className="py-3.5 px-4">
                         <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggleSelect(req.id)}
-                          className="w-4 h-4 accent-brand-purple rounded cursor-pointer"
+                           type="checkbox"
+                           checked={isSelected}
+                           onChange={() => handleToggleSelect(req.id)}
+                           className="w-4 h-4 accent-brand-purple rounded cursor-pointer"
                         />
                       </td>
                       <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
                       <td className="py-3.5 px-4 font-semibold text-slate-600">
                         {req.inventory?.department?.code || 'N/A'}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-600">
+                        {req.inventory?.lab?.labNumber || '---'}
                       </td>
                       <td className="py-3.5 px-4 text-slate-500">{req.inventory?.type || 'N/A'}</td>
                       <td className="py-3.5 px-4">
@@ -439,8 +444,11 @@ export const PrincipalDashboard: React.FC = () => {
                           {req.status}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-500">
-                        {new Date(req.initiatedDate).toLocaleDateString()} {req.initiatedTime ? req.initiatedTime.substring(0, 5) : ''}
+                      <td className="py-3.5 px-4 text-slate-500 font-medium">
+                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500 font-medium">
+                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">

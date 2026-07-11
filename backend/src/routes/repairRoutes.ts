@@ -18,6 +18,21 @@ function getLocalDates() {
   return { todayStr, timeStr };
 }
 
+const BASE_REPAIR_QUERY = `
+  SELECT r.*, 
+         inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id, inv.lab_id as lab_id,
+         dept.name as dept_name, dept.code as dept_code,
+         u.name as req_name, u.email as req_email,
+         u2.name as assigned_name, u2.email as assigned_email,
+         l.lab_number as lab_number, l.name as lab_name
+  FROM repair_requests r
+  LEFT JOIN inventory inv ON r.inventory_id = inv.id
+  LEFT JOIN departments dept ON inv.department_id = dept.id
+  LEFT JOIN users u ON r.requester_id = u.id
+  LEFT JOIN users u2 ON r.assigned_to_id = u2.id
+  LEFT JOIN labs l ON inv.lab_id = l.id
+`;
+
 // Helper to format a single repair request row
 function formatRepairRequest(row: any) {
   return {
@@ -28,6 +43,8 @@ function formatRepairRequest(row: any) {
     status: row.status,
     initiatedDate: row.initiated_date,
     initiatedTime: row.initiated_time,
+    completedDate: row.completed_date || null,
+    completedTime: row.completed_time || null,
     deviceCount: row.device_count !== undefined ? row.device_count : 1,
     inventory: {
       id: row.inventory_id,
@@ -39,6 +56,11 @@ function formatRepairRequest(row: any) {
         id: row.inv_dept_id,
         name: row.dept_name,
         code: row.dept_code
+      } : null,
+      lab: row.lab_id ? {
+        id: row.lab_id,
+        name: row.lab_name,
+        labNumber: row.lab_number
       } : null
     },
     requester: row.requester_id ? {
@@ -78,18 +100,7 @@ function getAssetIdsFromRequest(request: any): string[] {
 router.get('/', authenticateJWT, async (req, res) => {
   const departmentId = req.query.departmentId;
   try {
-    let query = `
-      SELECT r.*, 
-             inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-             dept.name as dept_name, dept.code as dept_code,
-             u.name as req_name, u.email as req_email,
-             u2.name as assigned_name, u2.email as assigned_email
-      FROM repair_requests r
-      LEFT JOIN inventory inv ON r.inventory_id = inv.id
-      LEFT JOIN departments dept ON inv.department_id = dept.id
-      LEFT JOIN users u ON r.requester_id = u.id
-      LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-    `;
+    let query = BASE_REPAIR_QUERY;
     const params: any[] = [];
 
     if (departmentId) {
@@ -112,18 +123,7 @@ router.get('/', authenticateJWT, async (req, res) => {
 router.get('/recent', authenticateJWT, async (req, res) => {
   const departmentId = req.query.departmentId;
   try {
-    let query = `
-      SELECT r.*, 
-             inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-             dept.name as dept_name, dept.code as dept_code,
-             u.name as req_name, u.email as req_email,
-             u2.name as assigned_name, u2.email as assigned_email
-      FROM repair_requests r
-      LEFT JOIN inventory inv ON r.inventory_id = inv.id
-      LEFT JOIN departments dept ON inv.department_id = dept.id
-      LEFT JOIN users u ON r.requester_id = u.id
-      LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-    `;
+    let query = BASE_REPAIR_QUERY;
     const params: any[] = [];
 
     if (departmentId) {
@@ -146,17 +146,7 @@ router.get('/:id', authenticateJWT, async (req, res) => {
   const { id } = req.params;
   try {
     const row = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -278,17 +268,7 @@ router.post('/initiate', authenticateJWT, async (req, res) => {
 
     // Fetch and return created request
     const created = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [requestId]
     );
 
@@ -354,17 +334,7 @@ router.post('/:id/start', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -434,17 +404,7 @@ router.post('/:id/accept', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -508,17 +468,7 @@ router.post('/:id/start-technician', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -583,17 +533,7 @@ router.post('/:id/request-parts', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -628,7 +568,7 @@ router.post('/:id/resolve', authenticateJWT, async (req, res) => {
 
     await db.transaction(async () => {
       // Set status to Resolved
-      await db.run("UPDATE repair_requests SET status = 'Resolved' WHERE id = ?", [id]);
+      await db.run("UPDATE repair_requests SET status = 'Resolved', completed_date = ?, completed_time = ? WHERE id = ?", [todayStr, timeStr, id]);
       
       // Update inventory status back to Working for all associated assets
       const assetIds = getAssetIdsFromRequest(request);
@@ -676,17 +616,7 @@ router.post('/:id/resolve', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -721,7 +651,7 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
 
     await db.transaction(async () => {
       // Set status to Dead Stock
-      await db.run("UPDATE repair_requests SET status = 'Dead Stock' WHERE id = ?", [id]);
+      await db.run("UPDATE repair_requests SET status = 'Dead Stock', completed_date = ?, completed_time = ? WHERE id = ?", [todayStr, timeStr, id]);
       
       // Update inventory status to Dead Stock for all associated assets
       const assetIds = getAssetIdsFromRequest(request);
@@ -765,17 +695,7 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 
@@ -1003,17 +923,7 @@ router.post('/:id/partial-progress', authenticateJWT, async (req, res) => {
     notificationService.broadcastDashboardUpdate();
 
     const updated = await db.get(
-      `SELECT r.*, 
-              inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id,
-              dept.name as dept_name, dept.code as dept_code,
-              u.name as req_name, u.email as req_email,
-              u2.name as assigned_name, u2.email as assigned_email
-       FROM repair_requests r
-       LEFT JOIN inventory inv ON r.inventory_id = inv.id
-       LEFT JOIN departments dept ON inv.department_id = dept.id
-       LEFT JOIN users u ON r.requester_id = u.id
-       LEFT JOIN users u2 ON r.assigned_to_id = u2.id
-       WHERE r.id = ?`,
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
       [id]
     );
 

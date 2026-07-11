@@ -64,7 +64,9 @@ CREATE TABLE IF NOT EXISTS repair_requests (
     status VARCHAR(50) NOT NULL DEFAULT 'Initiated', -- Initiated, In Progress, Resolved
     initiated_date DATE DEFAULT CURRENT_DATE,
     initiated_time TIME DEFAULT CURRENT_TIME,
-    device_count INTEGER DEFAULT 1
+    device_count INTEGER DEFAULT 1,
+    completed_date DATE,
+    completed_time TIME
 );
 
 -- 6. Create Repair History Table

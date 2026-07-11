@@ -229,11 +229,13 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
       }
     }
 
-    // Force In Repair and Dead counts to 0 in HOD dashboard
-    for (const type of types) {
-      if (counts[type]) {
-        counts[type].Repairing = 0;
-        counts[type].Dead = 0;
+    // Force In Repair and Dead counts to 0 only for HOD role
+    if ((req as any).user?.role === 'ROLE_HOD') {
+      for (const type of types) {
+        if (counts[type]) {
+          counts[type].Repairing = 0;
+          counts[type].Dead = 0;
+        }
       }
     }
 
@@ -310,11 +312,13 @@ router.get('/counts/lab/:labId', authenticateJWT, async (req, res) => {
       }
     }
 
-    // Force In Repair and Dead counts to 0 in Lab counts
-    for (const type of types) {
-      if (counts[type]) {
-        counts[type].Repairing = 0;
-        counts[type].Dead = 0;
+    // Force In Repair and Dead counts to 0 in Lab counts only for HOD role
+    if ((req as any).user?.role === 'ROLE_HOD') {
+      for (const type of types) {
+        if (counts[type]) {
+          counts[type].Repairing = 0;
+          counts[type].Dead = 0;
+        }
       }
     }
 

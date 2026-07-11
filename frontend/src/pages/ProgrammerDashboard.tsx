@@ -394,21 +394,27 @@ export const ProgrammerDashboard: React.FC = () => {
               <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">Ticket ID</th>
                 <th className="py-3 px-4">Title</th>
+                <th className="py-3 px-4">Lab Number</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Initiated Date</th>
+                <th className="py-3 px-4">Completed Date</th>
                 <th className="py-3 px-4">Timeline</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {recentRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-slate-400 italic">No repair requests logged yet.</td>
+                  <td colSpan={8} className="py-6 text-center text-slate-400 italic">No repair requests logged yet.</td>
                 </tr>
               ) : (
                 recentRequests.map((req) => (
                   <tr key={req.id} className="hover:bg-slate-50/50">
                     <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-700">{req.title}</td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-600">
+                      {req.inventory?.lab?.labNumber || '---'}
+                    </td>
                     <td className="py-3.5 px-4 font-bold">
                       <span className={`px-2 py-0.5 rounded-full ${
                         req.priority === 'High' ? 'bg-red-50 text-red-700 border border-red-100' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-blue-50 text-blue-700 border border-blue-100'
@@ -420,6 +426,12 @@ export const ProgrammerDashboard: React.FC = () => {
                       <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
                         {req.status}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500 font-medium">
+                      {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500 font-medium">
+                      {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
                     </td>
                     <td className="py-3.5 px-4">
                       <button
@@ -991,8 +1003,11 @@ export const ProgrammerDashboard: React.FC = () => {
                 <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                   <th className="py-2.5 px-3">ID</th>
                   <th className="py-2.5 px-3">Title</th>
+                  <th className="py-2.5 px-3">Lab Number</th>
                   <th className="py-2.5 px-3">Priority</th>
                   <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3">Initiated Date</th>
+                  <th className="py-2.5 px-3">Completed Date</th>
                   <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -1002,7 +1017,7 @@ export const ProgrammerDashboard: React.FC = () => {
                   if (myRequests.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-400 italic">No request history found.</td>
+                        <td colSpan={8} className="py-6 text-center text-slate-400 italic">No request history found.</td>
                       </tr>
                     );
                   }
@@ -1010,6 +1025,9 @@ export const ProgrammerDashboard: React.FC = () => {
                     <tr key={req.id} className="hover:bg-slate-50/50">
                       <td className="py-2.5 px-3 font-bold text-slate-700">{req.id}</td>
                       <td className="py-2.5 px-3 font-semibold text-slate-600">{req.title}</td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-600">
+                        {req.inventory?.lab?.labNumber || '---'}
+                      </td>
                       <td className="py-2.5 px-3 font-bold">
                         <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${
                           req.priority === 'High' ? 'bg-red-50 text-red-700' : req.priority === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'
@@ -1021,6 +1039,12 @@ export const ProgrammerDashboard: React.FC = () => {
                         <span className={`px-1.5 py-0.5 rounded-md font-bold text-[9px] ${getStatusBadgeClass(req.status)}`}>
                           {req.status}
                         </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 font-medium">
+                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 font-medium">
+                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button
