@@ -412,8 +412,8 @@ export const UserManagement: React.FC = () => {
               >
                 <option value="">Select Lab Room</option>
                 {labs.map((lab) => (
-                  <option key={lab.id} value={lab.id}>
-                    Lab {lab.labNumber} ({lab.name})
+                  <option key={lab.id} value={lab.id} disabled={Boolean(lab.programmerId)}>
+                    Lab {lab.labNumber} ({lab.name}){lab.programmerName ? ` - Assigned to ${lab.programmerName}` : ''}
                   </option>
                 ))}
               </select>

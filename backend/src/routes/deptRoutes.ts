@@ -271,9 +271,16 @@ router.get('/labs/all', authenticateJWT, async (req, res) => {
     const departmentId = req.query.departmentId;
     let query = `
       SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
-             EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
+             EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts,
+             prog.id as programmerId, prog.name as programmerName
       FROM labs l
       LEFT JOIN departments d ON l.department_id = d.id
+      LEFT JOIN (
+        SELECT u.id, u.name, u.lab_id 
+        FROM users u 
+        JOIN roles r ON u.role_id = r.id 
+        WHERE r.name = 'ROLE_PROGRAMMER'
+      ) prog ON l.id = prog.lab_id
     `;
     const params: any[] = [];
     if (departmentId) {
@@ -291,7 +298,9 @@ router.get('/labs/all', authenticateJWT, async (req, res) => {
         departmentId: row.departmentId !== undefined ? row.departmentId : row.departmentid,
         deptName: row.deptName !== undefined ? row.deptName : row.deptname,
         deptCode: row.deptCode !== undefined ? row.deptCode : row.deptcode,
-        hasFinalizedCounts: hasFin === 1 || hasFin === true || hasFin === 't'
+        hasFinalizedCounts: hasFin === 1 || hasFin === true || hasFin === 't',
+        programmerId: row.programmerId !== undefined ? row.programmerId : (row.programmerid || null),
+        programmerName: row.programmerName !== undefined ? row.programmerName : (row.programmername || null)
       };
     });
     res.json(mapped);
@@ -323,9 +332,16 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
     if (numericDeptId > 0) {
       rows = await db.all(
         `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
-                EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
+                EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts,
+                prog.id as programmerId, prog.name as programmerName
          FROM labs l
          LEFT JOIN departments d ON l.department_id = d.id
+         LEFT JOIN (
+           SELECT u.id, u.name, u.lab_id 
+           FROM users u 
+           JOIN roles r ON u.role_id = r.id 
+           WHERE r.name = 'ROLE_PROGRAMMER'
+         ) prog ON l.id = prog.lab_id
          WHERE l.department_id = ?
          ORDER BY l.lab_number ASC, l.name ASC`,
         [numericDeptId]
@@ -346,9 +362,16 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
         }
         rows = await db.all(
           `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
-                  EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
+                  EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts,
+                  prog.id as programmerId, prog.name as programmerName
            FROM labs l
            LEFT JOIN departments d ON l.department_id = d.id
+           LEFT JOIN (
+             SELECT u.id, u.name, u.lab_id 
+             FROM users u 
+             JOIN roles r ON u.role_id = r.id 
+             WHERE r.name = 'ROLE_PROGRAMMER'
+           ) prog ON l.id = prog.lab_id
            WHERE l.department_id = ?
            ORDER BY l.lab_number ASC, l.name ASC`,
           [numericDeptId]
@@ -357,9 +380,16 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
     } else {
       rows = await db.all(
         `SELECT l.id, l.name, l.lab_number as labNumber, l.department_id as departmentId, d.name as deptName, d.code as deptCode,
-                EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts
+                EXISTS(SELECT 1 FROM finalized_hardware_counts f WHERE f.lab_id = l.id) as hasFinalizedCounts,
+                prog.id as programmerId, prog.name as programmerName
          FROM labs l
          LEFT JOIN departments d ON l.department_id = d.id
+         LEFT JOIN (
+           SELECT u.id, u.name, u.lab_id 
+           FROM users u 
+           JOIN roles r ON u.role_id = r.id 
+           WHERE r.name = 'ROLE_PROGRAMMER'
+         ) prog ON l.id = prog.lab_id
          ORDER BY l.lab_number ASC, l.name ASC`
       );
     }
@@ -373,7 +403,9 @@ router.get('/:deptId/labs', authenticateJWT, async (req, res) => {
         departmentId: row.departmentId !== undefined ? row.departmentId : row.departmentid,
         deptName: row.deptName !== undefined ? row.deptName : row.deptname,
         deptCode: row.deptCode !== undefined ? row.deptCode : row.deptcode,
-        hasFinalizedCounts: hasFin === 1 || hasFin === true || hasFin === 't'
+        hasFinalizedCounts: hasFin === 1 || hasFin === true || hasFin === 't',
+        programmerId: row.programmerId !== undefined ? row.programmerId : (row.programmerid || null),
+        programmerName: row.programmerName !== undefined ? row.programmerName : (row.programmername || null)
       };
     });
     res.json(mapped);

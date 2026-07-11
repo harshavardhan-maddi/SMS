@@ -157,6 +157,19 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 
       }
     }
 
+    // Verify lab is not already assigned to another programmer
+    if (roleName === 'ROLE_PROGRAMMER' && labId) {
+      const alreadyAssigned = await db.get(
+        `SELECT u.name FROM users u 
+         JOIN roles r ON u.role_id = r.id 
+         WHERE u.lab_id = ? AND r.name = 'ROLE_PROGRAMMER'`,
+        [labId]
+      );
+      if (alreadyAssigned) {
+        return res.status(400).send(`This lab is already assigned to programmer: ${alreadyAssigned.name}`);
+      }
+    }
+
     const hashedPwd = await bcrypt.hash(password, 10);
     
     let createdUserId: number;
