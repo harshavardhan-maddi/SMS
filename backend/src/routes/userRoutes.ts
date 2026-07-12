@@ -228,9 +228,10 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 
 });
 
 // 5. Reset Password
-router.put('/:id/reset-password', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+router.put('/:id/reset-password', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
+  const authUser = (req as any).user;
 
   if (!newPassword) {
     return res.status(400).send('Missing newPassword');
@@ -238,13 +239,17 @@ router.put('/:id/reset-password', authenticateJWT, authorizeRoles('ROLE_PRINCIPA
 
   try {
     const user = await db.get(
-      `SELECT u.id, r.name as role_name FROM users u 
+      `SELECT u.id, u.department_id, r.name as role_name FROM users u 
        LEFT JOIN roles r ON u.role_id = r.id 
        WHERE u.id = ?`, 
       [id]
     );
     if (!user) {
       return res.status(404).send('User not found');
+    }
+
+    if (authUser.role === 'ROLE_HOD' && Number(user.department_id) !== Number(authUser.departmentId)) {
+      return res.status(403).send('Forbidden: You can only reset password for users in your department.');
     }
 
     const hashedPwd = await bcrypt.hash(newPassword, 10);
@@ -267,20 +272,24 @@ router.put('/:id/reset-password', authenticateJWT, authorizeRoles('ROLE_PRINCIPA
 });
 
 // 6. Update active status
-router.put('/:id/active', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+router.put('/:id/active', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), async (req, res) => {
   const { id } = req.params;
-  // Get active query parameter
   const active = req.query.active === 'true' || req.query.active === '1';
+  const authUser = (req as any).user;
 
   try {
     const user = await db.get(
-      `SELECT u.id, r.name as role_name FROM users u 
+      `SELECT u.id, u.department_id, r.name as role_name FROM users u 
        LEFT JOIN roles r ON u.role_id = r.id 
        WHERE u.id = ?`, 
       [id]
     );
     if (!user) {
       return res.status(404).send('User not found');
+    }
+
+    if (authUser.role === 'ROLE_HOD' && Number(user.department_id) !== Number(authUser.departmentId)) {
+      return res.status(403).send('Forbidden: You can only update status for users in your department.');
     }
 
     const activeVal = db.getDialect() === 'postgres' ? active : (active ? 1 : 0);
@@ -304,8 +313,10 @@ router.put('/:id/active', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), asy
 });
 
 // 7. Delete User
-router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), async (req, res) => {
   const { id } = req.params;
+  const authUser = (req as any).user;
+
   try {
     const user = await db.get(
       `SELECT u.id, u.department_id, r.name as role_name FROM users u 
@@ -315,6 +326,10 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
     );
     if (!user) {
       return res.status(404).send('User not found');
+    }
+
+    if (authUser.role === 'ROLE_HOD' && Number(user.department_id) !== Number(authUser.departmentId)) {
+      return res.status(403).send('Forbidden: You can only delete users in your department.');
     }
 
     await db.transaction(async () => {

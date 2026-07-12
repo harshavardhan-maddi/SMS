@@ -354,20 +354,10 @@ export const HODDashboard: React.FC = () => {
             <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
-          <button className="flex items-center justify-between w-full p-3.5 bg-amber-50/50 hover:bg-amber-50 border border-amber-100 rounded-2xl text-left transition-colors cursor-pointer group">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
-                <Laptop className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-800">Inventory Overview</div>
-                <div className="text-[10px] text-slate-500 font-medium">View department inventory</div>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-amber-500 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-
-          <button className="flex items-center justify-between w-full p-3.5 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl text-left transition-colors cursor-pointer group">
+          <button
+            onClick={() => navigate('/reports')}
+            className="flex items-center justify-between w-full p-3.5 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl text-left transition-colors cursor-pointer group"
+          >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 text-purple-600 rounded-xl">
                 <FileText className="w-5 h-5" />

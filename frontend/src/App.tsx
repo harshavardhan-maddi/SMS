@@ -12,13 +12,13 @@ import { HardwareTechnicianDashboard } from './pages/HardwareTechnicianDashboard
 import { ProgrammerDashboard } from './pages/ProgrammerDashboard';
 import { DepartmentManagement } from './pages/DepartmentManagement';
 import { UserManagement } from './pages/UserManagement';
-import { InventoryPage } from './pages/InventoryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage, ProfilePage, SparePartsPage } from './pages/DummyPages';
 import { FinalizeCounts } from './pages/FinalizeCounts';
 import { LabsPage } from './pages/LabsPage';
 import { DeadStockPage } from './pages/DeadStockPage';
 import { MyDepartmentPage } from './pages/MyDepartmentPage';
+import { ProgrammersPage } from './pages/ProgrammersPage';
 import { PortalIntroAnimation } from './components/PortalIntroAnimation';
 
 // 1. Route Guard for Authenticated Session
@@ -139,11 +139,11 @@ export const App: React.FC = () => {
                       <Route path="/departments" element={<DepartmentManagement />} />
                       <Route path="/labs" element={<LabsPage />} />
                       <Route path="/users" element={<UserManagement />} />
-                      <Route path="/inventory" element={<InventoryPage />} />
                       <Route path="/reports" element={<ReportsPage />} />
                       <Route path="/finalize-counts" element={<FinalizeCounts />} />
                       <Route path="/dead-stock" element={<DeadStockPage />} />
                       <Route path="/my-department" element={<MyDepartmentPage />} />
+                      <Route path="/programmers" element={<ProgrammersPage />} />
 
                       {/* Supporting Pages */}
                       <Route path="/settings" element={<SettingsPage />} />
@@ -152,7 +152,7 @@ export const App: React.FC = () => {
 
                       {/* Redirect links mapped from sidebar buttons */}
                       <Route path="/overview" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/new-stock" element={<Navigate to="/inventory" replace />} />
+                      <Route path="/new-stock" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/in-progress" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/resolved" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/repair-requests" element={<Navigate to="/dashboard" replace />} />
