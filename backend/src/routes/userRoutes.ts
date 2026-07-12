@@ -40,6 +40,26 @@ router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'RO
   }
 });
 
+// Get programmers for a particular department (HOD access)
+router.get('/department/:deptId/programmers', authenticateJWT, authorizeRoles('ROLE_HOD', 'ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
+  const { deptId } = req.params;
+  try {
+    const rows = await db.all(
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
+       FROM users u
+       LEFT JOIN roles r ON u.role_id = r.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id
+       WHERE u.department_id = ? AND r.name = 'ROLE_PROGRAMMER'`,
+      [deptId]
+    );
+    res.json(rows.map(formatUser));
+  } catch (err) {
+    console.error('Get department programmers error:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
 // 2. Get all users (Principal & Dean)
 router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
   try {
