@@ -35,6 +35,7 @@ export const ProgrammersPage: React.FC = () => {
 
   // Password Form states
   const [newPassword, setNewPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchProgrammers = async () => {
     if (!currentUser || currentUser.role !== 'ROLE_HOD') {
@@ -67,6 +68,11 @@ export const ProgrammersPage: React.FC = () => {
       return;
     }
 
+    if (!window.confirm('Are you sure you want to register this programmer?')) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await api.post('/users', {
         name,
@@ -85,6 +91,8 @@ export const ProgrammersPage: React.FC = () => {
       fetchProgrammers();
     } catch (err: any) {
       toast.error(err.response?.data || 'Failed to create programmer.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -103,6 +111,11 @@ export const ProgrammersPage: React.FC = () => {
     e.preventDefault();
     if (!selectedUser || !newPassword) return;
 
+    if (!window.confirm(`Are you sure you want to reset the password for ${selectedUser.name}?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await api.put(`/users/${selectedUser.id}/reset-password`, { newPassword });
       toast.success(`Password for ${selectedUser.name} reset successfully.`);
@@ -111,6 +124,8 @@ export const ProgrammersPage: React.FC = () => {
       setSelectedUser(null);
     } catch (err: any) {
       toast.error(err.response?.data || 'Failed to reset password.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -286,9 +301,10 @@ export const ProgrammersPage: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-purple/10 mt-6"
+            disabled={isSubmitting}
+            className="w-full py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-purple/10 mt-6 disabled:opacity-50"
           >
-            Create Programmer Account
+            {isSubmitting ? 'Registering Programmer...' : 'Create Programmer Account'}
           </button>
         </form>
       </Modal>
@@ -313,9 +329,10 @@ export const ProgrammersPage: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="w-full py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-purple/10 mt-6"
+              disabled={isSubmitting}
+              className="w-full py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-purple/10 mt-6 disabled:opacity-50"
             >
-              Update Password
+              {isSubmitting ? 'Resetting Password...' : 'Update Password'}
             </button>
           </form>
         )}

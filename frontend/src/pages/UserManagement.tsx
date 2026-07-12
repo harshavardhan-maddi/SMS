@@ -49,6 +49,7 @@ export const UserManagement: React.FC = () => {
 
   // Password Form states
   const [newPassword, setNewPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = async () => {
     if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
@@ -126,6 +127,11 @@ export const UserManagement: React.FC = () => {
     e.preventDefault();
     if (!name || !email || !password) return;
 
+    if (!window.confirm(`Are you sure you want to register a new user: ${name}?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await api.post('/users', {
         name,
@@ -140,6 +146,8 @@ export const UserManagement: React.FC = () => {
       fetchData();
     } catch (err: any) {
       toast.error(err.response?.data || 'Failed to register user.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -153,12 +161,19 @@ export const UserManagement: React.FC = () => {
     e.preventDefault();
     if (!selectedUser || !newPassword) return;
 
+    if (!window.confirm(`Are you sure you want to reset the password for ${selectedUser.name}?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await api.put(`/users/${selectedUser.id}/reset-password`, { newPassword });
       toast.success(`Password successfully updated for ${selectedUser.name}.`);
       setPasswordModalOpen(false);
     } catch (err) {
       toast.error('Failed to update password.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -422,9 +437,10 @@ export const UserManagement: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4 disabled:opacity-50"
           >
-            <span>Register User Account</span>
+            <span>{isSubmitting ? 'Registering User...' : 'Register User Account'}</span>
           </button>
         </form>
       </Modal>
@@ -445,10 +461,11 @@ export const UserManagement: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4 disabled:opacity-50"
           >
             <Key className="w-4 h-4" />
-            <span>Update Password</span>
+            <span>{isSubmitting ? 'Updating Password...' : 'Update Password'}</span>
           </button>
         </form>
       </Modal>

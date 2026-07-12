@@ -23,6 +23,7 @@ export const FinalizeCounts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [selectedLabId, setSelectedLabId] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
   
   const [cpuCounts, setCpuCounts] = useState<HardwareCounts>({ total: 0, working: 0, not_working: 0 });
   const [monitorCounts, setMonitorCounts] = useState<HardwareCounts>({ total: 0, working: 0, not_working: 0 });
@@ -77,6 +78,11 @@ export const FinalizeCounts: React.FC = () => {
       return;
     }
 
+    if (!window.confirm('Are you sure you want to save and finalize these hardware counts?')) {
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const payload = {
         departmentId: user?.departmentId || 0,
@@ -96,6 +102,8 @@ export const FinalizeCounts: React.FC = () => {
     } catch (err: any) {
       const msg = err.response?.data || 'Failed to finalize hardware counts.';
       toast.error(typeof msg === 'string' ? msg : 'Failed to finalize hardware counts.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -235,10 +243,15 @@ export const FinalizeCounts: React.FC = () => {
         {isHOD ? (
           <button
             type="submit"
-            className="px-6 py-3 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            disabled={isSaving}
+            className={`px-6 py-3 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 ${
+              isSaving
+                ? 'bg-slate-400 cursor-not-allowed'
+                : 'bg-brand-purple hover:bg-brand-purpleHover shadow-brand-purple/20 cursor-pointer'
+            }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>Finalize & Save counts</span>
+            <span>{isSaving ? 'Saving counts...' : 'Finalize & Save counts'}</span>
           </button>
         ) : (
           <div className="p-4 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl text-xs font-semibold max-w-lg">

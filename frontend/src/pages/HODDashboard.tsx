@@ -184,6 +184,11 @@ export const HODDashboard: React.FC = () => {
     e.preventDefault();
     if (!programmerName || !programmerEmail || !programmerPassword) return;
 
+    if (!window.confirm(`Are you sure you want to register this programmer: ${programmerName}?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await api.post('/users', {
         name: programmerName,
@@ -202,6 +207,8 @@ export const HODDashboard: React.FC = () => {
       fetchHODData();
     } catch (err: any) {
       toast.error(err.response?.data || 'Failed to register programmer.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1183,9 +1190,10 @@ export const HODDashboard: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4 disabled:opacity-50"
           >
-            <span>Register Programmer Account</span>
+            <span>{isSubmitting ? 'Registering Programmer...' : 'Register Programmer Account'}</span>
           </button>
         </form>
       </Modal>
