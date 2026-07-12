@@ -244,6 +244,12 @@ export async function initSchema() {
       `);
       console.log("Database reset completed successfully: cleared all hardware, repairs, and notifications.");
     }
+
+    // Record schema initialization status
+    const initDone = await db.get("SELECT value FROM settings WHERE key = 'schema_initialized'");
+    if (!initDone) {
+      await db.run("INSERT INTO settings (key, value) VALUES ('schema_initialized', 'true')");
+    }
   } catch (e) {
     console.error("Cleanup reset error:", e);
   }
