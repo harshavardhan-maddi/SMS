@@ -61,7 +61,381 @@ export const ReportsPage: React.FC = () => {
     fetchDeptLabs();
   }, [selectedDeptId, user]);
 
+  const handlePrintPDF = async (reportName: string) => {
+    // Calculate range dates
+    let sDate = '';
+    let eDate = '';
+    const today = new Date().toISOString().split('T')[0];
+
+    if (timePeriod === 'today') {
+      sDate = today;
+      eDate = today;
+    } else if (timePeriod === 'weekly') {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 7);
+      sDate = pastDate.toISOString().split('T')[0];
+      eDate = today;
+    } else if (timePeriod === 'monthly') {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 30);
+      sDate = pastDate.toISOString().split('T')[0];
+      eDate = today;
+    } else if (timePeriod === 'custom') {
+      sDate = startDate;
+      eDate = endDate;
+    }
+
+    // Resolve report type parameter
+    let type = 'inventory';
+    if (reportName.toLowerCase().includes('repair') || reportName.toLowerCase().includes('history') || reportName.toLowerCase().includes('performance')) {
+      type = 'repairs';
+    }
+
+    const activeDeptId = user?.role === 'ROLE_HOD' ? user?.departmentId : selectedDeptId;
+
+    const loadingToast = toast.loading(`Compiling PDF report data...`);
+
+    try {
+      let data: any[] = [];
+      if (type === 'inventory') {
+        let url = `/inventory?`;
+        if (activeDeptId && activeDeptId !== 'all') url += `departmentId=${activeDeptId}&`;
+        if (selectedLabId && selectedLabId !== 'all') url += `labId=${selectedLabId}&`;
+        const res = await api.get(url);
+        data = res.data || [];
+        
+        // Filter by date range in frontend if applicable
+        if (sDate) {
+          data = data.filter(item => item.purchaseDate >= sDate);
+        }
+        if (eDate) {
+          data = data.filter(item => item.purchaseDate <= eDate);
+        }
+
+        // Apply report specific constraints
+        if (reportName.toLowerCase().includes('dead stock')) {
+          data = data.filter(item => item.status === 'Dead Stock');
+        } else if (reportName.toLowerCase().includes('unallocated')) {
+          data = data.filter(item => item.status === 'New Stock');
+        }
+      } else {
+        let url = `/repairs?`;
+        if (activeDeptId && activeDeptId !== 'all') url += `departmentId=${activeDeptId}&`;
+        const res = await api.get(url);
+        data = res.data || [];
+
+        // Filter by lab
+        if (selectedLabId && selectedLabId !== 'all') {
+          data = data.filter(item => item.inventory?.lab?.id === Number(selectedLabId));
+        }
+
+        // Filter by date range in frontend
+        if (sDate) {
+          data = data.filter(item => item.initiatedDate >= sDate);
+        }
+        if (eDate) {
+          data = data.filter(item => item.initiatedDate <= eDate);
+        }
+
+        // Apply report specific constraints
+        if (reportName.toLowerCase().includes('active') || reportName.toLowerCase().includes('pending')) {
+          data = data.filter(item => ['initiated', 'in progress'].includes(item.status.toLowerCase()));
+        } else if (reportName.toLowerCase().includes('resolved') || reportName.toLowerCase().includes('resolution')) {
+          data = data.filter(item => item.status.toLowerCase() === 'resolved');
+        }
+      }
+
+      toast.dismiss(loadingToast);
+
+      // Get department and lab labels for NEC headers
+      let deptNameStr = 'All Departments';
+      if (user?.role === 'ROLE_HOD') {
+        deptNameStr = user?.departmentCode || 'HOD Department';
+      } else if (activeDeptId && activeDeptId !== 'all') {
+        const found = departments.find(d => String(d.id) === String(activeDeptId));
+        if (found) deptNameStr = `${found.name} (${found.code})`;
+      }
+
+      let labNameStr = 'All Labs';
+      if (selectedLabId && selectedLabId !== 'all') {
+        const found = labs.find(l => String(l.id) === String(selectedLabId));
+        if (found) labNameStr = `Lab ${found.labNumber} (${found.name})`;
+      }
+
+      const dateRangeStr = sDate || eDate ? `${sDate || 'Beginning'} to ${eDate || 'Present'}` : 'All Time';
+
+      // Open new window for print layout
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Pop-up blocked. Please allow pop-ups to print reports.');
+        return;
+      }
+
+      // Generate HTML printable structure
+      let tableHeadersHtml = '';
+      let tableRowsHtml = '';
+
+      if (type === 'inventory') {
+        tableHeadersHtml = `
+          <tr>
+            <th>Asset ID</th>
+            <th>Type</th>
+            <th>Brand</th>
+            <th>Model</th>
+            <th>Serial Number</th>
+            <th>Department</th>
+            <th>Lab</th>
+            <th>Purchase Date</th>
+            <th>Status</th>
+          </tr>
+        `;
+        tableRowsHtml = data.map(item => `
+          <tr>
+            <td>${item.id}</td>
+            <td>${item.type}</td>
+            <td>${item.brand || '-'}</td>
+            <td>${item.model || '-'}</td>
+            <td>${item.serialNumber || '-'}</td>
+            <td>${item.department?.code || 'N/A'}</td>
+            <td>${item.lab ? 'Lab ' + item.lab.labNumber : 'N/A'}</td>
+            <td>${item.purchaseDate || '-'}</td>
+            <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
+          </tr>
+        `).join('');
+      } else {
+        tableHeadersHtml = `
+          <tr>
+            <th>Request ID</th>
+            <th>Asset ID</th>
+            <th>Component</th>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Initiated On</th>
+            <th>Requester</th>
+            <th>Assigned To</th>
+          </tr>
+        `;
+        tableRowsHtml = data.map(item => `
+          <tr>
+            <td>${item.id}</td>
+            <td>${item.inventory?.id || '-'}</td>
+            <td>${item.inventory?.type || '-'}</td>
+            <td>${item.title}</td>
+            <td>${item.priority}</td>
+            <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
+            <td>${item.initiatedDate} ${item.initiatedTime}</td>
+            <td>${item.requester?.name || '-'}</td>
+            <td>${item.assignedTo?.name || '-'}</td>
+          </tr>
+        `).join('');
+      }
+
+      const htmlContent = `
+        <html>
+          <head>
+            <title>${reportName}</title>
+            <style>
+              body {
+                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                color: #1e293b;
+                margin: 0;
+                padding: 40px;
+              }
+              .header-container {
+                text-align: center;
+                border-bottom: 3px double #cbd5e1;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+              }
+              .college-title {
+                font-size: 24px;
+                font-weight: 800;
+                text-transform: uppercase;
+                color: #475569;
+                margin: 0 0 5px 0;
+                letter-spacing: 0.5px;
+              }
+              .subtitle {
+                font-size: 14px;
+                font-weight: 600;
+                color: #64748b;
+                margin: 0 0 15px 0;
+              }
+              .report-title {
+                font-size: 18px;
+                font-weight: 700;
+                text-transform: uppercase;
+                color: #0f172a;
+                margin: 15px 0 5px 0;
+                background-color: #f1f5f9;
+                display: inline-block;
+                padding: 6px 16px;
+                border-radius: 8px;
+              }
+              .meta-grid {
+                display: grid;
+                grid-template-cols: 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 30px;
+                font-size: 12px;
+                background-color: #f8fafc;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+              }
+              .meta-item {
+                display: flex;
+                margin-bottom: 4px;
+              }
+              .meta-label {
+                font-weight: 700;
+                color: #475569;
+                width: 130px;
+                flex-shrink: 0;
+              }
+              .meta-val {
+                color: #0f172a;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+                margin-top: 10px;
+              }
+              th, td {
+                border: 1px solid #cbd5e1;
+                padding: 10px 8px;
+                text-align: left;
+              }
+              th {
+                background-color: #f1f5f9;
+                color: #334155;
+                font-weight: 700;
+                text-transform: uppercase;
+                font-size: 10px;
+              }
+              tr:nth-child(even) {
+                background-color: #f8fafc;
+              }
+              .status-badge {
+                font-weight: 700;
+                text-transform: uppercase;
+                font-size: 9px;
+                padding: 2px 6px;
+                border-radius: 4px;
+              }
+              .status-badge.working, .status-badge.resolved {
+                background-color: #dcfce7;
+                color: #15803d;
+              }
+              .status-badge.dead-stock, .status-badge.initiated {
+                background-color: #fee2e2;
+                color: #b91c1c;
+              }
+              .status-badge.new-stock {
+                background-color: #dbeafe;
+                color: #1d4ed8;
+              }
+              .status-badge.in-progress {
+                background-color: #fef3c7;
+                color: #b45309;
+              }
+              .summary-box {
+                margin-top: 30px;
+                text-align: right;
+                font-size: 13px;
+                font-weight: 700;
+                color: #334155;
+              }
+              @media print {
+                body {
+                  padding: 20px;
+                }
+                button {
+                  display: none;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header-container">
+              <h1 class="college-title">Narasaraopeta Engineering College</h1>
+              <p class="subtitle">Autonomous Institution | Approved by AICTE, Affiliated to JNTUK</p>
+              <div class="report-title">${reportName}</div>
+            </div>
+
+            <div class="meta-grid">
+              <div>
+                <div class="meta-item">
+                  <span class="meta-label">Department:</span>
+                  <span class="meta-val">${deptNameStr}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Laboratory:</span>
+                  <span class="meta-val">${labNameStr}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Date Filter:</span>
+                  <span class="meta-val">${dateRangeStr}</span>
+                </div>
+              </div>
+              <div>
+                <div class="meta-item">
+                  <span class="meta-label">Generated By:</span>
+                  <span class="meta-val">${user?.name} (${user?.role === 'ROLE_PRINCIPAL' ? 'Principal' : user?.role === 'ROLE_DEAN' ? 'Computer Dean' : 'HOD'})</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Timestamp:</span>
+                  <span class="meta-val">${new Date().toLocaleString()}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Total Records:</span>
+                  <span class="meta-val">${data.length}</span>
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                ${tableHeadersHtml}
+              </thead>
+              <tbody>
+                ${data.length === 0 ? '<tr><td colspan="10" style="text-align: center; padding: 20px; font-weight: bold; color: #64748b;">No matching records found</td></tr>' : tableRowsHtml}
+              </tbody>
+            </table>
+
+            <div class="summary-box">
+              Report Summary Count: ${data.length} Items Listed
+            </div>
+
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+
+      toast.success(`${reportName} compiled for printing.`);
+    } catch (err: any) {
+      console.error('Print PDF error:', err);
+      toast.dismiss(loadingToast);
+      toast.error('Failed to compile PDF report data.');
+    }
+  };
+
   const handleExport = (reportName: string, format: 'PDF' | 'CSV' | 'Excel') => {
+    if (format === 'PDF') {
+      handlePrintPDF(reportName);
+      return;
+    }
+
     // Calculate range dates
     let sDate = '';
     let eDate = '';
