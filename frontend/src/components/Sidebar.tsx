@@ -53,7 +53,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   // Role based menu structures
   const getPrincipalMenu = () => [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Overview', path: '/overview', icon: ShieldCheck },
     { name: 'Departments', path: '/departments', icon: Building2 },
     { name: 'Department Labs', path: '/labs', icon: Laptop },
     { name: 'In Progress', path: '/in-progress', icon: Wrench },
