@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  updateUser: (updatedFields: Partial<UserSession>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,8 +89,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Logged out successfully.');
   };
 
+  const updateUser = (updatedFields: Partial<UserSession>) => {
+    if (!user) return;
+    const sessionUser = { ...user, ...updatedFields };
+    setUser(sessionUser);
+    
+    // Update stored user details
+    const isSessionOnly = sessionStorage.getItem('sms_token') !== null;
+    if (isSessionOnly) {
+      sessionStorage.setItem('sms_user', JSON.stringify(sessionUser));
+    }
+    localStorage.setItem('sms_user', JSON.stringify(sessionUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token: token as string | null, isAuthenticated: !!user, login, logout, loading: loading as boolean }}>
+    <AuthContext.Provider value={{ user, token: token as string | null, isAuthenticated: !!user, login, logout, loading: loading as boolean, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

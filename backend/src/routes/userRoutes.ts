@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { db } from '../db/db';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
@@ -103,6 +104,78 @@ router.put('/change-password', authenticateJWT, async (req, res) => {
     res.json({ message: 'Password updated successfully!' });
   } catch (err) {
     console.error('Change password error:', err);
+    res.status(400).send((err as Error).message);
+  }
+});
+
+const JWT_SECRET = process.env.JWT_SECRET || '404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970';
+
+// 3b. Update own profile details (name, email/username, password)
+router.put('/profile', authenticateJWT, async (req, res) => {
+  const { name, email, currentPassword, newPassword } = req.body;
+  const userReq = (req as any).user;
+  const userId = userReq.id;
+
+  if (!name || !email) {
+    return res.status(400).send('Name and email are required');
+  }
+
+  try {
+    // Check if another user already has this email
+    const existing = await db.get('SELECT id FROM users WHERE LOWER(email) = ? AND id != ?', [email.trim().toLowerCase(), userId]);
+    if (existing) {
+      return res.status(400).send(`User with email ${email} already exists`);
+    }
+
+    const userRow = await db.get('SELECT password FROM users WHERE id = ?', [userId]);
+    if (!userRow) {
+      return res.status(404).send('User not found');
+    }
+
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).send('Current password is required to change password');
+      }
+      const match = await bcrypt.compare(currentPassword, userRow.password);
+      if (!match) {
+        return res.status(400).send('Incorrect current password');
+      }
+      const hashedPwd = await bcrypt.hash(newPassword, 10);
+      await db.run('UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?', [name.trim(), email.trim(), hashedPwd, userId]);
+    } else {
+      await db.run('UPDATE users SET name = ?, email = ? WHERE id = ?', [name.trim(), email.trim(), userId]);
+    }
+
+    const updated = await db.get(
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
+       FROM users u
+       LEFT JOIN roles r ON u.role_id = r.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id
+       WHERE u.id = ?`,
+      [userId]
+    );
+
+    const token = jwt.sign(
+      {
+        sub: updated.email,
+        role: updated.role_name,
+        name: updated.name,
+        userId: updated.id,
+        departmentCode: updated.dept_code || null,
+        departmentId: updated.dept_id || null,
+        labId: updated.lab_id || null,
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: formatUser(updated)
+    });
+  } catch (err) {
+    console.error('Update profile error:', err);
     res.status(400).send((err as Error).message);
   }
 });
