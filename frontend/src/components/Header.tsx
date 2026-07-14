@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { Bell, Menu, Check, Eye } from 'lucide-react';
@@ -149,6 +150,15 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
               <div className="px-4 py-3 border-b border-slate-100">
                 <p className="text-xs font-bold text-slate-800 truncate">{user.name}</p>
                 <p className="text-[10px] text-brand-textMuted truncate">{user.email}</p>
+              </div>
+              <div className="py-0.5 border-b border-slate-100">
+                <Link
+                  to="/profile"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="block w-full text-left px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  My Profile
+                </Link>
               </div>
               <button
                 onClick={logout}
