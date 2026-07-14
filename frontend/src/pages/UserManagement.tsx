@@ -3,7 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { Modal } from '../components/ReusableComponents';
-import { Users, Plus, Key, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { Users, Plus, Key, ToggleLeft, ToggleRight, Trash2, Edit } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface Role {
@@ -50,6 +50,12 @@ export const UserManagement: React.FC = () => {
   // Password Form states
   const [newPassword, setNewPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit Form states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
 
   const fetchData = async () => {
     if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
@@ -172,6 +178,39 @@ export const UserManagement: React.FC = () => {
       setPasswordModalOpen(false);
     } catch (err) {
       toast.error('Failed to update password.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (user: User) => {
+    setSelectedUser(user);
+    setEditName(user.name);
+    setEditEmail(user.email);
+    setEditPassword('');
+    setEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !editName || !editEmail) return;
+
+    if (!window.confirm(`Are you sure you want to update user: ${selectedUser.name}?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.put(`/users/${selectedUser.id}`, {
+        name: editName,
+        email: editEmail,
+        password: editPassword || undefined
+      });
+      toast.success('User updated successfully.');
+      setEditModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data || 'Failed to update user.');
     } finally {
       setIsSubmitting(false);
     }
@@ -312,6 +351,17 @@ export const UserManagement: React.FC = () => {
                             >
                               <Key className="w-4 h-4" />
                             </button>
+
+                            {/* Edit user details (Principal only) */}
+                            {currentUser?.role === 'ROLE_PRINCIPAL' && (
+                              <button
+                                onClick={() => handleOpenEdit(u)}
+                                className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors cursor-pointer"
+                                title="Edit User Details"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
 
                             {/* Delete user */}
                             <button
@@ -466,6 +516,55 @@ export const UserManagement: React.FC = () => {
           >
             <Key className="w-4 h-4" />
             <span>{isSubmitting ? 'Updating Password...' : 'Update Password'}</span>
+          </button>
+        </form>
+      </Modal>
+
+      {/* MODAL 3: Edit User Details (Principal only) */}
+      <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title={`Edit User: ${selectedUser?.name}`}>
+        <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
+          
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Full Name</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Dr. Jane Doe"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Email Address (Username)</label>
+            <input
+              type="email"
+              required
+              placeholder="e.g. tech@sms.edu"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Password (Leave blank to keep current)</label>
+            <input
+              type="password"
+              placeholder="Enter new password to change"
+              value={editPassword}
+              onChange={(e) => setEditPassword(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-xl bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold shadow-md shadow-brand-purple/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4 disabled:opacity-50"
+          >
+            <span>{isSubmitting ? 'Updating User...' : 'Save Changes'}</span>
           </button>
         </form>
       </Modal>

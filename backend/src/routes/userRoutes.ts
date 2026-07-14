@@ -347,4 +347,45 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HO
   }
 });
 
+// 8. Edit user name, email (username), and optionally password (Principal only)
+router.put('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+  const { id } = req.params;
+  const { name, email, password } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).send('Name and email are required');
+  }
+
+  try {
+    // Check if another user already has this email
+    const existing = await db.get('SELECT id FROM users WHERE LOWER(email) = ? AND id != ?', [email.trim().toLowerCase(), id]);
+    if (existing) {
+      return res.status(400).send(`User with email ${email} already exists`);
+    }
+
+    if (password) {
+      const hashedPwd = await bcrypt.hash(password, 10);
+      await db.run('UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?', [name.trim(), email.trim(), hashedPwd, id]);
+    } else {
+      await db.run('UPDATE users SET name = ?, email = ? WHERE id = ?', [name.trim(), email.trim(), id]);
+    }
+
+    const updated = await db.get(
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
+       FROM users u
+       LEFT JOIN roles r ON u.role_id = r.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN labs l ON u.lab_id = l.id
+       WHERE u.id = ?`,
+      [id]
+    );
+
+    res.json(formatUser(updated));
+  } catch (err) {
+    console.error('Update user error:', err);
+    res.status(400).send((err as Error).message);
+  }
+});
+
 export default router;
+
