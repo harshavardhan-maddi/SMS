@@ -661,11 +661,12 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
         const asset = await db.get("SELECT department_id, lab_id, type FROM inventory WHERE id = ?", [assetId]);
         if (asset && asset.department_id) {
           const targetLabId = asset.lab_id || 0;
+          const countToMove = (request.device_count && assetIds.length <= 1) ? request.device_count : 1;
           await db.run(
             `UPDATE finalized_hardware_counts 
-             SET working = MAX(0, working - 1), not_working = not_working + 1, updated_at = CURRENT_TIMESTAMP
+             SET working = MAX(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
              WHERE department_id = ? AND lab_id = ? AND type = ?`,
-            [asset.department_id, targetLabId, asset.type]
+            [countToMove, countToMove, asset.department_id, targetLabId, asset.type]
           );
         }
       }

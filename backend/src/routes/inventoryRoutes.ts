@@ -138,7 +138,7 @@ router.get('/counts', authenticateJWT, async (req, res) => {
 
     for (const row of activeRepairs) {
       const type = row.type;
-      const countVal = parseInt(row.count);
+      const countVal = parseInt(row.count, 10);
       if (counts.Repairing[type] !== undefined) {
         counts.Repairing[type] += countVal;
         counts.Repairing.Total += countVal;
@@ -146,6 +146,34 @@ router.get('/counts', authenticateJWT, async (req, res) => {
         counts.Working.Total = Math.max(0, counts.Working.Total - countVal);
       }
     }
+
+    // Add dead stock repair requests dynamically and adjust Working
+    const deadStockRepairs = await db.all(
+      `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
+       FROM repair_requests r 
+       JOIN inventory i ON r.inventory_id = i.id 
+       WHERE r.status = 'Dead Stock' 
+       GROUP BY i.type`
+    );
+
+    for (const row of deadStockRepairs) {
+      const type = row.type;
+      const countVal = parseInt(row.count, 10);
+      if (counts.DeadStock[type] !== undefined) {
+        counts.DeadStock[type] = Math.max(counts.DeadStock[type], countVal);
+        counts.Working[type] = Math.max(0, counts.Working[type] - countVal);
+      }
+    }
+
+    // Recalculate totals
+    let deadTotal = 0;
+    let workingTotal = 0;
+    for (const t of types) {
+      deadTotal += counts.DeadStock[t] || 0;
+      workingTotal += counts.Working[t] || 0;
+    }
+    counts.DeadStock.Total = deadTotal;
+    counts.Working.Total = workingTotal;
 
     res.json(counts);
   } catch (err) {
@@ -218,9 +246,28 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
 
     for (const row of activeRepairRows) {
       const type = row.type;
-      const countVal = parseInt(row.count);
+      const countVal = parseInt(row.count, 10);
       if (counts[type]) {
         counts[type].Repairing += countVal;
+        counts[type].Working = Math.max(0, counts[type].Working - countVal);
+      }
+    }
+
+    // Dynamically add Dead Stock repair requests count to Dead and adjust Working
+    const deadRepairRows = await db.all(
+      `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
+       FROM repair_requests r 
+       JOIN inventory i ON r.inventory_id = i.id 
+       WHERE i.department_id = ? AND r.status = 'Dead Stock'
+       GROUP BY i.type`,
+      [numericDeptId]
+    );
+
+    for (const row of deadRepairRows) {
+      const type = row.type;
+      const countVal = parseInt(row.count, 10);
+      if (counts[type]) {
+        counts[type].Dead = Math.max(counts[type].Dead, countVal);
         counts[type].Working = Math.max(0, counts[type].Working - countVal);
       }
     }
@@ -291,9 +338,27 @@ router.get('/counts/lab/:labId', authenticateJWT, async (req, res) => {
 
     for (const row of activeRepairRows) {
       const type = row.type;
-      const countVal = parseInt(row.count);
+      const countVal = parseInt(row.count, 10);
       if (counts[type]) {
         counts[type].Repairing += countVal;
+        counts[type].Working = Math.max(0, counts[type].Working - countVal);
+      }
+    }
+
+    const deadRepairRows = await db.all(
+      `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
+       FROM repair_requests r 
+       JOIN inventory i ON r.inventory_id = i.id 
+       WHERE i.lab_id = ? AND r.status = 'Dead Stock'
+       GROUP BY i.type`,
+      [numericLabId]
+    );
+
+    for (const row of deadRepairRows) {
+      const type = row.type;
+      const countVal = parseInt(row.count, 10);
+      if (counts[type]) {
+        counts[type].Dead = Math.max(counts[type].Dead, countVal);
         counts[type].Working = Math.max(0, counts[type].Working - countVal);
       }
     }
