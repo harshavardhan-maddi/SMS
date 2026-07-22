@@ -18,7 +18,8 @@ import {
   Layers,
   Calendar,
   ShieldCheck,
-  Tag
+  Tag,
+  Trash2
 } from 'lucide-react';
 
 interface RequestDetailsModalProps {
@@ -83,8 +84,12 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
 
   let resolvedCount = 0;
   const currentStatus = request.status || 'Initiated';
+  const isDeadStock = currentStatus.toLowerCase() === 'dead stock';
+
   if (currentStatus.toLowerCase() === 'resolved') {
     resolvedCount = totalCount;
+  } else if (isDeadStock) {
+    resolvedCount = 0;
   } else if (currentStatus.toLowerCase() === 'in progress' || currentStatus.toLowerCase() === 'accepted') {
     // Check if timeline or description specifies resolved count (e.g. 4/10)
     const matchRes = (request.description || '').match(/resolved\s*(\d+)\/(\d+)/i);
@@ -98,8 +103,8 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
     resolvedCount = 0; // Initiated state: 0 resolved
   }
 
-  const inProgressCount = totalCount - resolvedCount;
-  const progressPercent = Math.round((resolvedCount / totalCount) * 100);
+  const inProgressCount = isDeadStock ? 0 : totalCount - resolvedCount;
+  const progressPercent = isDeadStock ? 100 : Math.round((resolvedCount / totalCount) * 100);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
@@ -162,31 +167,41 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-brand-purple" />
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Unit Resolution Status Breakdown ({resolvedCount}/{totalCount} Resolved)
+                {isDeadStock 
+                  ? `Unit Status Breakdown (${totalCount}/${totalCount} Dead Stock)`
+                  : `Unit Resolution Status Breakdown (${resolvedCount}/${totalCount} Resolved)`}
               </h4>
             </div>
-            <span className="text-xs font-extrabold text-brand-purple">{progressPercent}% Completed</span>
+            <span className={`text-xs font-extrabold ${isDeadStock ? 'text-red-600' : 'text-brand-purple'}`}>
+              {isDeadStock ? 'Decommissioned' : `${progressPercent}% Completed`}
+            </span>
           </div>
 
           {/* Live Progress Bar */}
           <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
+              className={`h-full rounded-full transition-all duration-500 ${
+                isDeadStock 
+                  ? 'bg-gradient-to-r from-red-600 to-rose-500' 
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+              }`}
+              style={{ width: `${isDeadStock ? 100 : progressPercent}%` }}
             ></div>
           </div>
 
           {/* Unit Grid Displays */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
             {Array.from({ length: totalCount }).map((_, idx) => {
-              const isResolved = idx < resolvedCount;
+              const isResolved = !isDeadStock && idx < resolvedCount;
               const isInitiatedOnly = currentStatus.toLowerCase() === 'initiated';
 
               return (
                 <div
                   key={idx}
                   className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all ${
-                    isResolved
+                    isDeadStock
+                      ? 'bg-red-50/90 border-red-300 text-red-800'
+                      : isResolved
                       ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800 shadow-xs'
                       : isInitiatedOnly
                       ? 'bg-red-50/90 border-red-300 text-red-800 animate-pulse'
@@ -199,14 +214,20 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                   </div>
                   <span
                     className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 ${
-                      isResolved
+                      isDeadStock
+                        ? 'bg-red-200/90 text-red-900 border border-red-300'
+                        : isResolved
                         ? 'bg-emerald-200/70 text-emerald-900'
                         : isInitiatedOnly
                         ? 'bg-red-200/80 text-red-900'
                         : 'bg-amber-200/80 text-amber-900'
                     }`}
                   >
-                    {isResolved ? (
+                    {isDeadStock ? (
+                      <>
+                        <Trash2 className="w-3 h-3 text-red-700" /> Dead Stock
+                      </>
+                    ) : isResolved ? (
                       <>
                         <CheckCircle2 className="w-3 h-3 text-emerald-700" /> Resolved
                       </>

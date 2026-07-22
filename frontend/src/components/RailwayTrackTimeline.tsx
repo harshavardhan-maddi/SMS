@@ -16,7 +16,8 @@ import {
   Keyboard,
   Mouse,
   Wifi,
-  Laptop
+  Laptop,
+  Trash2
 } from 'lucide-react';
 
 interface RailwayTrackTimelineProps {
@@ -177,18 +178,24 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
             <div className="absolute left-[29px] sm:left-[37px] top-4 bottom-4 w-1.5 bg-gradient-to-b from-emerald-500 via-indigo-500 to-slate-700 rounded-full shadow-inner"></div>
 
             {stations.map((st, idx) => {
+              const isDeadStockTerminal = currentStatus === 'dead stock' && st.id === 'terminal';
+
               return (
                 <div key={st.id} className="relative flex items-start gap-4 sm:gap-6 group">
                   
                   {/* Railway Station Node Icon / Light */}
                   <div className={`relative z-10 flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-4 shadow-lg transition-transform group-hover:scale-110 ${
-                    st.isCompleted
+                    isDeadStockTerminal
+                      ? 'bg-red-600 border-red-900 text-white ring-4 ring-red-500/30'
+                      : st.isCompleted
                       ? 'bg-emerald-500 border-emerald-900 text-white ring-4 ring-emerald-500/20'
                       : st.isActive
                       ? 'bg-amber-500 border-amber-900 text-white ring-4 ring-amber-500/30 animate-pulse'
                       : 'bg-slate-800 border-slate-700 text-slate-500'
                   }`}>
-                    {st.isCompleted ? (
+                    {isDeadStockTerminal ? (
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    ) : st.isCompleted ? (
                       <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3]" />
                     ) : st.isActive ? (
                       <Wrench className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
