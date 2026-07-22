@@ -653,10 +653,21 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
       // Set status to Dead Stock
       await db.run("UPDATE repair_requests SET status = 'Dead Stock', completed_date = ?, completed_time = ? WHERE id = ?", [todayStr, timeStr, id]);
       
-      // Update inventory status to Dead Stock for all associated assets
+      // Update inventory status to Dead Stock for all associated assets and sync finalized counts
       const assetIds = getAssetIdsFromRequest(request);
       for (const assetId of assetIds) {
         await db.run("UPDATE inventory SET status = 'Dead Stock' WHERE id = ?", [assetId]);
+        
+        const asset = await db.get("SELECT department_id, lab_id, type FROM inventory WHERE id = ?", [assetId]);
+        if (asset && asset.department_id) {
+          const targetLabId = asset.lab_id || 0;
+          await db.run(
+            `UPDATE finalized_hardware_counts 
+             SET working = MAX(0, working - 1), not_working = not_working + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE department_id = ? AND lab_id = ? AND type = ?`,
+            [asset.department_id, targetLabId, asset.type]
+          );
+        }
       }
 
       // Create history log
@@ -682,6 +693,11 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
         'DEAD_STOCK_ADDED'
       );
     }
+    notificationService.sendToRole(
+      'ROLE_HOD',
+      `Asset ${request.inventory_id} marked as Dead Stock (Request: ${id})`,
+      'DEAD_STOCK_ADDED'
+    );
     notificationService.sendToRole(
       'ROLE_DEAN',
       `Asset ${request.inventory_id} marked as Dead Stock (Request: ${id})`,
