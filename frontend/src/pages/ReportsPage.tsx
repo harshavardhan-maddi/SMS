@@ -17,6 +17,10 @@ export const ReportsPage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Export Modal State
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [selectedReportName, setSelectedReportName] = useState('');
+
   // Fetch departments and labs on mount
   useEffect(() => {
     const initFilters = async () => {
@@ -118,6 +122,9 @@ export const ReportsPage: React.FC = () => {
         } else if (reportName.toLowerCase().includes('unallocated')) {
           data = data.filter(item => item.status === 'New Stock');
         }
+
+        // EXCLUDE WORKING systems for the PDF!
+        data = data.filter(item => item.status !== 'Working');
       } else {
         let url = `/repairs?`;
         if (activeDeptId && activeDeptId !== 'all') url += `departmentId=${activeDeptId}&`;
@@ -206,27 +213,34 @@ export const ReportsPage: React.FC = () => {
         tableHeadersHtml = `
           <tr>
             <th>Request ID</th>
+            <th>Lab Name</th>
             <th>Asset ID</th>
             <th>Component</th>
-            <th>Title</th>
+            <th>Title & Description</th>
+            <th>Programmer</th>
+            <th>Technician</th>
             <th>Priority</th>
             <th>Status</th>
             <th>Initiated On</th>
-            <th>Requester</th>
-            <th>Assigned To</th>
+            <th>Solved On</th>
           </tr>
         `;
         tableRowsHtml = data.map(item => `
           <tr>
             <td>${item.id}</td>
+            <td>${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber + ' (' + item.inventory.lab.name + ')' : 'N/A'}</td>
             <td>${item.inventory?.id || '-'}</td>
             <td>${item.inventory?.type || '-'}</td>
-            <td>${item.title}</td>
+            <td>
+              <div style="font-weight: 600; margin-bottom: 2px;">${item.title}</div>
+              <div style="font-size: 9px; color: #64748b; max-width: 180px; white-space: normal; word-break: break-all;">${item.description || '-'}</div>
+            </td>
+            <td>${item.requester?.name || '-'}</td>
+            <td>${item.assignedTo?.name || 'Not Assigned'}</td>
             <td>${item.priority}</td>
             <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
             <td>${item.initiatedDate} ${item.initiatedTime}</td>
-            <td>${item.requester?.name || '-'}</td>
-            <td>${item.assignedTo?.name || '-'}</td>
+            <td>${item.completedDate ? `${item.completedDate} ${item.completedTime || ''}` : 'Pending'}</td>
           </tr>
         `).join('');
       }
@@ -236,178 +250,250 @@ export const ReportsPage: React.FC = () => {
           <head>
             <title>${reportName}</title>
             <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
               body {
-                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', sans-serif;
                 color: #1e293b;
                 margin: 0;
                 padding: 40px;
+                background-color: #ffffff;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
-              .header-container {
+              .header-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 25px;
+                border-bottom: 3px double #0f172a;
+              }
+              .logo-cell {
+                width: 70px;
+                vertical-align: middle;
+                padding-bottom: 15px;
+              }
+              .logo-placeholder {
+                width: 60px;
+                height: 60px;
+                background-color: #0c2340;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #ffffff;
+                font-size: 20px;
+                font-weight: 800;
+              }
+              .college-details-cell {
                 text-align: center;
-                border-bottom: 3px double #cbd5e1;
-                padding-bottom: 20px;
-                margin-bottom: 30px;
+                padding-bottom: 15px;
               }
               .college-title {
-                font-size: 24px;
+                font-size: 22px;
                 font-weight: 800;
+                color: #0c2340;
+                margin: 0;
+                letter-spacing: 0.5px;
                 text-transform: uppercase;
-                color: #475569;
+              }
+              .college-subtitle {
+                font-size: 13px;
+                font-weight: 700;
+                color: #c5a059;
+                margin: 4px 0 0 0;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              }
+              .college-tagline {
+                font-size: 9px;
+                font-weight: 500;
+                color: #64748b;
+                margin: 4px 0 0 0;
+              }
+              .report-title-container {
+                text-align: center;
+                margin-bottom: 25px;
+              }
+              .department-title {
+                font-size: 14px;
+                font-weight: 700;
+                color: #334155;
+                text-transform: uppercase;
                 margin: 0 0 5px 0;
                 letter-spacing: 0.5px;
               }
-              .subtitle {
-                font-size: 14px;
-                font-weight: 600;
-                color: #64748b;
-                margin: 0 0 15px 0;
-              }
               .report-title {
-                font-size: 18px;
-                font-weight: 700;
-                text-transform: uppercase;
+                font-size: 16px;
+                font-weight: 800;
                 color: #0f172a;
-                margin: 15px 0 5px 0;
-                background-color: #f1f5f9;
+                text-transform: uppercase;
+                margin: 0;
+                border-bottom: 2px solid #0c2340;
                 display: inline-block;
-                padding: 6px 16px;
-                border-radius: 8px;
+                padding-bottom: 4px;
               }
-              .meta-grid {
-                display: grid;
-                grid-template-cols: 1fr 1fr;
-                gap: 10px;
-                margin-bottom: 30px;
-                font-size: 12px;
+              .meta-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 25px;
                 background-color: #f8fafc;
-                padding: 15px;
-                border-radius: 8px;
                 border: 1px solid #e2e8f0;
               }
-              .meta-item {
-                display: flex;
-                margin-bottom: 4px;
+              .meta-table td {
+                padding: 10px 14px;
+                font-size: 11px;
+                border: none;
+                width: 50%;
               }
               .meta-label {
                 font-weight: 700;
                 color: #475569;
-                width: 130px;
-                flex-shrink: 0;
+                text-transform: uppercase;
+                font-size: 9px;
+                display: inline-block;
+                width: 120px;
               }
               .meta-val {
                 color: #0f172a;
+                font-weight: 600;
               }
-              table {
+              table.data-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 11px;
-                margin-top: 10px;
+                font-size: 10px;
+                margin-top: 15px;
               }
-              th, td {
-                border: 1px solid #cbd5e1;
+              table.data-table th {
+                background-color: #0c2340;
+                color: #ffffff;
+                font-weight: 700;
+                text-transform: uppercase;
+                font-size: 8px;
+                letter-spacing: 0.5px;
+                border: 1px solid #0c2340;
                 padding: 10px 8px;
                 text-align: left;
               }
-              th {
-                background-color: #f1f5f9;
+              table.data-table td {
+                border: 1px solid #e2e8f0;
+                padding: 8px 6px;
                 color: #334155;
-                font-weight: 700;
-                text-transform: uppercase;
-                font-size: 10px;
+                vertical-align: top;
               }
-              tr:nth-child(even) {
+              table.data-table tr:nth-child(even) {
                 background-color: #f8fafc;
               }
               .status-badge {
                 font-weight: 700;
                 text-transform: uppercase;
-                font-size: 9px;
+                font-size: 8px;
                 padding: 2px 6px;
                 border-radius: 4px;
+                display: inline-block;
               }
               .status-badge.working, .status-badge.resolved {
                 background-color: #dcfce7;
                 color: #15803d;
+                border: 1px solid #bbf7d0;
               }
               .status-badge.dead-stock, .status-badge.initiated {
                 background-color: #fee2e2;
                 color: #b91c1c;
+                border: 1px solid #fecaca;
               }
               .status-badge.new-stock {
                 background-color: #dbeafe;
                 color: #1d4ed8;
+                border: 1px solid #bfdbfe;
               }
               .status-badge.in-progress {
                 background-color: #fef3c7;
                 color: #b45309;
+                border: 1px solid #fde68a;
               }
-              .summary-box {
-                margin-top: 30px;
-                text-align: right;
-                font-size: 13px;
-                font-weight: 700;
-                color: #334155;
+              .footer-signatures {
+                margin-top: 60px;
+                width: 100%;
+                border-collapse: collapse;
+              }
+              .signature-cell {
+                width: 33.33%;
+                text-align: center;
+                font-size: 11px;
+                font-weight: 600;
+                color: #475569;
+                padding-top: 40px;
+              }
+              .signature-line {
+                border-top: 1px dashed #cbd5e1;
+                width: 150px;
+                margin: 0 auto 8px auto;
               }
               @media print {
                 body {
                   padding: 20px;
                 }
-                button {
-                  display: none;
-                }
               }
             </style>
           </head>
           <body>
-            <div class="header-container">
-              <h1 class="college-title">Narasaraopeta Engineering College</h1>
-              <p class="subtitle">Autonomous Institution | Approved by AICTE, Affiliated to JNTUK</p>
-              <div class="report-title">${reportName}</div>
+            <table class="header-table">
+              <tr>
+                <td class="logo-cell">
+                  <div class="logo-placeholder">NEC</div>
+                </td>
+                <td class="college-details-cell">
+                  <h1 class="college-title">Narasaraopeta Engineering College</h1>
+                  <p class="college-subtitle">(Autonomous)</p>
+                  <p class="college-tagline">Approved by AICTE, Permanent Affiliation to JNTUK, Accredited by NBA & NAAC with 'A' Grade</p>
+                </td>
+              </tr>
+            </table>
+
+            <div class="report-title-container">
+              ${activeDeptId && activeDeptId !== 'all' ? `<h3 class="department-title">Department of ${deptNameStr}</h3>` : ''}
+              <h2 class="report-title">${type === 'inventory' ? 'Hardware Asset Register' : reportName}</h2>
             </div>
 
-            <div class="meta-grid">
-              <div>
-                <div class="meta-item">
-                  <span class="meta-label">Department:</span>
-                  <span class="meta-val">${deptNameStr}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">Laboratory:</span>
-                  <span class="meta-val">${labNameStr}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">Date Filter:</span>
-                  <span class="meta-val">${dateRangeStr}</span>
-                </div>
-              </div>
-              <div>
-                <div class="meta-item">
-                  <span class="meta-label">Generated By:</span>
-                  <span class="meta-val">${user?.name} (${user?.role === 'ROLE_PRINCIPAL' ? 'Principal' : user?.role === 'ROLE_DEAN' ? 'Computer Dean' : 'HOD'})</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">Timestamp:</span>
-                  <span class="meta-val">${new Date().toLocaleString()}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">Total Records:</span>
-                  <span class="meta-val">${data.length}</span>
-                </div>
-              </div>
-            </div>
+            <table class="meta-table">
+              <tr>
+                <td>
+                  <div><span class="meta-label">Department:</span><span class="meta-val">${deptNameStr}</span></div>
+                  <div style="margin-top: 6px;"><span class="meta-label">Laboratory:</span><span class="meta-val">${labNameStr}</span></div>
+                  <div style="margin-top: 6px;"><span class="meta-label">Date Filter:</span><span class="meta-val">${dateRangeStr}</span></div>
+                </td>
+                <td>
+                  <div><span class="meta-label">Compiled By:</span><span class="meta-val">${user?.name} (${user?.role === 'ROLE_PRINCIPAL' ? 'Principal' : user?.role === 'ROLE_DEAN' ? 'Computer Dean' : 'HOD'})</span></div>
+                  <div style="margin-top: 6px;"><span class="meta-label">Timestamp:</span><span class="meta-val">${new Date().toLocaleString()}</span></div>
+                  <div style="margin-top: 6px;"><span class="meta-label">Total Records:</span><span class="meta-val">${data.length}</span></div>
+                </td>
+              </tr>
+            </table>
 
-            <table>
+            <table class="data-table">
               <thead>
                 ${tableHeadersHtml}
               </thead>
               <tbody>
-                ${data.length === 0 ? '<tr><td colspan="10" style="text-align: center; padding: 20px; font-weight: bold; color: #64748b;">No matching records found</td></tr>' : tableRowsHtml}
+                ${data.length === 0 ? `<tr><td colspan="${type === 'inventory' ? 9 : 11}" style="text-align: center; padding: 25px; font-weight: bold; color: #64748b; font-size: 11px;">No matching records found</td></tr>` : tableRowsHtml}
               </tbody>
             </table>
 
-            <div class="summary-box">
-              Report Summary Count: ${data.length} Items Listed
-            </div>
+            <table class="footer-signatures">
+              <tr>
+                <td class="signature-cell">
+                  <div class="signature-line"></div>
+                  Prepared By / Lab Programmer
+                </td>
+                <td class="signature-cell">
+                  <div class="signature-line"></div>
+                  Head of the Department
+                </td>
+                <td class="signature-cell">
+                  <div class="signature-line"></div>
+                  Principal
+                </td>
+              </tr>
+            </table>
 
             <script>
               window.onload = function() {
@@ -430,13 +516,11 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
-  const handleExport = (reportName: string, format: 'PDF' | 'CSV' | 'Excel') => {
+  const handleExport = (reportName: string, format: 'PDF' | 'CSV' | 'Excel' | 'Excel') => {
     if (format === 'PDF') {
       handlePrintPDF(reportName);
       return;
     }
-
-    // Calculate range dates
     let sDate = '';
     let eDate = '';
     const today = new Date().toISOString().split('T')[0];
@@ -634,30 +718,75 @@ export const ReportsPage: React.FC = () => {
 
             <div className="flex items-center gap-2 border-t border-slate-100 pt-4 mt-6">
               <button
-                onClick={() => handleExport(rep.name, 'CSV')}
-                className="flex-1 py-2 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={() => {
+                  setSelectedReportName(rep.name);
+                  setDownloadModalOpen(true);
+                }}
+                className="flex-1 py-2.5 bg-brand-purple hover:bg-brand-purpleHover text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download CSV</span>
-              </button>
-              <button
-                onClick={() => handleExport(rep.name, 'Excel')}
-                className="flex-1 py-2 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>Export Excel</span>
-              </button>
-              <button
-                onClick={() => handleExport(rep.name, 'PDF')}
-                className="flex-1 py-2 bg-slate-50 hover:bg-red-50 hover:text-red-700 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Print PDF</span>
+                <Download className="w-4 h-4" />
+                <span>Download Report</span>
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Export Format Selection Modal */}
+      {downloadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 w-full max-w-sm animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-sm font-black text-slate-800 tracking-tight">Select Export Format</h3>
+            <p className="text-xs text-brand-textMuted font-medium mt-1">Choose the preferred format to compile and download <strong>{selectedReportName}</strong>.</p>
+            
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setDownloadModalOpen(false);
+                  handleExport(selectedReportName, 'PDF');
+                }}
+                className="flex flex-col items-center gap-3 p-4 bg-red-50/50 hover:bg-red-50 border border-red-100 hover:border-red-200 rounded-2xl transition-all cursor-pointer group"
+              >
+                <div className="p-3 bg-red-500/10 text-red-500 rounded-xl group-hover:scale-105 transition-transform">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div className="text-center">
+                  <span className="block text-xs font-bold text-slate-800">PDF Document</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Print or view PDF</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDownloadModalOpen(false);
+                  handleExport(selectedReportName, 'Excel');
+                }}
+                className="flex flex-col items-center gap-3 p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 hover:border-emerald-200 rounded-2xl transition-all cursor-pointer group"
+              >
+                <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-xl group-hover:scale-105 transition-transform">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div className="text-center">
+                  <span className="block text-xs font-bold text-slate-800">Excel Sheet</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Download CSV Excel</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDownloadModalOpen(false)}
+                className="px-4 py-2 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-500 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

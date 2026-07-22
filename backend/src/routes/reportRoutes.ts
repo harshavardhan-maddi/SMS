@@ -28,11 +28,13 @@ const BASE_REPAIR_QUERY = `
          inv.type as inv_type, inv.brand as inv_brand, inv.model as inv_model, inv.status as inv_status, inv.department_id as inv_dept_id, inv.lab_id as lab_id,
          dept.name as dept_name, dept.code as dept_code,
          u.name as req_name, u.email as req_email,
+         u2.name as assigned_name, u2.email as assigned_email,
          l.lab_number as lab_number, l.name as lab_name
   FROM repair_requests r
   LEFT JOIN inventory inv ON r.inventory_id = inv.id
   LEFT JOIN departments dept ON inv.department_id = dept.id
   LEFT JOIN users u ON r.requester_id = u.id
+  LEFT JOIN users u2 ON r.assigned_to_id = u2.id
   LEFT JOIN labs l ON inv.lab_id = l.id
 `;
 
@@ -70,6 +72,11 @@ function formatRepairRequest(row: any) {
       id: row.requester_id,
       name: row.req_name,
       email: row.req_email
+    } : null,
+    assignedTo: row.assigned_to_id ? {
+      id: row.assigned_to_id,
+      name: row.assigned_name,
+      email: row.assigned_email
     } : null
   };
 }
@@ -282,14 +289,18 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
       }
     } 
     else if (reportType.toLowerCase().includes('repair') || reportType.toLowerCase().includes('history')) {
-      res.write('Request ID,Asset ID,Department,Lab,Type,Title,Priority,Status,Initiated On\n');
+      res.write('Request ID,Asset ID,Department,Lab,Type,Title,Priority,Status,Initiated On,Solved On,Programmer Name,Technician Name\n');
       
       let query = `
-        SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, inv.type as inv_type, d.code as dept_code, l.lab_number 
+        SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, r.completed_date, r.completed_time,
+               inv.type as inv_type, d.code as dept_code, l.lab_number, l.name as lab_name,
+               u.name as req_name, u2.name as assigned_name
         FROM repair_requests r 
         LEFT JOIN inventory inv ON r.inventory_id = inv.id 
         LEFT JOIN departments d ON inv.department_id = d.id
         LEFT JOIN labs l ON inv.lab_id = l.id
+        LEFT JOIN users u ON r.requester_id = u.id
+        LEFT JOIN users u2 ON r.assigned_to_id = u2.id
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -314,8 +325,9 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
       for (const r of list) {
         const titleClean = (r.title || '').replace(/"/g, '""');
         const initiatedOn = `${r.initiated_date} ${r.initiated_time}`;
+        const solvedOn = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : 'Pending';
         res.write(
-          `"${r.id}","${r.inventory_id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}"\n`
+          `"${r.id}","${r.inventory_id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number + ' (' + (r.lab_name || '') + ')' : 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}","${solvedOn}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
         );
       }
     } 
