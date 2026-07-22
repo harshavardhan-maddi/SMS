@@ -850,8 +850,8 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
           const primaryAssetId = assetIds[0];
           const labTag = labStr ? ` [${labStr}]` : '';
           const reqTitle = count > 1 
-            ? `${title || 'Batch Repair Request'}${labTag} - ${count} Units of ${type} (${brand})`
-            : `${title || 'Repair Request'}${labTag} - ${type} (${brand})`;
+            ? `${count} * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`
+            : `1 * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`;
 
           const reqDesc = count > 1
             ? `Location: ${labStr || 'Department Systems'}. Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''} [Asset IDs: ${assetIds.join(', ')}]`
