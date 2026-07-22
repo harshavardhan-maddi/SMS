@@ -173,6 +173,10 @@ export const PrincipalDashboard: React.FC = () => {
                 <span>Keyboard</span>
                 <span className="font-bold text-blue-600">{stats.CollegeSystems?.Keyboard ?? 0}</span>
               </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Hotspot</span>
+                <span className="font-bold text-blue-600">{stats.CollegeSystems?.Hotspot ?? 0}</span>
+              </div>
             </div>
           </div>
           <div className="border-t border-slate-100 pt-3 mt-4 flex justify-between items-center">
@@ -209,6 +213,10 @@ export const PrincipalDashboard: React.FC = () => {
               <div className="flex justify-between text-slate-600">
                 <span>Keyboard</span>
                 <span className="font-bold text-emerald-600">{stats.NewStock?.Keyboard ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Hotspot</span>
+                <span className="font-bold text-emerald-600">{stats.NewStock?.Hotspot ?? 0}</span>
               </div>
             </div>
           </div>
@@ -247,6 +255,10 @@ export const PrincipalDashboard: React.FC = () => {
                 <span>Keyboard</span>
                 <span className="font-bold text-amber-600">{stats.Repairing?.Keyboard ?? 0}</span>
               </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Hotspot</span>
+                <span className="font-bold text-amber-600">{stats.Repairing?.Hotspot ?? 0}</span>
+              </div>
             </div>
           </div>
           <div className="border-t border-slate-100 pt-3 mt-4 flex justify-between items-center">
@@ -283,6 +295,10 @@ export const PrincipalDashboard: React.FC = () => {
               <div className="flex justify-between text-slate-600">
                 <span>Keyboard</span>
                 <span className="font-bold text-red-600">{stats.DeadStock?.Keyboard ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Hotspot</span>
+                <span className="font-bold text-red-600">{stats.DeadStock?.Hotspot ?? 0}</span>
               </div>
             </div>
           </div>

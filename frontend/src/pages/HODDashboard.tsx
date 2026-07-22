@@ -282,9 +282,9 @@ export const HODDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Component Cards Row (CPU, Monitor, Keyboard, Mouse) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {['CPU', 'Monitor', 'Keyboard', 'Mouse'].map((type) => {
+      {/* 1. Component Cards Row (CPU, Monitor, Keyboard, Mouse, Hotspot) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'].map((type) => {
           const typeData = stats[type] || { Total: 0, Working: 0, Repairing: 0, Dead: 0, NewStock: 0 };
           return (
             <div key={type} className="admin-card p-6 bg-white flex flex-col justify-between">
