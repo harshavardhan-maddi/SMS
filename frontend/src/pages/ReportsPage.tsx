@@ -213,7 +213,7 @@ export const ReportsPage: React.FC = () => {
             <th>Request ID</th>
             <th>Lab Name</th>
             <th>Component</th>
-            <th>Title & Description</th>
+            <th>Title</th>
             <th>Programmer</th>
             <th>Technician</th>
             <th>Priority</th>
@@ -227,10 +227,7 @@ export const ReportsPage: React.FC = () => {
             <td>${item.id}</td>
             <td>${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber + ' (' + item.inventory.lab.name + ')' : 'N/A'}</td>
             <td>${item.inventory?.type || '-'}</td>
-            <td>
-              <div style="font-weight: 600; margin-bottom: 2px;">${item.title}</div>
-              <div style="font-size: 9px; color: #64748b; max-width: 180px; white-space: normal; word-break: break-all;">${item.description || '-'}</div>
-            </td>
+            <td><div style="font-weight: 600;">${item.title}</div></td>
             <td>${item.requester?.name || '-'}</td>
             <td>${item.assignedTo?.name || 'Not Assigned'}</td>
             <td>${item.priority}</td>
