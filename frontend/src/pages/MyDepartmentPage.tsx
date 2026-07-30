@@ -260,7 +260,6 @@ export const MyDepartmentPage: React.FC = () => {
                 <table className="w-full text-xs text-left">
                   <thead>
                     <tr className="text-slate-400 font-bold border-b border-slate-100 text-[10px] uppercase tracking-wider">
-                      <th className="py-3 px-4">Asset ID</th>
                       <th className="py-3 px-4">Hardware Type</th>
                       <th className="py-3 px-4">Brand & Model</th>
                       <th className="py-3 px-4">Serial Number</th>
@@ -270,7 +269,6 @@ export const MyDepartmentPage: React.FC = () => {
                   <tbody className="divide-y divide-slate-100">
                     {labItems.map(item => (
                       <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-brand-purple">{item.id}</td>
                         <td className="py-3 px-4 font-semibold text-slate-700">{item.type}</td>
                         <td className="py-3 px-4 text-slate-600">{item.brand} {item.model}</td>
                         <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">{item.serialNumber}</td>

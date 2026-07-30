@@ -258,10 +258,6 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
               <span className="font-bold text-slate-800">{request.inventory?.department?.name || 'College Department'} ({request.inventory?.department?.code || 'N/A'})</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Primary Asset ID:</span>
-              <span className="font-mono font-bold text-brand-purple">{request.inventory?.id || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-slate-500 font-medium">Priority Level:</span>
               <span className={`px-2 py-0.5 rounded-md font-extrabold text-[10px] ${
                 request.priority === 'High' ? 'bg-red-100 text-red-700' : request.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-700'

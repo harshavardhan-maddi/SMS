@@ -247,6 +247,7 @@ export const UserManagement: React.FC = () => {
     if (role === 'ROLE_HOD') return 'HOD';
     if (role === 'ROLE_TECHNICIAN') return 'Hardware Technician';
     if (role === 'ROLE_PROGRAMMER') return 'Programmer';
+    if (role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager';
     return role;
   };
 
@@ -438,6 +439,7 @@ export const UserManagement: React.FC = () => {
                 <>
                   <option value="ROLE_HOD">HOD (Department Head)</option>
                   <option value="ROLE_DEAN">Computer Dean</option>
+                  <option value="ROLE_EEE_ASSET_MANAGER">EEE Asset Manager</option>
                   <option value="ROLE_TECHNICIAN">Hardware Technician</option>
                   <option value="ROLE_PROGRAMMER">Programmer</option>
                 </>
@@ -447,7 +449,7 @@ export const UserManagement: React.FC = () => {
             </select>
           </div>
 
-          {['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(roleName) && (
+          {['ROLE_HOD', 'ROLE_PROGRAMMER', 'ROLE_EEE_ASSET_MANAGER'].includes(roleName) && (
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">Department</label>
               <select

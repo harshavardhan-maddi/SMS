@@ -11,6 +11,7 @@ export async function seedData() {
     await db.run("INSERT INTO roles (id, name) VALUES (3, 'ROLE_DEAN') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (4, 'ROLE_TECHNICIAN') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (5, 'ROLE_PROGRAMMER') ON CONFLICT (id) DO NOTHING");
+    await db.run("INSERT INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER') ON CONFLICT (id) DO NOTHING");
   } catch (e) {
     // SQLite fallback for ON CONFLICT
     try {
@@ -19,6 +20,7 @@ export async function seedData() {
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (3, 'ROLE_DEAN')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (4, 'ROLE_TECHNICIAN')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (5, 'ROLE_PROGRAMMER')");
+      await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER')");
     } catch (e2) {}
   }
 
@@ -65,50 +67,34 @@ export async function seedData() {
     }
   } catch (e) {}
 
-  // 3. Initial Demo Users Seeding (ONLY on fresh database with 0 users)
+  // 3. Initial Demo Users Seeding
   try {
-    const userCountRow = await db.get("SELECT COUNT(*) as count FROM users");
-    const uCount = userCountRow ? parseInt(userCountRow.count) : 0;
+    const hashedPwd = await bcrypt.hash('password', 10);
 
-    if (uCount === 0) {
-      console.log('Seeding initial demo user accounts...');
-      const hashedPwd = await bcrypt.hash('password', 10);
-      const demoUsers = [
-        { id: 1, name: 'Dr. Robert Carter', email: 'principal@sms.edu', roleId: 1, deptId: null },
-        { id: 2, name: 'Dr. Alan Turing', email: 'hod.cse@sms.edu', roleId: 2, deptId: 1 },
-        { id: 3, name: 'Dr. Shannon Porter', email: 'hod.ece@sms.edu', roleId: 2, deptId: 2 },
-        { id: 4, name: 'Prof. Charles Babbage', email: 'dean@sms.edu', roleId: 3, deptId: null },
-        { id: 5, name: 'Hardware Technician', email: 'tech@sms.edu', roleId: 4, deptId: null }
-      ];
+    // Always ensure EEE HOD and EEE Asset Manager exist
+    const eeeDept = await db.get("SELECT id FROM departments WHERE code = 'EEE' OR id = 3");
+    const eeeDeptId = eeeDept ? eeeDept.id : 3;
 
-      for (const u of demoUsers) {
-        let targetDeptId = u.deptId;
-        if (targetDeptId) {
-          const deptExists = await db.get("SELECT id FROM departments WHERE id = ?", [targetDeptId]);
-          if (!deptExists) targetDeptId = null;
-        }
+    const demoUsers = [
+      { id: 1, name: 'Dr. Robert Carter', email: 'principal@sms.edu', roleId: 1, deptId: null },
+      { id: 2, name: 'Dr. Alan Turing', email: 'hod.cse@sms.edu', roleId: 2, deptId: 1 },
+      { id: 3, name: 'Dr. Shannon Porter', email: 'hod.ece@sms.edu', roleId: 2, deptId: 2 },
+      { id: 4, name: 'Prof. Charles Babbage', email: 'dean@sms.edu', roleId: 3, deptId: null },
+      { id: 5, name: 'Hardware Technician', email: 'tech@sms.edu', roleId: 4, deptId: null },
+      { id: 6, name: 'Dr. Nikola Tesla', email: 'hod.eee@sms.edu', roleId: 2, deptId: eeeDeptId },
+      { id: 7, name: 'EEE Asset Manager', email: 'eee.manager@sms.edu', roleId: 6, deptId: eeeDeptId }
+    ];
 
+    for (const u of demoUsers) {
+      const existingUser = await db.get("SELECT id FROM users WHERE email = ?", [u.email]);
+      if (!existingUser) {
         try {
           await db.run(
-            "INSERT INTO users (id, name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, ?, true)",
-            [u.id, u.name, u.email, hashedPwd, u.roleId, targetDeptId]
+            "INSERT INTO users (name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, true)",
+            [u.name, u.email, hashedPwd, u.roleId, u.deptId]
           );
-        } catch (err) {
-          try {
-            await db.run(
-              "INSERT INTO users (name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, ?, true)",
-              [u.name, u.email, hashedPwd, u.roleId, targetDeptId]
-            );
-          } catch (err2) {}
-        }
+        } catch (err) {}
       }
-
-      try {
-        const dept1 = await db.get("SELECT id FROM departments WHERE id = 1");
-        if (dept1) await db.run("UPDATE departments SET hod_id = 2 WHERE id = 1");
-        const dept2 = await db.get("SELECT id FROM departments WHERE id = 2");
-        if (dept2) await db.run("UPDATE departments SET hod_id = 3 WHERE id = 2");
-      } catch (e) {}
     }
   } catch (e) {}
 

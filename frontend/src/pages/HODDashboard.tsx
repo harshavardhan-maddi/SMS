@@ -406,7 +406,6 @@ export const HODDashboard: React.FC = () => {
               <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Item Type</th>
-                <th className="py-3 px-4">Asset ID</th>
                 <th className="py-3 px-4">Lab Number</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Issue Title</th>
@@ -421,7 +420,6 @@ export const HODDashboard: React.FC = () => {
                 <tr key={req.id} className="hover:bg-slate-50/50">
                   <td className="py-3.5 px-4 font-bold text-slate-700">{req.id}</td>
                   <td className="py-3.5 px-4 text-slate-500">{req.inventory.type}</td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-600">{req.inventory.id}</td>
                   <td className="py-3.5 px-4 font-semibold text-slate-600">
                     {req.inventory?.lab?.labNumber || '---'}
                   </td>

@@ -181,7 +181,6 @@ export const DeadStockPage: React.FC = () => {
                                           <table className="w-full text-left border-collapse">
                                             <thead>
                                               <tr className="border-b border-slate-100 text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                                                <th className="py-2 px-3">Asset ID</th>
                                                 <th className="py-2 px-3">Brand / Model</th>
                                                 <th className="py-2 px-3">Serial Number</th>
                                                 <th className="py-2 px-3">Status</th>
@@ -190,7 +189,6 @@ export const DeadStockPage: React.FC = () => {
                                             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                                               {items.map(item => (
                                                 <tr key={item.id} className="hover:bg-slate-50">
-                                                  <td className="py-2 px-3 font-bold text-slate-800">{item.id}</td>
                                                   <td className="py-2 px-3 font-medium text-slate-600">{item.brand} {item.model}</td>
                                                   <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{item.serialNumber || 'N/A'}</td>
                                                   <td className="py-2 px-3">

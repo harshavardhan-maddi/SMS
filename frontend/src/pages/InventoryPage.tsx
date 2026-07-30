@@ -195,7 +195,7 @@ export const InventoryPage: React.FC = () => {
         <div className="relative w-full md:max-w-xs">
           <input
             type="text"
-            placeholder="Search by Asset ID, Serial, Brand..."
+            placeholder="Search by Serial, Brand, Model..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
@@ -252,7 +252,6 @@ export const InventoryPage: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">Asset ID</th>
                 <th className="py-3 px-4">Department</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Brand / Model</th>
@@ -266,7 +265,6 @@ export const InventoryPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-xs">
               {filteredInventory.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50">
-                  <td className="py-3.5 px-4 font-bold text-slate-700">{item.id}</td>
                   <td className="py-3.5 px-4 font-semibold text-slate-600">
                     {item.department.code}
                   </td>
@@ -320,18 +318,7 @@ export const InventoryPage: React.FC = () => {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingItem ? 'Edit Asset details' : 'Register New Hardware Asset'}>
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           
-          {!editingItem && (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">Asset ID (e.g. CPU-045)</label>
-              <input
-                type="text"
-                placeholder="Leave blank for auto-generation"
-                value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
-              />
-            </div>
-          )}
+
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">

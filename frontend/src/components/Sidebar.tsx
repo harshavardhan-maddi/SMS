@@ -109,6 +109,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
+  const getEEEAssetManagerMenu = () => [
+    { name: 'EEE Dashboard', path: '/eee-manager', icon: LayoutDashboard },
+    { name: 'Dead Stock', path: '/dead-stock', icon: XCircle },
+    { name: 'Reports', path: '/reports', icon: FileBarChart },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
 
   const AlertCircleIcon = HelpCircle; // Quick fallback for simple mapping
 
@@ -117,6 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     if (user.role === 'ROLE_HOD') return getHodMenu();
     if (user.role === 'ROLE_TECHNICIAN') return getTechnicianMenu();
     if (user.role === 'ROLE_PROGRAMMER') return getProgrammerMenu();
+    if (user.role === 'ROLE_EEE_ASSET_MANAGER') return getEEEAssetManagerMenu();
     return getDeanMenu();
   };
 

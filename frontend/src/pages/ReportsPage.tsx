@@ -185,7 +185,6 @@ export const ReportsPage: React.FC = () => {
       if (type === 'inventory') {
         tableHeadersHtml = `
           <tr>
-            <th>Asset ID</th>
             <th>Type</th>
             <th>Brand</th>
             <th>Model</th>
@@ -198,7 +197,6 @@ export const ReportsPage: React.FC = () => {
         `;
         tableRowsHtml = data.map(item => `
           <tr>
-            <td>${item.id}</td>
             <td>${item.type}</td>
             <td>${item.brand || '-'}</td>
             <td>${item.model || '-'}</td>
@@ -214,7 +212,6 @@ export const ReportsPage: React.FC = () => {
           <tr>
             <th>Request ID</th>
             <th>Lab Name</th>
-            <th>Asset ID</th>
             <th>Component</th>
             <th>Title & Description</th>
             <th>Programmer</th>
@@ -229,7 +226,6 @@ export const ReportsPage: React.FC = () => {
           <tr>
             <td>${item.id}</td>
             <td>${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber + ' (' + item.inventory.lab.name + ')' : 'N/A'}</td>
-            <td>${item.inventory?.id || '-'}</td>
             <td>${item.inventory?.type || '-'}</td>
             <td>
               <div style="font-weight: 600; margin-bottom: 2px;">${item.title}</div>

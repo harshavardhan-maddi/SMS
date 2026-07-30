@@ -154,10 +154,6 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
                 </h3>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold">Asset ID</span>
-              <span className="text-xs font-mono font-black text-brand-purple">{request.inventory?.id || 'N/A'}</span>
-            </div>
           </div>
         </div>
 

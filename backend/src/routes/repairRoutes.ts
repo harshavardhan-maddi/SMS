@@ -254,6 +254,13 @@ router.post('/initiate', authenticateJWT, async (req, res) => {
     });
 
     // Send notifications async
+    if (inventory.dept_code === 'EEE') {
+      notificationService.sendToRole(
+        'ROLE_EEE_ASSET_MANAGER',
+        `New EEE repair request ${requestId} (${inventory.type}) initiated by ${requester.name}`,
+        'NEW_REPAIR'
+      );
+    }
     notificationService.sendToRole(
       'ROLE_DEAN',
       `New repair request ${requestId} (${inventory.type}) initiated by ${requester.name} in ${inventory.dept_code || 'N/A'}`,
@@ -871,7 +878,7 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
             : `1 * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`;
 
           const reqDesc = count > 1
-            ? `Location: ${labStr || 'Department Systems'}. Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''} [Asset IDs: ${assetIds.join(', ')}]`
+            ? `Location: ${labStr || 'Department Systems'}. Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''}`
             : `Location: ${labStr || 'Department Systems'}. Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
 
           await db.run(
@@ -890,6 +897,13 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     });
 
     for (const reqId of generatedRequests) {
+      if (deptCode === 'EEE') {
+        notificationService.sendToRole(
+          'ROLE_EEE_ASSET_MANAGER',
+          `New EEE repair request ${reqId} initiated by ${requester.name}`,
+          'NEW_REPAIR'
+        );
+      }
       notificationService.sendToRole(
         'ROLE_DEAN',
         `New repair request ${reqId} initiated by ${requester.name} in ${deptCode}`,

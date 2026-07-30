@@ -20,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const getDisplayRole = () => {
     if (user.role === 'ROLE_PRINCIPAL') return 'Principal';
     if (user.role === 'ROLE_DEAN') return 'Computer Dean';
+    if (user.role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager';
     if (user.role === 'ROLE_HOD') {
       const dept = user.departmentCode ? ` (${user.departmentCode})` : '';
       return `HOD${dept}`;
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const getDashboardSubtitle = () => {
     if (user.role === 'ROLE_PRINCIPAL') return 'Principal Dashboard - Overview of College Systems';
     if (user.role === 'ROLE_HOD') return 'HOD Dashboard - Department Overview';
+    if (user.role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager Dashboard - Department Maintenance Overview';
     return 'Computer Dean Dashboard - Repair Management Overview';
   };
 

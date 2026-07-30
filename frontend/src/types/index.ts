@@ -1,6 +1,6 @@
 export interface Role {
   id: number;
-  name: string; // ROLE_PRINCIPAL, ROLE_HOD, ROLE_DEAN, ROLE_TECHNICIAN
+  name: string; // ROLE_PRINCIPAL, ROLE_HOD, ROLE_DEAN, ROLE_TECHNICIAN, ROLE_PROGRAMMER, ROLE_EEE_ASSET_MANAGER
 }
 
 export interface Department {

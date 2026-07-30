@@ -591,7 +591,7 @@ export const ComputerDeanDashboard: React.FC = () => {
         {selectedReq && (
           <div className="space-y-6 text-left">
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/50 space-y-2 text-xs">
-              <div><span className="font-bold text-slate-500">Asset:</span> <span className="font-semibold text-slate-700">{selectedReq.inventory.id} ({selectedReq.inventory.type})</span></div>
+              <div><span className="font-bold text-slate-500">Hardware Type:</span> <span className="font-semibold text-slate-700">{selectedReq.inventory?.type}</span></div>
               <div><span className="font-bold text-slate-500">Fault:</span> <span className="font-semibold text-slate-700">{selectedReq.title}</span></div>
               <div><span className="font-bold text-slate-500">Current Status:</span> <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ml-1.5 ${getStatusBadgeClass(selectedReq.status)}`}>{selectedReq.status}</span></div>
             </div>

@@ -10,6 +10,7 @@ import { HODDashboard } from './pages/HODDashboard';
 import { ComputerDeanDashboard } from './pages/ComputerDeanDashboard';
 import { HardwareTechnicianDashboard } from './pages/HardwareTechnicianDashboard';
 import { ProgrammerDashboard } from './pages/ProgrammerDashboard';
+import { EEEAssetManagerDashboard } from './pages/EEEAssetManagerDashboard';
 import { DepartmentManagement } from './pages/DepartmentManagement';
 import { UserManagement } from './pages/UserManagement';
 import { ReportsPage } from './pages/ReportsPage';
@@ -49,6 +50,9 @@ const DynamicDashboard: React.FC = () => {
   }
   if (user.role === 'ROLE_PROGRAMMER') {
     return <ProgrammerDashboard />;
+  }
+  if (user.role === 'ROLE_EEE_ASSET_MANAGER') {
+    return <EEEAssetManagerDashboard />;
   }
   return <ComputerDeanDashboard />;
 };
@@ -134,6 +138,7 @@ export const App: React.FC = () => {
                     <Routes>
                       {/* Unified Dashboard Route */}
                       <Route path="/dashboard" element={<DynamicDashboard />} />
+                      <Route path="/eee-manager" element={<EEEAssetManagerDashboard />} />
                       
                       {/* Core Management Modules */}
                       <Route path="/departments" element={<DepartmentManagement />} />

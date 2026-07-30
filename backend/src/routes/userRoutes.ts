@@ -26,7 +26,7 @@ function formatUser(row: any) {
 }
 
 // 1. Get all technicians (narrow access for Deans)
-router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
+router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 'ROLE_EEE_ASSET_MANAGER'), async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT u.id, u.name, u.email 

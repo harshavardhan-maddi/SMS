@@ -254,7 +254,7 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
 
   try {
     if (reportType.toLowerCase().includes('inventory')) {
-      res.write('Asset ID,Department,Lab,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
+      res.write('Department,Lab,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
       
       let query = `
         SELECT i.id, i.type, i.brand, i.model, i.serial_number, i.purchase_date, i.warranty_months, i.status, d.code as dept_code, l.lab_number
@@ -284,12 +284,12 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
       const items = await db.all(query, params);
       for (const item of items) {
         res.write(
-          `"${item.id}","${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
+          `"${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
         );
       }
     } 
     else if (reportType.toLowerCase().includes('repair') || reportType.toLowerCase().includes('history')) {
-      res.write('Request ID,Asset ID,Department,Lab,Type,Title,Priority,Status,Initiated On,Solved On,Programmer Name,Technician Name\n');
+      res.write('Request ID,Department,Lab,Type,Title,Priority,Status,Initiated On,Solved On,Programmer Name,Technician Name\n');
       
       let query = `
         SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, r.completed_date, r.completed_time,
@@ -327,7 +327,7 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
         const initiatedOn = `${r.initiated_date} ${r.initiated_time}`;
         const solvedOn = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : 'Pending';
         res.write(
-          `"${r.id}","${r.inventory_id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number + ' (' + (r.lab_name || '') + ')' : 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}","${solvedOn}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
+          `"${r.id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number + ' (' + (r.lab_name || '') + ')' : 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}","${solvedOn}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
         );
       }
     } 
