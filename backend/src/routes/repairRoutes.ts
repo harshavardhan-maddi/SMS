@@ -254,18 +254,19 @@ router.post('/initiate', authenticateJWT, async (req, res) => {
     });
 
     // Send notifications async
-    if (inventory.dept_code === 'EEE') {
+    if (inventory.type === 'Electrical Hardware') {
       notificationService.sendToRole(
         'ROLE_EEE_ASSET_MANAGER',
-        `New EEE repair request ${requestId} (${inventory.type}) initiated by ${requester.name}`,
+        `New Electrical Hardware repair request ${requestId} (${inventory.type}) initiated by ${requester.name}`,
+        'NEW_REPAIR'
+      );
+    } else {
+      notificationService.sendToRole(
+        'ROLE_DEAN',
+        `New repair request ${requestId} (${inventory.type}) initiated by ${requester.name} in ${inventory.dept_code || 'N/A'}`,
         'NEW_REPAIR'
       );
     }
-    notificationService.sendToRole(
-      'ROLE_DEAN',
-      `New repair request ${requestId} (${inventory.type}) initiated by ${requester.name} in ${inventory.dept_code || 'N/A'}`,
-      'NEW_REPAIR'
-    );
     notificationService.sendToRole(
       'ROLE_PRINCIPAL',
       `Repair request ${requestId} initiated for ${inventory.dept_code || 'N/A'}`,
@@ -903,14 +904,13 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     );
 
     for (const reqId of generatedRequests) {
-      if (deptCode === 'EEE' || hasElectrical) {
+      if (hasElectrical) {
         notificationService.sendToRole(
           'ROLE_EEE_ASSET_MANAGER',
-          `New ${hasElectrical ? 'Electrical Hardware' : 'EEE'} repair request ${reqId} initiated by ${requester.name}`,
+          `New Electrical Hardware repair request ${reqId} initiated by ${requester.name}`,
           'NEW_REPAIR'
         );
-      }
-      if (!hasElectrical) {
+      } else {
         notificationService.sendToRole(
           'ROLE_DEAN',
           `New repair request ${reqId} initiated by ${requester.name} in ${deptCode}`,
