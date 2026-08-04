@@ -449,7 +449,7 @@ export const UserManagement: React.FC = () => {
             </select>
           </div>
 
-          {['ROLE_HOD', 'ROLE_PROGRAMMER', 'ROLE_EEE_ASSET_MANAGER'].includes(roleName) && (
+          {['ROLE_HOD', 'ROLE_PROGRAMMER'].includes(roleName) && (
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">Department</label>
               <select

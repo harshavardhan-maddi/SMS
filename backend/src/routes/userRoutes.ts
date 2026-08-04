@@ -263,6 +263,14 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 
       }
     }
 
+    let targetDeptId = departmentId || null;
+    if (roleName === 'ROLE_EEE_ASSET_MANAGER' && !targetDeptId) {
+      const eeeDept = await db.get("SELECT id FROM departments WHERE code = 'EEE'");
+      if (eeeDept) {
+        targetDeptId = eeeDept.id;
+      }
+    }
+
     const hashedPwd = await bcrypt.hash(password, 10);
     
     let createdUserId: number;
@@ -272,7 +280,7 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 
       const result = await db.run(
         `INSERT INTO users (name, email, password, role_id, department_id, lab_id, active) 
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [name, email, hashedPwd, role.id, departmentId || null, labId || null, activeVal]
+        [name, email, hashedPwd, role.id, targetDeptId, labId || null, activeVal]
       );
       
       createdUserId = result.lastID;
