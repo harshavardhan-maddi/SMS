@@ -245,10 +245,19 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                       <td className="py-3.5 px-4 font-semibold text-slate-700">
                         {req.inventory?.lab ? `Lab ${req.inventory.lab.labNumber}` : 'EEE Dept'}
                       </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-600">{req.inventory?.type || 'Hardware'}</td>
-                      <td className="py-3.5 px-4 max-w-[200px]">
-                        <div className="font-semibold text-slate-800 truncate" title={req.title}>{req.title}</div>
-                        <div className="text-[10px] text-slate-400 truncate" title={req.description}>{req.description}</div>
+                      <td className="py-3.5 px-4 font-semibold text-slate-600">
+                        {req.inventory?.type === 'Electrical Hardware' && req.inventory?.brand && req.inventory.brand !== 'Standard'
+                          ? `Electrical Hardware (${req.inventory.brand})`
+                          : (req.inventory?.type || 'Electrical Hardware')}
+                      </td>
+                      <td className="py-3.5 px-4 max-w-[220px]">
+                        <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5 flex-wrap" title={req.title}>
+                          <span>{req.title}</span>
+                          <span className="bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold whitespace-nowrap">
+                            Qty: {req.deviceCount || 1}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate mt-0.5" title={req.description}>{req.description}</div>
                       </td>
                       <td className="py-3.5 px-4 font-medium text-slate-600">
                         {req.requester?.name || 'EEE Faculty'}

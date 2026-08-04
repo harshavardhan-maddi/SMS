@@ -874,9 +874,14 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
 
           const primaryAssetId = assetIds[0];
           const labTag = labStr ? ` [${labStr}]` : '';
-          const reqTitle = count > 1 
-            ? `${count} * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`
-            : `1 * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`;
+          let reqTitle = '';
+          if (type === 'Electrical Hardware') {
+            reqTitle = `Electrical Hardware - ${brand || 'Equipment'} (Qty: ${count})${labTag}`;
+          } else {
+            reqTitle = count > 1 
+              ? `${count} * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`
+              : `1 * ${type}${brand && brand !== 'Standard' ? ` (${brand})` : ''}${labTag}`;
+          }
 
           const reqDesc = count > 1
             ? `Location: ${labStr || 'Department Systems'}. Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''}`

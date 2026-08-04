@@ -717,7 +717,11 @@ export const ProgrammerDashboard: React.FC = () => {
                     const finalUpdatedIssues = [...reportedIssues, newIssue];
                     setReportedIssues(finalUpdatedIssues);
 
-                    const generatedTitle = `Repair: ${finalUpdatedIssues.map(i => `${i.type}${i.brand ? ` (${i.brand})` : ''} x${i.count}`).join(', ')}`;
+                    const generatedTitle = `Repair: ${finalUpdatedIssues.map(i => 
+                      i.type === 'Electrical Hardware'
+                        ? `${i.type} - ${i.brand} (Qty: ${i.count})`
+                        : `${i.type}${i.brand ? ` (${i.brand})` : ''} x${i.count}`
+                    ).join(', ')}`;
                     const generatedDesc = `Reported hardware issues:\n` + 
                       finalUpdatedIssues.map(i => `- ${i.type}: ${i.brand ? `Item: ${i.brand}, ` : ''}Quantity: ${i.count}${i.description ? `, Info: ${i.description}` : ''}`).join('\n');
                     setIssueTitle(generatedTitle);
