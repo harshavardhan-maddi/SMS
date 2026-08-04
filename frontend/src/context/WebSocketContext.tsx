@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { createClient } from '@supabase/supabase-js';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
-import { Notification } from '../types';
+import type { Notification } from '../types';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
@@ -16,12 +16,43 @@ if (!(import.meta as any).env.VITE_SUPABASE_URL || !(import.meta as any).env.VIT
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const triggerBrowserDesktopNotification = (title: string, body: string) => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+
+  const showNotification = () => {
+    try {
+      const notif = new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: `sms-notif-${Date.now()}`
+      });
+      notif.onclick = () => {
+        window.focus();
+      };
+    } catch (e) {
+      console.warn('Native Chrome desktop notification error:', e);
+    }
+  };
+
+  if (Notification.permission === 'granted') {
+    showNotification();
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        showNotification();
+      }
+    });
+  }
+};
+
 interface WebSocketContextType {
   notifications: Notification[];
   unreadCount: number;
   dashboardTick: number; // Increment triggers charts/stats refresh
   markAsRead: (id: number) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  requestNotificationPermission: () => Promise<NotificationPermission | 'unsupported'>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
@@ -31,6 +62,21 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [dashboardTick, setDashboardTick] = useState<number>(0);
+
+  const requestNotificationPermission = async (): Promise<NotificationPermission | 'unsupported'> => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      return perm;
+    }
+    return 'unsupported';
+  };
+
+  // Request browser notification permission automatically when user logs in
+  useEffect(() => {
+    if (user && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [user]);
 
   // Fetch initial notifications when user changes
   const fetchNotifications = async () => {
@@ -90,13 +136,15 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           toast(newNotif.message, {
             icon: '🔔',
-            duration: 4000,
+            duration: 5000,
             style: {
               background: '#0c1a30',
               color: '#fff',
               borderRadius: '12px',
             }
           });
+
+          triggerBrowserDesktopNotification('SMS Maintenance Alert', newNotif.message);
         }
       )
       .subscribe();
@@ -166,9 +214,11 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setUnreadCount((prev) => prev + 1);
               toast(newNotif.message, {
                 icon: '🔔',
-                duration: 4000,
+                duration: 5000,
                 style: { background: '#0c1a30', color: '#fff', borderRadius: '12px' }
               });
+
+              triggerBrowserDesktopNotification('SMS Maintenance Alert', newNotif.message);
             } catch (e) {}
           });
         }
@@ -219,6 +269,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         dashboardTick,
         markAsRead,
         markAllAsRead,
+        requestNotificationPermission,
       }}
     >
       {children}

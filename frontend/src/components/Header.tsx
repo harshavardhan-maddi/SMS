@@ -10,7 +10,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const { user, logout } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useWebSocket();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, requestNotificationPermission } = useWebSocket();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -25,14 +25,19 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
       const dept = user.departmentCode ? ` (${user.departmentCode})` : '';
       return `HOD${dept}`;
     }
-    return 'User';
+    if (user.role === 'ROLE_TECHNICIAN') return 'Hardware Technician';
+    if (user.role === 'ROLE_PROGRAMMER') return 'Lab Assistant / Programmer';
+    return user.role;
   };
 
-  const getDashboardSubtitle = () => {
-    if (user.role === 'ROLE_PRINCIPAL') return 'Principal Dashboard - Overview of College Systems';
-    if (user.role === 'ROLE_HOD') return 'HOD Dashboard - Department Overview';
+  const getDashboardTitle = () => {
+    if (user.role === 'ROLE_PRINCIPAL') return 'Principal Command Center - Institution Overview';
+    if (user.role === 'ROLE_DEAN') return 'Computer Dean Dashboard - Repair Management Overview';
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager Dashboard - Department Maintenance Overview';
-    return 'Computer Dean Dashboard - Repair Management Overview';
+    if (user.role === 'ROLE_HOD') return `${user.departmentCode || 'Department'} Head Dashboard - Lab Hardware Overview`;
+    if (user.role === 'ROLE_TECHNICIAN') return 'Hardware Technician Workspace - Maintenance Queue';
+    if (user.role === 'ROLE_PROGRAMMER') return 'Programmer / Lab Assistant Workspace - Repair Operations';
+    return 'Campus Asset Management Dashboard';
   };
 
   const getInitials = (name: string) => {
@@ -45,21 +50,22 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   };
 
   return (
-    <header className="flex items-center justify-between px-6 h-[70px] bg-white border-b border-[#e2e8f0]">
-      {/* Left side: Hamburger & Title */}
+    <header className="h-16 bg-white border-b border-[#e2e8f0] px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      {/* Left side: Hamburger menu for mobile & Page Title */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5" />
         </button>
+        
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-1.5 text-slate-800">
-            Welcome, <span className="text-brand-purple">{user.name}</span>
-          </h2>
-          <p className="text-xs text-brand-textMuted font-medium hidden md:block">
-            {getDashboardSubtitle()}
+          <h1 className="text-sm md:text-base font-bold text-slate-800 tracking-tight">
+            {getDashboardTitle()}
+          </h1>
+          <p className="text-[11px] text-brand-textMuted hidden sm:block font-medium">
+            System Maintenance & Asset Tracking Portal
           </p>
         </div>
       </div>
@@ -82,17 +88,28 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
 
           {/* Notifications Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-[320px] bg-white rounded-2xl border border-[#e2e8f0] shadow-premium z-50 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-[340px] bg-white rounded-2xl border border-[#e2e8f0] shadow-premium z-50 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-[#e2e8f0]">
                 <span className="text-xs font-bold text-slate-700">Notifications ({unreadCount} unread)</span>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-[10px] font-semibold text-brand-purple hover:underline"
-                  >
-                    Mark all read
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                    <button
+                      onClick={() => requestNotificationPermission()}
+                      className="text-[10px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-md transition-colors"
+                      title="Click to enable Chrome desktop notification alerts"
+                    >
+                      Enable Chrome Alerts
+                    </button>
+                  )}
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-[10px] font-semibold text-brand-purple hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-100">
                 {notifications.length === 0 ? (
