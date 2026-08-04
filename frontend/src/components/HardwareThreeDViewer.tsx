@@ -170,6 +170,34 @@ export const HardwareThreeDViewer: React.FC<HardwareThreeDViewerProps> = ({ type
       ant2.position.set(0.38, 0.3, -0.32);
       modelGroup.add(ant2);
 
+    } else if (normalizedType.includes('ELECTRICAL')) {
+      // Electrical Box / Transformer / Fixture
+      const electricalAmber = new THREE.MeshPhysicalMaterial({
+        color: 0xf59e0b,
+        metalness: 0.7,
+        roughness: 0.2,
+        clearcoat: 0.6,
+      });
+      const electricYellow = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+
+      // Main Electrical Box Body
+      const boxGeo = new THREE.BoxGeometry(0.9, 1.1, 0.5);
+      const boxMesh = new THREE.Mesh(boxGeo, electricalAmber);
+      modelGroup.add(boxMesh);
+
+      // Top Insulators (Bushings)
+      for (let i = -1; i <= 1; i += 1) {
+        const insGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.25, 12);
+        const insMesh = new THREE.Mesh(insGeo, metallicGrey);
+        insMesh.position.set(i * 0.25, 0.65, 0);
+        modelGroup.add(insMesh);
+      }
+
+      // Front Warning / Electrical Flash Symbol Accent
+      const flashGeo = new THREE.BoxGeometry(0.3, 0.4, 0.04);
+      const flashMesh = new THREE.Mesh(flashGeo, electricYellow);
+      flashMesh.position.set(0, 0.0, 0.27);
+      modelGroup.add(flashMesh);
     } else {
       // Default / Others: Crate box representing generic inventory item
       const boxGeo = new THREE.BoxGeometry(0.85, 0.85, 0.85);

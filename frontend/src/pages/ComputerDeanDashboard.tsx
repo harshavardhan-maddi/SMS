@@ -61,7 +61,11 @@ export const ComputerDeanDashboard: React.FC = () => {
         api.get('/users/technicians')
       ]);
 
-      setRequests(repairsRes.data);
+      const allDeanReqs = (repairsRes.data || []).filter((r: any) => 
+        r.inventory?.type !== 'Electrical Hardware' &&
+        (!r.title || !r.title.includes('Electrical Hardware'))
+      );
+      setRequests(allDeanReqs);
       setReportStats(statsRes.data);
 
       const techs = techsRes.data;

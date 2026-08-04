@@ -47,10 +47,14 @@ export const EEEAssetManagerDashboard: React.FC = () => {
         api.get('/users/technicians')
       ]);
 
-      // Filter repair requests belonging to EEE department
+      // Filter repair requests belonging to EEE department OR Electrical Hardware requests from any department
       const allRequests = repairsRes.data || [];
       const eeeRequests = allRequests.filter((r: any) => 
-        r.inventory?.department?.code === 'EEE' || r.inventory?.department?.id === 3
+        r.inventory?.department?.code === 'EEE' || 
+        r.inventory?.department?.id === 3 ||
+        r.inventory?.type === 'Electrical Hardware' ||
+        (r.title && r.title.includes('Electrical Hardware')) ||
+        (r.description && r.description.includes('Electrical Hardware'))
       );
 
       setRequests(eeeRequests);

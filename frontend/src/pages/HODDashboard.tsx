@@ -53,14 +53,17 @@ export const HODDashboard: React.FC = () => {
   const [programmerLabId, setProgrammerLabId] = useState('');
 
   // Wizard States
-  const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number }[]>([]);
+  const [reportedIssues, setReportedIssues] = useState<{ type: string; brand: string; count: number; description?: string }[]>([]);
   const [remainingTypes, setRemainingTypes] = useState<string[]>(['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot']);
-  const [wizardStage, setWizardStage] = useState<'select_lab' | 'select_type' | 'enter_custom_type' | 'enter_total_count' | 'ask_more' | 'final_submit' | 'confirm_submit'>('select_lab');
+  const [wizardStage, setWizardStage] = useState<'select_lab' | 'select_type' | 'enter_custom_type' | 'enter_electrical_type' | 'enter_total_count' | 'ask_more' | 'final_submit' | 'confirm_submit'>('select_lab');
   const [currentType, setCurrentType] = useState('CPU');
   
   // Current Type Configuration States
   const [typeTotalCount, setTypeTotalCount] = useState<number | string>('');
   const [customTypeName, setCustomTypeName] = useState('');
+  const [electricalIssueName, setElectricalIssueName] = useState('');
+  const [electricalQuantity, setElectricalQuantity] = useState<number | string>(1);
+  const [electricalDescription, setElectricalDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Report Issue General Form State
@@ -139,6 +142,9 @@ export const HODDashboard: React.FC = () => {
     setTypeTotalCount('');
     setIssueTitle('');
     setDescription('');
+    setElectricalIssueName('');
+    setElectricalQuantity(1);
+    setElectricalDescription('');
     
     const deptIdParam = user?.departmentId || 0;
     api.get(`/departments/${deptIdParam}/labs`).then(res => {
@@ -166,6 +172,9 @@ export const HODDashboard: React.FC = () => {
     setIssueTitle('');
     setDescription('');
     setCustomTypeName('');
+    setElectricalIssueName('');
+    setElectricalQuantity(1);
+    setElectricalDescription('');
     setIsSubmitting(false);
     if (location.pathname === '/report-issue') {
       navigate('/dashboard', { replace: true });
@@ -623,6 +632,23 @@ export const HODDashboard: React.FC = () => {
                   </button>
                 ))}
 
+                {/* Electrical Hardware category button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setElectricalIssueName('');
+                    setElectricalQuantity(1);
+                    setElectricalDescription('');
+                    setWizardStage('enter_electrical_type');
+                  }}
+                  className="p-4 border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-2 group"
+                >
+                  <div className="w-20 h-20 flex items-center justify-center">
+                    <HardwareThreeDViewer type="Electrical Hardware" />
+                  </div>
+                  <span className="text-xs font-bold text-amber-700 group-hover:text-amber-800 transition-all">Electrical Hardware</span>
+                </button>
+
                 {/* Special Others category button */}
                 <button
                   type="button"
@@ -646,6 +672,104 @@ export const HODDashboard: React.FC = () => {
                   className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer"
                 >
                   ← Back to Lab Selection
+                </button>
+              </div>
+            </div>
+          )}
+
+          {wizardStage === 'enter_electrical_type' && (
+            <div className="space-y-4">
+              <div className="text-center pb-2 border-b border-slate-100">
+                <span className="text-[10px] bg-amber-100 px-2.5 py-0.5 rounded-md text-amber-800 font-bold uppercase tracking-wider">Electrical Hardware</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Electrical Hardware Details</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Specify the electrical hardware issue and details</p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">What is the electric hardware with issue? <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ceiling Fan, Tube light, AC Unit, Switchboard"
+                    value={electricalIssueName}
+                    onChange={(e) => setElectricalIssueName(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Quantity <span className="text-red-500">*</span></label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    placeholder="Enter quantity count"
+                    value={electricalQuantity}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setElectricalQuantity('');
+                      } else {
+                        setElectricalQuantity(Math.max(1, parseInt(val) || 1));
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Description (Optional)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Optional details or location info..."
+                    value={electricalDescription}
+                    onChange={(e) => setElectricalDescription(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setWizardStage('select_type')}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-bold transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmedIssue = electricalIssueName.trim();
+                    if (!trimmedIssue) {
+                      toast.error('Please specify what electric hardware had an issue.');
+                      return;
+                    }
+                    const parsedQty = parseInt(electricalQuantity as string) || 0;
+                    if (parsedQty <= 0) {
+                      toast.error('Please enter a valid quantity of at least 1.');
+                      return;
+                    }
+                    const newIssue = { 
+                      type: 'Electrical Hardware', 
+                      brand: trimmedIssue, 
+                      count: parsedQty,
+                      description: electricalDescription.trim()
+                    };
+                    const finalUpdatedIssues = [...reportedIssues, newIssue];
+                    setReportedIssues(finalUpdatedIssues);
+
+                    const generatedTitle = `Repair: ${finalUpdatedIssues.map(i => `${i.type}${i.brand ? ` (${i.brand})` : ''} x${i.count}`).join(', ')}`;
+                    const generatedDesc = `Reported hardware issues:\n` + 
+                      finalUpdatedIssues.map(i => `- ${i.type}: ${i.brand ? `Item: ${i.brand}, ` : ''}Quantity: ${i.count}${i.description ? `, Info: ${i.description}` : ''}`).join('\n');
+                    setIssueTitle(generatedTitle);
+                    setDescription(generatedDesc);
+                    setWizardStage('final_submit');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all cursor-pointer text-center"
+                >
+                  Raise Issue
                 </button>
               </div>
             </div>

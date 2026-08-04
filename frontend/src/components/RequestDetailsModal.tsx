@@ -19,7 +19,8 @@ import {
   Calendar,
   ShieldCheck,
   Tag,
-  Trash2
+  Trash2,
+  Zap,
 } from 'lucide-react';
 
 interface RequestDetailsModalProps {
@@ -70,6 +71,9 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
       case 'HOTSPOT':
       case 'WIFI':
         return <Wifi className="w-8 h-8 text-amber-600" />;
+      case 'ELECTRICAL HARDWARE':
+      case 'ELECTRICAL':
+        return <Zap className="w-8 h-8 text-amber-500 fill-amber-500/20" />;
       default:
         return <Laptop className="w-8 h-8 text-slate-700" />;
     }
