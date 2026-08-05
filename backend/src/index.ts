@@ -15,6 +15,7 @@ import inventoryRoutes from './routes/inventoryRoutes';
 import repairRoutes from './routes/repairRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import reportRoutes from './routes/reportRoutes';
+import electricianRoutes from './routes/electricianRoutes';
 
 dotenv.config();
 
@@ -87,6 +88,9 @@ app.use('/repairs', repairRoutes);
 
 app.use('/api/notifications', notificationRoutes);
 app.use('/notifications', notificationRoutes);
+
+app.use('/api/electricians', electricianRoutes);
+app.use('/electricians', electricianRoutes);
 
 app.use('/api/reports', reportRoutes);
 app.use('/reports', reportRoutes);

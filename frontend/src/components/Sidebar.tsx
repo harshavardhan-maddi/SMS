@@ -86,7 +86,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'In Progress', path: '/in-progress', icon: Wrench },
     { name: 'Resolved', path: '/resolved', icon: ShieldCheck },
     { name: 'Dead Stock', path: '/dead-stock', icon: XCircle },
-    { name: 'Users', path: '/users', icon: Users },
     { name: 'Reports', path: '/reports', icon: FileBarChart },
     { name: 'Analytics', path: '/analytics', icon: FolderOpen },
     { name: 'Spare Parts', path: '/spare-parts', icon: HelpCircle },

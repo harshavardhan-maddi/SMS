@@ -100,6 +100,14 @@ CREATE TABLE IF NOT EXISTS finalized_hardware_counts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (department_id, lab_id, type)
 );
+
+CREATE TABLE IF NOT EXISTS electricians (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT,
+    specialization TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 export async function initSchema() {
@@ -157,6 +165,10 @@ export async function initSchema() {
 
     try {
       await db.exec('ALTER TABLE repair_requests ADD COLUMN completed_time TEXT;');
+    } catch (e) { /* Column already exists */ }
+
+    try {
+      await db.exec('ALTER TABLE repair_requests ADD COLUMN assigned_electrician_name TEXT;');
     } catch (e) { /* Column already exists */ }
 
     try {

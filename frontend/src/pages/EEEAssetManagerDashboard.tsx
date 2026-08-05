@@ -12,7 +12,10 @@ import {
   ChevronDown,
   Activity,
   UserCheck,
-  Zap
+  Zap,
+  UserPlus,
+  Plus,
+  Phone
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
@@ -24,15 +27,24 @@ export const EEEAssetManagerDashboard: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
 
-  // Modals state
-  const [selectedReq, setSelectedReq] = useState<any>(null);
-  const [viewDetailsReq, setViewDetailsReq] = useState<any>(null);
+  // Electricians State (Managed by EEE Asset Manager, non-login users)
+  const [electricians, setElectricians] = useState<any[]>([]);
+  const [elecModalOpen, setElecModalOpen] = useState(false);
+  const [newElecName, setNewElecName] = useState('');
+  const [newElecPhone, setNewElecPhone] = useState('');
+  const [newElecSpec, setNewElecSpec] = useState('Electrical Fixtures');
+
+  // Modal & Selection States
+  const [selectedReq, setSelectedReq] = useState<any | null>(null);
+  const [viewDetailsReq, setViewDetailsReq] = useState<any | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [deadModalOpen, setDeadModalOpen] = useState(false);
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
   const [timelineHistory, setTimelineHistory] = useState<any[]>([]);
 
   // Action Form States
+  const [assignType, setAssignType] = useState<'electrician' | 'technician'>('electrician');
+  const [selectedElecId, setSelectedElecId] = useState<string>('');
   const [selectedTechId, setSelectedTechId] = useState<string>('');
   const [deadReason, setDeadReason] = useState('');
   const [deadDesc, setDeadDesc] = useState('');
@@ -42,9 +54,10 @@ export const EEEAssetManagerDashboard: React.FC = () => {
 
   const fetchEEEData = async () => {
     try {
-      const [repairsRes, techsRes] = await Promise.all([
+      const [repairsRes, techsRes, elecsRes] = await Promise.all([
         api.get('/repairs'),
-        api.get('/users/technicians')
+        api.get('/users/technicians'),
+        api.get('/electricians')
       ]);
 
       // EEE Asset Manager can ONLY see Electrical Hardware issue requests, not any others
@@ -62,6 +75,12 @@ export const EEEAssetManagerDashboard: React.FC = () => {
       if (techs.length > 0) {
         setSelectedTechId(techs[0].id.toString());
       }
+
+      const elecs = elecsRes.data || [];
+      setElectricians(elecs);
+      if (elecs.length > 0) {
+        setSelectedElecId(elecs[0].id.toString());
+      }
     } catch (err) {
       console.error('Failed to load EEE Asset Manager data', err);
     } finally {
@@ -73,19 +92,65 @@ export const EEEAssetManagerDashboard: React.FC = () => {
     fetchEEEData();
   }, [dashboardTick]);
 
+  const handleAddElectrician = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newElecName.trim()) {
+      toast.error('Please enter electrician name.');
+      return;
+    }
+    try {
+      await api.post('/electricians', {
+        name: newElecName,
+        phone: newElecPhone,
+        specialization: newElecSpec
+      });
+      toast.success(`Electrician ${newElecName} added successfully!`);
+      setNewElecName('');
+      setNewElecPhone('');
+      fetchEEEData();
+    } catch (err) {
+      toast.error('Failed to add electrician.');
+    }
+  };
+
+  const handleDeleteElectrician = async (id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete electrician ${name}?`)) return;
+    try {
+      await api.delete(`/electricians/${id}`);
+      toast.success(`Electrician ${name} deleted.`);
+      fetchEEEData();
+    } catch (err) {
+      toast.error('Failed to delete electrician.');
+    }
+  };
+
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedReq || !selectedTechId) return;
+    if (!selectedReq) return;
 
     try {
-      await api.post(`/repairs/${selectedReq.id}/accept`, {
-        technicianId: parseInt(selectedTechId)
-      });
-      toast.success(`Request ${selectedReq.id} assigned to technician successfully!`);
+      if (assignType === 'electrician') {
+        const elec = electricians.find(e => e.id.toString() === selectedElecId);
+        if (!elec && electricians.length > 0) {
+          toast.error('Please select an electrician.');
+          return;
+        }
+        await api.post(`/repairs/${selectedReq.id}/accept`, {
+          electricianId: elec ? elec.id : undefined,
+          electricianName: elec ? elec.name : selectedElecId
+        });
+        toast.success(`Request ${selectedReq.id} assigned to electrician successfully!`);
+      } else {
+        if (!selectedTechId) return;
+        await api.post(`/repairs/${selectedReq.id}/accept`, {
+          technicianId: parseInt(selectedTechId)
+        });
+        toast.success(`Request ${selectedReq.id} assigned to technician successfully!`);
+      }
       setAssignModalOpen(false);
       fetchEEEData();
     } catch (err) {
-      toast.error('Failed to assign technician to request.');
+      toast.error('Failed to assign request.');
     }
   };
 
@@ -154,13 +219,22 @@ export const EEEAssetManagerDashboard: React.FC = () => {
           </div>
           <h2 className="text-2xl font-black tracking-tight">Electrical & Electronics Asset Manager Dashboard</h2>
           <p className="text-xs text-amber-100 mt-1 max-w-xl">
-            Exclusive manager portal for EEE department repair requests. Review incoming tickets from EEE HOD and Lab Assistants, assign department technicians, and oversee maintenance operations.
+            Exclusive manager portal for EEE department repair requests. Review incoming tickets from EEE HOD and Lab Assistants, assign electricians/technicians, and oversee maintenance operations.
           </p>
         </div>
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-3 rounded-2xl text-right">
-          <div className="text-xs text-amber-100 font-semibold">Active User</div>
-          <div className="text-sm font-bold text-white">{user?.name}</div>
-          <div className="text-[10px] text-amber-200 uppercase font-black tracking-wider mt-0.5">EEE Asset Manager</div>
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+          <button
+            onClick={() => setElecModalOpen(true)}
+            className="px-4 py-2.5 bg-white text-amber-900 hover:bg-amber-50 rounded-2xl text-xs font-bold shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4 text-amber-600" />
+            <span>Manage Electricians ({electricians.length})</span>
+          </button>
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-2xl text-right">
+            <div className="text-xs text-amber-100 font-semibold">Active User</div>
+            <div className="text-sm font-bold text-white">{user?.name}</div>
+            <div className="text-[10px] text-amber-200 uppercase font-black tracking-wider mt-0.5">EEE Asset Manager</div>
+          </div>
         </div>
       </div>
 
@@ -263,10 +337,15 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                         {req.requester?.name || 'EEE Faculty'}
                       </td>
                       <td className="py-3.5 px-4 font-medium">
-                        {req.assignedTo ? (
-                          <span className="text-slate-800 font-semibold">{req.assignedTo.name}</span>
+                        {req.assignedElectricianName ? (
+                          <span className="bg-amber-100 text-amber-900 border border-amber-300/80 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 w-fit shadow-xs">
+                            <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                            <span>{req.assignedElectricianName}</span>
+                          </span>
+                        ) : req.assignedTo ? (
+                          <span className="text-slate-800 font-bold">{req.assignedTo.name}</span>
                         ) : (
-                          <span className="text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">
+                          <span className="text-amber-600 font-bold bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-xl text-[10px]">
                             Unassigned
                           </span>
                         )}
@@ -358,27 +437,180 @@ export const EEEAssetManagerDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ASSIGN TECHNICIAN MODAL */}
-      <Modal isOpen={assignModalOpen} onClose={() => setAssignModalOpen(false)} title={`Assign Technician to EEE Request: ${selectedReq?.id}`}>
+      {/* MANAGE ELECTRICIANS MODAL */}
+      <Modal isOpen={elecModalOpen} onClose={() => setElecModalOpen(false)} title="Manage Department Electricians">
+        <div className="space-y-6 text-left">
+          {/* Add Electrician Form */}
+          <form onSubmit={handleAddElectrician} className="p-4 bg-amber-50/70 border border-amber-200/60 rounded-2xl space-y-3">
+            <h4 className="text-xs font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
+              <UserPlus className="w-4 h-4 text-amber-600" />
+              <span>Add New Electrician</span>
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={newElecName}
+                  onChange={(e) => setNewElecName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium outline-hidden focus:border-amber-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Phone / Contact</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 9876543210"
+                  value={newElecPhone}
+                  onChange={(e) => setNewElecPhone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium outline-hidden focus:border-amber-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Specialization</label>
+                <select
+                  value={newElecSpec}
+                  onChange={(e) => setNewElecSpec(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-amber-500 bg-white"
+                >
+                  <option value="Electrical Fixtures">Electrical Fixtures (Fans, Lights)</option>
+                  <option value="AC & Cooling Systems">AC & Cooling Systems</option>
+                  <option value="High Voltage & Wiring">High Voltage & Wiring</option>
+                  <option value="General Electrical">General Electrical</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Electrician</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Electricians List Table */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-slate-700">Registered Electricians ({electricians.length})</h4>
+            {electricians.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100 font-medium">
+                No electricians added yet. Add department electricians above to assign tickets.
+              </div>
+            ) : (
+              <div className="max-h-[260px] overflow-y-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">
+                      <th className="py-2.5 px-3">Electrician Name</th>
+                      <th className="py-2.5 px-3">Contact Phone</th>
+                      <th className="py-2.5 px-3">Specialization</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {electricians.map((el) => (
+                      <tr key={el.id} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-3 font-bold text-slate-800 flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                          <span>{el.name}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600">{el.phone || 'N/A'}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-md font-semibold text-[10px]">
+                            {el.specialization}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            onClick={() => handleDeleteElectrician(el.id, el.name)}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Electrician"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ASSIGN ELECTRICIAN / TECHNICIAN MODAL */}
+      <Modal isOpen={assignModalOpen} onClose={() => setAssignModalOpen(false)} title={`Assign Electrician to EEE Request: ${selectedReq?.id}`}>
         <form onSubmit={handleAssignSubmit} className="space-y-4 text-left">
           <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-xl text-xs text-amber-800 font-medium">
-            Select a hardware technician to take ownership and start maintenance on this EEE ticket.
+            Select an electrician or technician to take ownership and resolve this Electrical Hardware issue.
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 block">Available Technicians</label>
-            <select
-              value={selectedTechId}
-              onChange={(e) => setSelectedTechId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-amber-500 bg-white"
+          {/* Toggle Assign Type */}
+          <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+            <button
+              type="button"
+              onClick={() => setAssignType('electrician')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                assignType === 'electrician' ? 'bg-white text-amber-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
             >
-              {technicians.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.email})
-                </option>
-              ))}
-            </select>
+              Electrician ({electricians.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssignType('technician')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                assignType === 'technician' ? 'bg-white text-amber-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              System Technician ({technicians.length})
+            </button>
           </div>
+
+          {assignType === 'electrician' ? (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Select Assigned Electrician</label>
+                {electricians.length === 0 ? (
+                  <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium">
+                    No electricians added yet. Please click <strong>Manage Electricians</strong> to add department electricians.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedElecId}
+                    onChange={(e) => setSelectedElecId(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-amber-500 bg-white"
+                  >
+                    {electricians.map((el) => (
+                      <option key={el.id} value={el.id.toString()}>
+                        {el.name} ({el.specialization}) {el.phone ? `- Tel: ${el.phone}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block">Available Hardware Technicians</label>
+              <select
+                value={selectedTechId}
+                onChange={(e) => setSelectedTechId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-amber-500 bg-white"
+              >
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
             <button
@@ -393,7 +625,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
               className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all cursor-pointer flex items-center gap-2"
             >
               <UserCheck className="w-4 h-4" />
-              <span>Confirm Technician Assignment</span>
+              <span>Confirm Assignment</span>
             </button>
           </div>
         </form>

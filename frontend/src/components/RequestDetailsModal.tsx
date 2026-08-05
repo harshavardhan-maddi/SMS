@@ -280,8 +280,12 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
               <span className="font-bold text-slate-800">{request.requester?.name || 'Department HOD'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Assigned Technician:</span>
-              <span className="font-extrabold text-brand-purple">{request.assignedTo?.name || 'Pending Assignment (Dean)'}</span>
+              <span className="text-slate-500 font-medium">Assigned Personnel:</span>
+              <span className="font-extrabold text-amber-700">
+                {request.assignedElectricianName 
+                  ? `${request.assignedElectricianName} (Electrician)` 
+                  : (request.assignedTo?.name || 'Pending Assignment')}
+              </span>
             </div>
           </div>
         </div>

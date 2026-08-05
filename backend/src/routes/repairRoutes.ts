@@ -72,7 +72,8 @@ function formatRepairRequest(row: any) {
       id: row.assigned_to_id,
       name: row.assigned_name,
       email: row.assigned_email
-    } : null
+    } : null,
+    assignedElectricianName: row.assigned_electrician_name || null
   };
 }
 
@@ -356,12 +357,8 @@ router.post('/:id/start', authenticateJWT, async (req, res) => {
 // 7. Accept & Assign Request (Dean accepts and assigns to technician)
 router.post('/:id/accept', authenticateJWT, async (req, res) => {
   const { id } = req.params;
-  const { technicianId } = req.body;
+  const { technicianId, electricianId, electricianName } = req.body;
   const updaterId = (req as any).user?.id;
-
-  if (!technicianId) {
-    return res.status(400).send('Missing technicianId');
-  }
 
   try {
     const request = await db.get(
@@ -372,22 +369,39 @@ router.post('/:id/accept', authenticateJWT, async (req, res) => {
       return res.status(400).send('Repair request not found');
     }
 
-    const technician = await db.get('SELECT id, name FROM users WHERE id = ?', [technicianId]);
-    if (!technician) {
-      return res.status(400).send('Technician not found');
+    let assignedTechName = '';
+    let targetTechId = technicianId ? parseInt(technicianId) : null;
+    let targetElecName = electricianName || null;
+
+    if (electricianId && !targetElecName) {
+      const elecRow = await db.get('SELECT name FROM electricians WHERE id = ?', [electricianId]);
+      if (elecRow) targetElecName = elecRow.name;
     }
 
+    if (targetTechId) {
+      const technician = await db.get('SELECT id, name FROM users WHERE id = ?', [targetTechId]);
+      if (technician) assignedTechName = technician.name;
+    }
+
+    if (!targetTechId && !targetElecName) {
+      return res.status(400).send('Missing technician or electrician selection');
+    }
+
+    const assignedDisplayName = targetElecName ? `electrician ${targetElecName}` : `technician ${assignedTechName}`;
     const { todayStr, timeStr } = getLocalDates();
 
     await db.transaction(async () => {
-      // Set status to Accepted and assign technician
-      await db.run("UPDATE repair_requests SET status = 'Accepted', assigned_to_id = ? WHERE id = ?", [technicianId, id]);
+      // Set status to Accepted and assign technician / electrician
+      await db.run(
+        "UPDATE repair_requests SET status = 'Accepted', assigned_to_id = ?, assigned_electrician_name = ? WHERE id = ?",
+        [targetTechId, targetElecName, id]
+      );
 
       // Create history log
       await db.run(
         `INSERT INTO repair_history (request_id, status, description, status_date, status_time, updated_by_id)
          VALUES (?, 'Accepted', ?, ?, ?, ?)`,
-        [id, `Accepted and assigned to technician: ${technician.name}`, todayStr, timeStr, updaterId]
+        [id, `Accepted and assigned to ${assignedDisplayName}`, todayStr, timeStr, updaterId]
       );
     });
 
@@ -395,18 +409,20 @@ router.post('/:id/accept', authenticateJWT, async (req, res) => {
     if (request.requester_id) {
       notificationService.sendToUser(
         request.requester_id,
-        `Your repair request ${id} has been accepted and assigned to ${technician.name}.`,
+        `Your repair request ${id} has been accepted and assigned to ${assignedDisplayName}.`,
         'REPAIR_STARTED'
       );
     }
-    notificationService.sendToUser(
-      technicianId,
-      `New repair request ${id} assigned to you.`,
-      'NEW_REPAIR'
-    );
+    if (targetTechId) {
+      notificationService.sendToUser(
+        targetTechId,
+        `New repair request ${id} assigned to you.`,
+        'NEW_REPAIR'
+      );
+    }
     notificationService.sendToRole(
       'ROLE_PRINCIPAL',
-      `Repair request ${id} accepted and assigned to ${technician.name} in ${request.dept_code || 'N/A'}.`,
+      `Repair request ${id} accepted and assigned to ${assignedDisplayName} in ${request.dept_code || 'N/A'}.`,
       'REPAIR_STARTED'
     );
     notificationService.broadcastDashboardUpdate();
@@ -565,12 +581,17 @@ router.post('/:id/resolve', authenticateJWT, async (req, res) => {
 
   try {
     const request = await db.get(
-      'SELECT r.id, r.requester_id, r.inventory_id, r.description, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
+      'SELECT r.id, r.requester_id, r.inventory_id, r.description, r.assigned_electrician_name, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
       [id]
     );
     if (!request) {
       return res.status(400).send('Repair request not found');
     }
+
+    const assignedElec = request.assigned_electrician_name;
+    const resolutionLogText = assignedElec 
+      ? `Issue resolved by assigned electrician (${assignedElec}): ${solution}` 
+      : `Issue resolved: ${solution}`;
 
     const { todayStr, timeStr } = getLocalDates();
 
@@ -590,12 +611,12 @@ router.post('/:id/resolve', authenticateJWT, async (req, res) => {
          VALUES (?, 'Resolved', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
-          `Issue resolved: ${solution}`,
+          resolutionLogText,
           problemFound,
           solution,
           reasonForDelay || null,
           partsReplaced || null,
-          remarks || null,
+          remarks || (assignedElec ? `Assigned Electrician: ${assignedElec}` : null),
           todayStr,
           timeStr,
           updaterId

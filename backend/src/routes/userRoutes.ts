@@ -61,8 +61,8 @@ router.get('/department/:deptId/programmers', authenticateJWT, authorizeRoles('R
   }
 });
 
-// 2. Get all users (Principal & Dean)
-router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'), async (req, res) => {
+// 2. Get all users (Principal)
+router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
@@ -205,8 +205,8 @@ router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'
   }
 });
 
-// 5. Create User (Principal, Dean & HOD)
-router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 'ROLE_HOD'), async (req, res) => {
+// 5. Create User (Principal & HOD)
+router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), async (req, res) => {
   const { name, email, password, roleName, departmentId, labId } = req.body;
   const userReq = (req as any).user;
 

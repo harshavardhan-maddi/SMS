@@ -58,7 +58,7 @@ export const UserManagement: React.FC = () => {
   const [editPassword, setEditPassword] = useState('');
 
   const fetchData = async () => {
-    if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
+    if (!currentUser || currentUser.role !== 'ROLE_PRINCIPAL') {
       setLoading(false);
       return;
     }
@@ -96,7 +96,7 @@ export const UserManagement: React.FC = () => {
     fetchLabsForDept();
   }, [departmentId]);
 
-  if (!currentUser || (currentUser.role !== 'ROLE_PRINCIPAL' && currentUser.role !== 'ROLE_DEAN')) {
+  if (!currentUser || currentUser.role !== 'ROLE_PRINCIPAL') {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="max-w-md w-full p-8 bg-white border border-slate-200/60 rounded-3xl shadow-premium text-center">
@@ -105,7 +105,7 @@ export const UserManagement: React.FC = () => {
           </div>
           <h3 className="text-base font-bold text-slate-800 mb-1">Access Denied</h3>
           <p className="text-xs text-brand-textMuted mb-6 leading-relaxed">
-            Only authorized administrators (Principal & Dean) are allowed to view and manage system users.
+            Only the Principal is authorized to view and manage system users.
           </p>
           <a
             href="/dashboard"
@@ -257,7 +257,7 @@ export const UserManagement: React.FC = () => {
     );
   }
 
-  const showActionsHeader = currentUser?.role === 'ROLE_PRINCIPAL' || currentUser?.role === 'ROLE_DEAN';
+  const showActionsHeader = currentUser?.role === 'ROLE_PRINCIPAL';
 
   return (
     <div className="space-y-6">
@@ -268,7 +268,7 @@ export const UserManagement: React.FC = () => {
           <p className="text-xs text-brand-textMuted font-medium">Create and manage access accounts for Department HODs, Computer Dean, and Hardware Technicians</p>
         </div>
 
-        {(currentUser?.role === 'ROLE_PRINCIPAL' || currentUser?.role === 'ROLE_DEAN') && (
+        {currentUser?.role === 'ROLE_PRINCIPAL' && (
           <button
             onClick={handleOpenCreate}
             className="px-4 py-2 bg-brand-purple hover:bg-brand-purpleHover text-white text-xs font-bold rounded-xl shadow-md shadow-brand-purple/20 transition-all flex items-center gap-1.5 cursor-pointer"
@@ -296,7 +296,7 @@ export const UserManagement: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {users.map((u) => {
-                const canManageUser = currentUser?.role === 'ROLE_PRINCIPAL' || (currentUser?.role === 'ROLE_DEAN' && u.role.name === 'ROLE_TECHNICIAN');
+                const canManageUser = currentUser?.role === 'ROLE_PRINCIPAL';
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/50">
                     <td className="py-3.5 px-4 font-bold text-slate-700">{u.name}</td>
