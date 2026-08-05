@@ -64,6 +64,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
   const myRequests = requests.filter(r => r.assignedTo?.id === user?.userId);
 
   const handleStartRepair = async (req: any) => {
+    if (!window.confirm(`Are you sure you want to start work on repair request ${req.id}?`)) {
+      return;
+    }
     try {
       await api.post(`/repairs/${req.id}/start-technician`, {});
       toast.success(`Repair started for request ${req.id}`);
@@ -76,6 +79,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
   const handleRequestPartsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq || !requiredParts) return;
+    if (!window.confirm(`Are you sure you want to update progress and request spare parts for request ${selectedReq.id}?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/partial-progress`, {
@@ -101,6 +107,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
   const handleResolveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq || !problemFound || !solution) return;
+    if (!window.confirm(`Are you sure you want to mark request ${selectedReq.id} as Resolved?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/resolve`, {
@@ -129,6 +138,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
   const handleDeadStockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq || !deadReason) return;
+    if (!window.confirm(`Are you sure you want to decommission request ${selectedReq.id} to Dead Stock?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/dead-stock`, {

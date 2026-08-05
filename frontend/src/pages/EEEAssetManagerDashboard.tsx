@@ -96,6 +96,9 @@ export const EEEAssetManagerDashboard: React.FC = () => {
       toast.error('Please enter electrician name.');
       return;
     }
+    if (!window.confirm(`Are you sure you want to add electrician "${newElecName.trim()}"?`)) {
+      return;
+    }
     try {
       await api.post('/electricians', {
         name: newElecName.trim()
@@ -110,19 +113,22 @@ export const EEEAssetManagerDashboard: React.FC = () => {
   };
 
   const handleDeleteElectrician = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete electrician ${name}?`)) return;
+    if (!window.confirm(`Are you sure you want to remove electrician ${name}?`)) return;
     try {
       await api.delete(`/electricians/${id}`);
-      toast.success(`Electrician ${name} deleted.`);
+      toast.success(`Electrician ${name} removed.`);
       fetchEEEData();
     } catch (err) {
-      toast.error('Failed to delete electrician.');
+      toast.error('Failed to remove electrician.');
     }
   };
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq) return;
+    if (!window.confirm(`Are you sure you want to confirm assignment for Request ${selectedReq.id}?`)) {
+      return;
+    }
 
     try {
       if (assignType === 'electrician') {
@@ -154,6 +160,9 @@ export const EEEAssetManagerDashboard: React.FC = () => {
     e.preventDefault();
     if (!selectedReq || !deadReason) {
       toast.error('Please enter a reason for decommissioning.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to decommission Request ${selectedReq.id} to Dead Stock?`)) {
       return;
     }
 

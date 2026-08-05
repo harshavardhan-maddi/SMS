@@ -87,6 +87,9 @@ export const ComputerDeanDashboard: React.FC = () => {
   const handleAcceptAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq || !selectedTechId) return;
+    if (!window.confirm(`Are you sure you want to accept and assign Request ${selectedReq.id}?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/accept`, {
@@ -103,6 +106,9 @@ export const ComputerDeanDashboard: React.FC = () => {
   const handleStartRepairSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq) return;
+    if (!window.confirm(`Are you sure you want to start repair process for Request ${selectedReq.id}?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/start`, {
@@ -125,6 +131,9 @@ export const ComputerDeanDashboard: React.FC = () => {
   const handleResolveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq) return;
+    if (!window.confirm(`Are you sure you want to mark Request ${selectedReq.id} as Resolved?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/resolve`, {
@@ -153,6 +162,9 @@ export const ComputerDeanDashboard: React.FC = () => {
   const handleDeadStockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq) return;
+    if (!window.confirm(`Are you sure you want to decommission Request ${selectedReq.id} to Dead Stock?`)) {
+      return;
+    }
 
     try {
       await api.post(`/repairs/${selectedReq.id}/dead-stock`, {

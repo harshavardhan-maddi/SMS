@@ -97,8 +97,11 @@ export const ProgrammersPage: React.FC = () => {
   };
 
   const handleToggleActive = async (user: User) => {
+    const targetState = !user.active;
+    if (!window.confirm(`Are you sure you want to ${targetState ? 'activate' : 'deactivate'} programmer ${user.name}?`)) {
+      return;
+    }
     try {
-      const targetState = !user.active;
       await api.put(`/users/${user.id}/active?active=${targetState}`);
       toast.success(`User account ${targetState ? 'activated' : 'deactivated'} successfully.`);
       fetchProgrammers();

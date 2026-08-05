@@ -64,6 +64,10 @@ export const LabsPage: React.FC = () => {
       return;
     }
 
+    if (!window.confirm(`Are you sure you want to create lab "${name}" (${labNumber})?`)) {
+      return;
+    }
+
     try {
       await api.post(`/departments/${targetDeptId}/labs`, { name, labNumber });
       toast.success('Lab created successfully.');

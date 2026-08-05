@@ -100,6 +100,11 @@ export const InventoryPage: React.FC = () => {
       return;
     }
 
+    const actionText = editingItem ? `update details for asset ${editingItem.id}` : 'log this new hardware asset';
+    if (!window.confirm(`Are you sure you want to ${actionText}?`)) {
+      return;
+    }
+
     try {
       const payload: any = {
         id: assetId || null,
