@@ -31,8 +31,6 @@ export const EEEAssetManagerDashboard: React.FC = () => {
   const [electricians, setElectricians] = useState<any[]>([]);
   const [elecModalOpen, setElecModalOpen] = useState(false);
   const [newElecName, setNewElecName] = useState('');
-  const [newElecPhone, setNewElecPhone] = useState('');
-  const [newElecSpec, setNewElecSpec] = useState('Electrical Fixtures');
 
   // Modal & Selection States
   const [selectedReq, setSelectedReq] = useState<any | null>(null);
@@ -100,16 +98,14 @@ export const EEEAssetManagerDashboard: React.FC = () => {
     }
     try {
       await api.post('/electricians', {
-        name: newElecName,
-        phone: newElecPhone,
-        specialization: newElecSpec
+        name: newElecName.trim()
       });
       toast.success(`Electrician ${newElecName} added successfully!`);
       setNewElecName('');
-      setNewElecPhone('');
       fetchEEEData();
-    } catch (err) {
-      toast.error('Failed to add electrician.');
+    } catch (err: any) {
+      console.error('Add electrician error:', err);
+      toast.error(err.response?.data?.message || err.response?.data || 'Failed to add electrician.');
     }
   };
 
@@ -298,13 +294,15 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                 <th className="py-3 px-4">Assigned Technician</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Initiated Date</th>
+                <th className="py-3 px-4">Completed Date</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {requests.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={11} className="py-8 text-center text-slate-400 font-medium">
                     No repair requests logged for EEE Department yet.
                   </td>
                 </tr>
@@ -361,6 +359,14 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                         <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${getStatusBadgeClass(req.status)}`}>
                           {req.status}
                         </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
+                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
+                        {['Resolved', 'Dead Stock'].includes(req.status) && (req.completedDate || req.updatedAt)
+                          ? new Date(req.completedDate || req.updatedAt).toLocaleDateString()
+                          : '---'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="relative inline-block text-left">
@@ -446,9 +452,9 @@ export const EEEAssetManagerDashboard: React.FC = () => {
               <UserPlus className="w-4 h-4 text-amber-600" />
               <span>Add New Electrician</span>
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">Full Name</label>
+            <div className="flex flex-col sm:flex-row items-end gap-3">
+              <div className="flex-1 w-full">
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Electrician Name</label>
                 <input
                   type="text"
                   required
@@ -458,34 +464,9 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium outline-hidden focus:border-amber-500 bg-white"
                 />
               </div>
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">Phone / Contact</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 9876543210"
-                  value={newElecPhone}
-                  onChange={(e) => setNewElecPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium outline-hidden focus:border-amber-500 bg-white"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">Specialization</label>
-                <select
-                  value={newElecSpec}
-                  onChange={(e) => setNewElecSpec(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-amber-500 bg-white"
-                >
-                  <option value="Electrical Fixtures">Electrical Fixtures (Fans, Lights)</option>
-                  <option value="AC & Cooling Systems">AC & Cooling Systems</option>
-                  <option value="High Voltage & Wiring">High Voltage & Wiring</option>
-                  <option value="General Electrical">General Electrical</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end pt-1">
               <button
                 type="submit"
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Electrician</span>
@@ -506,8 +487,6 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">
                       <th className="py-2.5 px-3">Electrician Name</th>
-                      <th className="py-2.5 px-3">Contact Phone</th>
-                      <th className="py-2.5 px-3">Specialization</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -517,12 +496,6 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                         <td className="py-2.5 px-3 font-bold text-slate-800 flex items-center gap-1.5">
                           <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
                           <span>{el.name}</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600">{el.phone || 'N/A'}</td>
-                        <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-md font-semibold text-[10px]">
-                            {el.specialization}
-                          </span>
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <button
@@ -588,7 +561,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                   >
                     {electricians.map((el) => (
                       <option key={el.id} value={el.id.toString()}>
-                        {el.name} ({el.specialization}) {el.phone ? `- Tel: ${el.phone}` : ''}
+                        {el.name}
                       </option>
                     ))}
                   </select>

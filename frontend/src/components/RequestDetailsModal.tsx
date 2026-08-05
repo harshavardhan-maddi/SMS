@@ -273,7 +273,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
 
           <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-2.5 text-xs">
             <h5 className="font-extrabold text-slate-700 uppercase text-[10px] tracking-wider border-b border-slate-200/60 pb-1.5 flex items-center gap-1.5">
-              <UserCheck className="w-3.5 h-3.5 text-slate-500" /> Personnel Assignment
+              <UserCheck className="w-3.5 h-3.5 text-slate-500" /> Personnel & Dates
             </h5>
             <div className="flex justify-between">
               <span className="text-slate-500 font-medium">Requested By:</span>
@@ -285,6 +285,20 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                 {request.assignedElectricianName 
                   ? `${request.assignedElectricianName} (Electrician)` 
                   : (request.assignedTo?.name || 'Pending Assignment')}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200/40 pt-1.5">
+              <span className="text-slate-500 font-medium">Initiated Date:</span>
+              <span className="font-bold text-slate-800 font-mono">
+                {request.initiatedDate ? new Date(request.initiatedDate).toLocaleDateString() : 'N/A'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Completed Date:</span>
+              <span className="font-bold text-emerald-700 font-mono">
+                {['resolved', 'dead stock'].includes((request.status || '').toLowerCase()) && (request.completedDate || request.updatedAt)
+                  ? new Date(request.completedDate || request.updatedAt).toLocaleDateString()
+                  : 'Pending Completion'}
               </span>
             </div>
           </div>

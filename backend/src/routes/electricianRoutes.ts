@@ -7,7 +7,7 @@ const router = express.Router();
 // 1. Get all electricians
 router.get('/', authenticateJWT, async (req, res) => {
   try {
-    const rows = await db.all('SELECT id, name, phone, specialization, created_at FROM electricians ORDER BY name ASC');
+    const rows = await db.all('SELECT id, name, created_at FROM electricians ORDER BY name ASC');
     res.json(rows);
   } catch (err) {
     console.error('Get electricians error:', err);
@@ -15,9 +15,9 @@ router.get('/', authenticateJWT, async (req, res) => {
   }
 });
 
-// 2. Add a new electrician (Authorized for EEE Asset Manager, Principal, Dean)
-router.post('/', authenticateJWT, authorizeRoles('ROLE_EEE_ASSET_MANAGER', 'ROLE_PRINCIPAL'), async (req, res) => {
-  const { name, phone, specialization } = req.body;
+// 2. Add a new electrician (Authorized for EEE Asset Manager, Principal, HOD, Dean)
+router.post('/', authenticateJWT, authorizeRoles('ROLE_EEE_ASSET_MANAGER', 'ROLE_PRINCIPAL', 'ROLE_HOD', 'ROLE_DEAN'), async (req, res) => {
+  const { name } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).send('Electrician name is required');
@@ -25,11 +25,11 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_EEE_ASSET_MANAGER', 'ROLE
 
   try {
     const result = await db.run(
-      'INSERT INTO electricians (name, phone, specialization) VALUES (?, ?, ?)',
-      [name.trim(), phone ? phone.trim() : null, specialization ? specialization.trim() : 'Electrical Fixtures']
+      'INSERT INTO electricians (name) VALUES (?)',
+      [name.trim()]
     );
 
-    const created = await db.get('SELECT id, name, phone, specialization, created_at FROM electricians WHERE id = ?', [result.lastID]);
+    const created = await db.get('SELECT id, name, created_at FROM electricians WHERE id = ?', [result.lastID]);
     res.json(created);
   } catch (err) {
     console.error('Create electrician error:', err);
@@ -38,7 +38,7 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_EEE_ASSET_MANAGER', 'ROLE
 });
 
 // 3. Delete an electrician
-router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_EEE_ASSET_MANAGER', 'ROLE_PRINCIPAL'), async (req, res) => {
+router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_EEE_ASSET_MANAGER', 'ROLE_PRINCIPAL', 'ROLE_HOD', 'ROLE_DEAN'), async (req, res) => {
   const { id } = req.params;
   try {
     await db.run('DELETE FROM electricians WHERE id = ?', [id]);
