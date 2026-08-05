@@ -108,6 +108,10 @@ export const ReportsPage: React.FC = () => {
         const res = await api.get(url);
         data = res.data || [];
         
+        if (user?.role === 'ROLE_EEE_ASSET_MANAGER') {
+          data = data.filter(item => item.type === 'Electrical Hardware');
+        }
+
         // Filter by date range in frontend if applicable
         if (sDate) {
           data = data.filter(item => item.purchaseDate >= sDate);
@@ -130,6 +134,14 @@ export const ReportsPage: React.FC = () => {
         if (activeDeptId && activeDeptId !== 'all') url += `departmentId=${activeDeptId}&`;
         const res = await api.get(url);
         data = res.data || [];
+
+        if (user?.role === 'ROLE_EEE_ASSET_MANAGER') {
+          data = data.filter(item => 
+            item.inventory?.type === 'Electrical Hardware' ||
+            (item.title && item.title.includes('Electrical Hardware')) ||
+            (item.description && item.description.includes('Electrical Hardware'))
+          );
+        }
 
         // Filter by lab
         if (selectedLabId && selectedLabId !== 'all') {

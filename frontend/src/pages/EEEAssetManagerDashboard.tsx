@@ -15,7 +15,8 @@ import {
   Zap,
   UserPlus,
   Plus,
-  Phone
+  Phone,
+  Download
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
@@ -181,6 +182,89 @@ export const EEEAssetManagerDashboard: React.FC = () => {
     }
   };
 
+  const handlePrintEEEReport = () => {
+    if (requests.length === 0) {
+      toast.error('No EEE tickets available to export.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Pop-up blocked. Please allow pop-ups to print reports.');
+      return;
+    }
+
+    const tableRowsHtml = requests.map(item => `
+      <tr>
+        <td>${item.id}</td>
+        <td>${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber : 'EEE Dept'}</td>
+        <td><div style="font-weight: 600;">${item.title}</div><div style="font-size: 10px; color: #64748b;">${item.description || ''}</div></td>
+        <td>${item.requester?.name || 'EEE Faculty'}</td>
+        <td>${item.assignedElectricianName ? item.assignedElectricianName + ' (Electrician)' : (item.assignedTo?.name || 'Unassigned')}</td>
+        <td>${item.priority || 'Medium'}</td>
+        <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
+        <td>${item.initiatedDate ? new Date(item.initiatedDate).toLocaleDateString() : '-'}</td>
+        <td>${['Resolved', 'Dead Stock'].includes(item.status) && (item.completedDate || item.updatedAt) ? new Date(item.completedDate || item.updatedAt).toLocaleDateString() : 'Pending'}</td>
+      </tr>
+    `).join('');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>EEE Electrical Repair Tickets Report</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+            body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 20px; font-size: 12px; }
+            .header-banner { background: linear-gradient(135deg, #d97706, #ea580c); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+            .header-banner h1 { margin: 0; font-size: 20px; font-weight: 800; }
+            .header-banner p { margin: 4px 0 0 0; font-size: 11px; opacity: 0.9; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { background: #f8fafc; color: #475569; font-size: 10px; text-transform: uppercase; font-weight: 700; text-align: left; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; }
+            td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+            .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+            .initiated { background: #fef3c7; color: #92400e; }
+            .in-progress, .accepted { background: #dbeafe; color: #1e40af; }
+            .resolved { background: #d1fae5; color: #065f46; }
+            .dead-stock { background: #fee2e2; color: #991b1b; }
+          </style>
+        </head>
+        <body>
+          <div class="header-banner">
+            <h1>NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)</h1>
+            <p>Electrical & Electronics Engineering (EEE) Asset Management - Official Repair Tickets Report</p>
+          </div>
+          <div style="margin-bottom: 10px; font-size: 11px; color: #475569;">
+            <strong>Generated Date:</strong> ${new Date().toLocaleDateString()} | <strong>Total EEE Tickets:</strong> ${requests.length}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Location / Lab</th>
+                <th>Electrical Issue Details</th>
+                <th>Requester</th>
+                <th>Assigned Electrician</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Initiated Date</th>
+                <th>Completed Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const fetchTimeline = async (reqId: string) => {
     try {
       const res = await api.get(`/repairs/${reqId}/history`);
@@ -281,14 +365,23 @@ export const EEEAssetManagerDashboard: React.FC = () => {
 
       {/* REPAIR REQUESTS TABLE */}
       <div className="admin-card bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-extrabold text-slate-800">EEE Department Repair Requests</h3>
             <p className="text-xs text-slate-500">Tickets initiated by EEE HOD and Lab Assistants requiring manager overview & technician assignment.</p>
           </div>
-          <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-bold">
-            {requests.length} EEE Tickets
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePrintEEEReport}
+              className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-amber-600/20 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download EEE Report</span>
+            </button>
+            <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-bold whitespace-nowrap">
+              {requests.length} EEE Tickets
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">

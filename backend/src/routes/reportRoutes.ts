@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/db';
-import { authenticateJWT } from '../middleware/auth';
+import { authenticateJWT, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -236,7 +236,7 @@ router.get('/dean', authenticateJWT, async (req, res) => {
 });
 
 // 4. Export CSV Endpoint
-router.get('/export/csv', authenticateJWT, async (req, res) => {
+router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
   const { reportType, deptId, labId, startDate, endDate } = req.query as { 
     reportType: string; 
     deptId?: string; 
@@ -304,6 +304,9 @@ router.get('/export/csv', authenticateJWT, async (req, res) => {
         WHERE 1=1
       `;
       const params: any[] = [];
+      if (req.user?.role === 'ROLE_EEE_ASSET_MANAGER') {
+        query += " AND (inv.type = 'Electrical Hardware' OR r.title LIKE '%Electrical Hardware%' OR r.description LIKE '%Electrical Hardware%')";
+      }
       if (deptId && deptId !== 'all' && deptId !== 'undefined' && deptId !== 'null') {
         query += ' AND inv.department_id = ?';
         params.push(parseInt(deptId));
