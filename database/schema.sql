@@ -108,6 +108,16 @@ CREATE TABLE IF NOT EXISTS finalized_hardware_counts (
     PRIMARY KEY (department_id, lab_id, type)
 );
 
+CREATE TABLE IF NOT EXISTS electricians (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    specialization VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS assigned_electrician_name VARCHAR(255);
+
 CREATE INDEX IF NOT EXISTS idx_inventory_dept ON inventory(department_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_lab ON inventory(lab_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
