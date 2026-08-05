@@ -445,8 +445,12 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                 </tr>
               ) : (
                 requests.map((req) => {
-                  const isInitiated = req.status.toLowerCase() === 'initiated';
-                  const isResolved = req.status.toLowerCase() === 'resolved';
+                  const statusLower = req.status?.toLowerCase() || '';
+                  const isInitiated = statusLower === 'initiated';
+                  const isResolved = statusLower === 'resolved';
+                  const isDead = statusLower === 'dead stock';
+                  const isCompleted = isResolved || isDead;
+                  const isAssigned = Boolean(req.assignedElectricianName || req.assignedTo);
 
                   return (
                     <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
@@ -517,61 +521,74 @@ export const EEEAssetManagerDashboard: React.FC = () => {
 
                           {activeDropdownRow === req.id && (
                             <div className="origin-top-right absolute right-0 mt-1 w-48 rounded-2xl shadow-xl bg-white ring-1 ring-black/5 divide-y divide-slate-100 z-50 border border-slate-100 py-1 text-left">
-                              {!isResolved && (
+                              {!isCompleted ? (
+                                <>
+                                  {!isAssigned && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedReq(req);
+                                        setAssignModalOpen(true);
+                                        setActiveDropdownRow(null);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                                      <span>Assign Electrician</span>
+                                    </button>
+                                  )}
+
+                                  {isAssigned && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedReq(req);
+                                        setProgressStatus(req.status === 'Accepted' || req.status === 'Initiated' ? 'In Progress' : req.status);
+                                        setProgressDescription('');
+                                        setRequiredParts('');
+                                        setProblemFound('');
+                                        setSolution('');
+                                        setProgressModalOpen(true);
+                                        setActiveDropdownRow(null);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                                      <span>Update Progress</span>
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={() => {
+                                      setViewDetailsReq(req);
+                                      setActiveDropdownRow(null);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>View Request Details</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setSelectedReq(req);
+                                      setDeadModalOpen(true);
+                                      setActiveDropdownRow(null);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                    <span>Mark as Dead Stock</span>
+                                  </button>
+                                </>
+                              ) : (
                                 <button
                                   onClick={() => {
-                                    setSelectedReq(req);
-                                    setAssignModalOpen(true);
+                                    setViewDetailsReq(req);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                                 >
-                                  <UserCheck className="w-3.5 h-3.5 text-amber-600" />
-                                  <span>Assign Electrician</span>
-                                </button>
-                              )}
-
-                              {(req.assignedElectricianName || req.assignedTo || !isInitiated) && !isResolved && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedReq(req);
-                                    setProgressStatus(req.status === 'Accepted' || req.status === 'Initiated' ? 'In Progress' : req.status);
-                                    setProgressDescription('');
-                                    setRequiredParts('');
-                                    setProblemFound('');
-                                    setSolution('');
-                                    setProgressModalOpen(true);
-                                    setActiveDropdownRow(null);
-                                  }}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
-                                >
-                                  <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>Update Progress</span>
-                                </button>
-                              )}
-
-                              <button
-                                onClick={() => {
-                                  setViewDetailsReq(req);
-                                  setActiveDropdownRow(null);
-                                }}
-                                className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5 text-slate-400" />
-                                <span>View Request Details</span>
-                              </button>
-
-                              {!isResolved && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedReq(req);
-                                    setDeadModalOpen(true);
-                                    setActiveDropdownRow(null);
-                                  }}
-                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                  <span>Mark as Dead Stock</span>
+                                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>View Request Details</span>
                                 </button>
                               )}
                             </div>
