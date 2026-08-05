@@ -16,7 +16,9 @@ import {
   UserPlus,
   Plus,
   Phone,
-  Download
+  Download,
+  RefreshCw,
+  Sliders
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
@@ -47,6 +49,13 @@ export const EEEAssetManagerDashboard: React.FC = () => {
   const [selectedTechId, setSelectedTechId] = useState<string>('');
   const [deadReason, setDeadReason] = useState('');
   const [deadDesc, setDeadDesc] = useState('');
+  // Progress Update States
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [progressStatus, setProgressStatus] = useState<string>('In Progress');
+  const [progressDescription, setProgressDescription] = useState<string>('');
+  const [requiredParts, setRequiredParts] = useState<string>('');
+  const [problemFound, setProblemFound] = useState<string>('');
+  const [solution, setSolution] = useState<string>('');
 
   // Dropdown state for rows
   const [activeDropdownRow, setActiveDropdownRow] = useState<string | null>(null);
@@ -168,7 +177,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
     }
 
     try {
-      await api.post(`/repairs/${selectedReq.id}/decommission`, {
+      await api.post(`/repairs/${selectedReq.id}/dead-stock`, {
         reason: deadReason,
         description: deadDesc
       });
@@ -177,8 +186,34 @@ export const EEEAssetManagerDashboard: React.FC = () => {
       setDeadReason('');
       setDeadDesc('');
       fetchEEEData();
-    } catch (err) {
-      toast.error('Failed to decommission asset.');
+    } catch (err: any) {
+      console.error('Decommission error:', err);
+      toast.error(err.response?.data?.message || err.response?.data || 'Failed to decommission asset.');
+    }
+  };
+
+  const handleProgressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedReq) return;
+
+    try {
+      await api.post(`/repairs/${selectedReq.id}/update-progress`, {
+        status: progressStatus,
+        description: progressDescription,
+        requiredParts,
+        problemFound: progressStatus === 'Resolved' ? (problemFound || 'Electrical repair completed') : undefined,
+        solution: progressStatus === 'Resolved' ? (solution || progressDescription || 'Restored hardware asset functionality') : undefined
+      });
+      toast.success(`Progress updated for Request ${selectedReq.id}`);
+      setProgressModalOpen(false);
+      setProgressDescription('');
+      setRequiredParts('');
+      setProblemFound('');
+      setSolution('');
+      fetchEEEData();
+    } catch (err: any) {
+      console.error('Update progress error:', err);
+      toast.error(err.response?.data?.message || err.response?.data || 'Failed to update progress.');
     }
   };
 
@@ -482,7 +517,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
 
                           {activeDropdownRow === req.id && (
                             <div className="origin-top-right absolute right-0 mt-1 w-48 rounded-2xl shadow-xl bg-white ring-1 ring-black/5 divide-y divide-slate-100 z-50 border border-slate-100 py-1 text-left">
-                              {isInitiated && (
+                              {!isResolved && (
                                 <button
                                   onClick={() => {
                                     setSelectedReq(req);
@@ -492,7 +527,26 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                                   className="w-full text-left px-3.5 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
                                 >
                                   <UserCheck className="w-3.5 h-3.5 text-amber-600" />
-                                  <span>Assign Technician</span>
+                                  <span>Assign Electrician</span>
+                                </button>
+                              )}
+
+                              {(req.assignedElectricianName || req.assignedTo || !isInitiated) && !isResolved && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedReq(req);
+                                    setProgressStatus(req.status === 'Accepted' || req.status === 'Initiated' ? 'In Progress' : req.status);
+                                    setProgressDescription('');
+                                    setRequiredParts('');
+                                    setProblemFound('');
+                                    setSolution('');
+                                    setProgressModalOpen(true);
+                                    setActiveDropdownRow(null);
+                                  }}
+                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>Update Progress</span>
                                 </button>
                               )}
 
@@ -505,18 +559,6 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                               >
                                 <FileText className="w-3.5 h-3.5 text-slate-400" />
                                 <span>View Request Details</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setSelectedReq(req);
-                                  fetchTimeline(req.id);
-                                  setActiveDropdownRow(null);
-                                }}
-                                className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                              >
-                                <Activity className="w-3.5 h-3.5 text-slate-400" />
-                                <span>View Railway Journey</span>
                               </button>
 
                               {!isResolved && (
@@ -792,6 +834,104 @@ export const EEEAssetManagerDashboard: React.FC = () => {
         onClose={() => setViewDetailsReq(null)}
         request={viewDetailsReq}
       />
+
+      {/* UPDATE PROGRESS MODAL */}
+      <Modal isOpen={progressModalOpen} onClose={() => setProgressModalOpen(false)} title={`Update Progress - Request: ${selectedReq?.id}`}>
+        <form onSubmit={handleProgressSubmit} className="space-y-4 text-left">
+          <div className="p-3 bg-blue-50 border border-blue-200/60 rounded-xl text-xs text-blue-800 font-medium flex items-center justify-between">
+            <div>
+              <span className="font-bold">Assigned Staff: </span>
+              <span>{selectedReq?.assignedElectricianName ? `${selectedReq.assignedElectricianName} (Electrician)` : (selectedReq?.assignedTo?.name || 'Unassigned')}</span>
+            </div>
+            <span className="bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded text-[10px]">
+              {selectedReq?.status}
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Select Progress Status</label>
+            <select
+              value={progressStatus}
+              onChange={(e) => setProgressStatus(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-blue-500 bg-white"
+            >
+              <option value="In Progress">In Progress (Electrician working on repair)</option>
+              <option value="Parts Requested">Parts Requested (Awaiting spare parts/components)</option>
+              <option value="Resolved">Resolved (Repair completed & asset restored)</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">Progress Description / Work Notes</label>
+            <textarea
+              rows={3}
+              required
+              placeholder="Provide details on repair progress or work conducted..."
+              value={progressDescription}
+              onChange={(e) => setProgressDescription(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-blue-500"
+            />
+          </div>
+
+          {progressStatus === 'Parts Requested' && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block">Required Spare Parts</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. 5A Fuse, 2.5sqmm copper cable, 32A MCB"
+                value={requiredParts}
+                onChange={(e) => setRequiredParts(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          {progressStatus === 'Resolved' && (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Problem Identified</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Loose wiring connection causing short circuit"
+                  value={problemFound}
+                  onChange={(e) => setProblemFound(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-emerald-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Solution / Work Done</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Replaced burnt terminal block and reconnected wiring"
+                  value={solution}
+                  onChange={(e) => setSolution(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-emerald-500"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setProgressModalOpen(false)}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Update Ticket Progress</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

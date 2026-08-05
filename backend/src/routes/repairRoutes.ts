@@ -752,6 +752,97 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
   }
 });
 
+// Alias for decommissioning asset to Dead Stock
+router.post('/:id/decommission', authenticateJWT, async (req, res) => {
+  const { id } = req.params;
+  const { deanId, reason, description } = req.body;
+  const updaterId = deanId || (req as any).user?.id;
+
+  if (!updaterId || !reason) {
+    return res.status(400).send('Missing required fields');
+  }
+
+  try {
+    const request = await db.get(
+      'SELECT r.id, r.requester_id, r.inventory_id, r.description, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
+      [id]
+    );
+    if (!request) {
+      return res.status(400).send('Repair request not found');
+    }
+
+    const { todayStr, timeStr } = getLocalDates();
+
+    await db.transaction(async () => {
+      await db.run("UPDATE repair_requests SET status = 'Dead Stock', completed_date = ?, completed_time = ? WHERE id = ?", [todayStr, timeStr, id]);
+      
+      const assetIds = getAssetIdsFromRequest(request);
+      for (const assetId of assetIds) {
+        await db.run("UPDATE inventory SET status = 'Dead Stock' WHERE id = ?", [assetId]);
+        
+        const asset = await db.get("SELECT department_id, lab_id, type FROM inventory WHERE id = ?", [assetId]);
+        if (asset && asset.department_id) {
+          const targetLabId = asset.lab_id || 0;
+          const countToMove = (request.device_count && assetIds.length <= 1) ? request.device_count : 1;
+          await db.run(
+            `UPDATE finalized_hardware_counts 
+             SET working = MAX(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
+             WHERE department_id = ? AND lab_id = ? AND type = ?`,
+            [countToMove, countToMove, asset.department_id, targetLabId, asset.type]
+          );
+        }
+      }
+
+      await db.run(
+        `INSERT INTO repair_history (request_id, status, description, remarks, status_date, status_time, updated_by_id)
+         VALUES (?, 'Dead Stock', ?, ?, ?, ?, ?)`,
+        [
+          id,
+          `Marked as Dead Stock. Reason: ${reason}${description ? ' - ' + description : ''}`,
+          reason,
+          todayStr,
+          timeStr,
+          updaterId
+        ]
+      );
+    });
+
+    if (request.requester_id) {
+      notificationService.sendToUser(
+        request.requester_id,
+        `Asset ${request.inventory_id} has been marked as Dead Stock.`,
+        'DEAD_STOCK_ADDED'
+      );
+    }
+    notificationService.sendToRole(
+      'ROLE_HOD',
+      `Asset ${request.inventory_id} marked as Dead Stock (Request: ${id})`,
+      'DEAD_STOCK_ADDED'
+    );
+    notificationService.sendToRole(
+      'ROLE_DEAN',
+      `Asset ${request.inventory_id} marked as Dead Stock (Request: ${id})`,
+      'DEAD_STOCK_ADDED'
+    );
+    notificationService.sendToRole(
+      'ROLE_PRINCIPAL',
+      `Asset ${request.inventory_id} marked as Dead Stock (Request: ${id})`,
+      'DEAD_STOCK_ADDED'
+    );
+    notificationService.broadcastDashboardUpdate();
+
+    const updated = await db.get(
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
+      [id]
+    );
+
+    res.json(formatRepairRequest(updated));
+  } catch (err) {
+    console.error('Mark dead stock error:', err);
+    res.status(400).send((err as Error).message);
+  }
+});
+
 // 12. Wizard Initiate multiple repair requests (HOD action)
 router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
   const { requesterId, labId, priority, title, description, issues } = req.body;
@@ -1098,6 +1189,91 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
   } catch (err) {
     console.error('Delete repair request error:', err);
     res.status(500).send((err as Error).message);
+  }
+});
+
+// 16. Update Repair Progress (Asset Manager / Technician progress update)
+router.post('/:id/update-progress', authenticateJWT, async (req, res) => {
+  const { id } = req.params;
+  const { status, description, requiredParts, problemFound, solution } = req.body;
+  const updaterId = (req as any).user?.id;
+
+  if (!status) {
+    return res.status(400).send('Status is required for progress update');
+  }
+
+  try {
+    const request = await db.get(
+      'SELECT r.id, r.requester_id, r.inventory_id, r.description, r.assigned_electrician_name, d.code as dept_code FROM repair_requests r LEFT JOIN inventory i ON r.inventory_id = i.id LEFT JOIN departments d ON i.department_id = d.id WHERE r.id = ?',
+      [id]
+    );
+    if (!request) {
+      return res.status(400).send('Repair request not found');
+    }
+
+    const { todayStr, timeStr } = getLocalDates();
+    const isResolved = status.toLowerCase() === 'resolved';
+    const isDead = status.toLowerCase() === 'dead stock';
+
+    await db.transaction(async () => {
+      if (isResolved || isDead) {
+        await db.run(
+          "UPDATE repair_requests SET status = ?, completed_date = ?, completed_time = ? WHERE id = ?",
+          [status, todayStr, timeStr, id]
+        );
+      } else {
+        await db.run("UPDATE repair_requests SET status = ? WHERE id = ?", [status, id]);
+      }
+
+      // Update inventory status if resolved or dead stock
+      const assetIds = getAssetIdsFromRequest(request);
+      if (isResolved) {
+        for (const assetId of assetIds) {
+          await db.run("UPDATE inventory SET status = 'Working' WHERE id = ?", [assetId]);
+        }
+      } else if (isDead) {
+        for (const assetId of assetIds) {
+          await db.run("UPDATE inventory SET status = 'Dead Stock' WHERE id = ?", [assetId]);
+        }
+      }
+
+      // Create history log entry
+      const logDescription = description || `Progress updated to ${status}`;
+      await db.run(
+        `INSERT INTO repair_history (request_id, status, description, problem_found, solution, required_parts, status_date, status_time, updated_by_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          status,
+          logDescription,
+          problemFound || null,
+          solution || null,
+          requiredParts || null,
+          todayStr,
+          timeStr,
+          updaterId
+        ]
+      );
+    });
+
+    if (request.requester_id) {
+      notificationService.sendToUser(
+        request.requester_id,
+        `Progress updated for repair request ${id}: Status changed to ${status}`,
+        isResolved ? 'REPAIR_COMPLETED' : 'REPAIR_STARTED'
+      );
+    }
+    notificationService.broadcastDashboardUpdate();
+
+    const updated = await db.get(
+      BASE_REPAIR_QUERY + ' WHERE r.id = ?',
+      [id]
+    );
+
+    res.json(formatRepairRequest(updated));
+  } catch (err) {
+    console.error('Update progress error:', err);
+    res.status(400).send((err as Error).message);
   }
 });
 
