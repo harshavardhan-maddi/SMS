@@ -693,7 +693,7 @@ router.post('/:id/dead-stock', authenticateJWT, async (req, res) => {
           const countToMove = (request.device_count && assetIds.length <= 1) ? request.device_count : 1;
           await db.run(
             `UPDATE finalized_hardware_counts 
-             SET working = MAX(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
+             SET working = GREATEST(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
              WHERE department_id = ? AND lab_id = ? AND type = ?`,
             [countToMove, countToMove, asset.department_id, targetLabId, asset.type]
           );
@@ -786,7 +786,7 @@ router.post('/:id/decommission', authenticateJWT, async (req, res) => {
           const countToMove = (request.device_count && assetIds.length <= 1) ? request.device_count : 1;
           await db.run(
             `UPDATE finalized_hardware_counts 
-             SET working = MAX(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
+             SET working = GREATEST(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
              WHERE department_id = ? AND lab_id = ? AND type = ?`,
             [countToMove, countToMove, asset.department_id, targetLabId, asset.type]
           );
