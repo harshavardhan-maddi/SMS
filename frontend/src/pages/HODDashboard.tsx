@@ -252,7 +252,7 @@ export const HODDashboard: React.FC = () => {
       fetchHODData();
     } catch (err: any) {
       console.error(err);
-      const errMsg = err.response?.data || 'Failed to submit repair request.';
+      const errMsg = typeof err.response?.data === 'string' ? err.response.data : (err.response?.data?.message || 'Failed to submit repair request.');
       toast.error(errMsg);
     } finally {
       setIsSubmitting(false);

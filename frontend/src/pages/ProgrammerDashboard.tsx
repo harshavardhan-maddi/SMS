@@ -201,8 +201,10 @@ export const ProgrammerDashboard: React.FC = () => {
       toast.success('Hardware repair request submitted successfully.');
       handleCloseReportModal();
       fetchProgrammerData();
-    } catch (err) {
-      toast.error('Failed to submit repair request.');
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = typeof err.response?.data === 'string' ? err.response.data : (err.response?.data?.message || 'Failed to submit repair request.');
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }

@@ -228,10 +228,19 @@ router.post('/initiate', authenticateJWT, async (req, res) => {
       return res.status(400).send('User not found');
     }
 
-    // Generate Request ID: REQ- + (101 + count)
-    const countRes = await db.get('SELECT COUNT(*) as count FROM repair_requests');
-    const count = countRes ? countRes.count : 0;
-    const requestId = `REQ-${101 + count}`;
+    // Generate Request ID safely checking highest numeric ID
+    const reqRows = await db.all('SELECT id FROM repair_requests');
+    let maxNum = 100;
+    for (const r of reqRows) {
+      if (r.id && typeof r.id === 'string') {
+        const match = r.id.match(/^REQ-(\d+)$/i);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (!isNaN(val) && val > maxNum) maxNum = val;
+        }
+      }
+    }
+    const requestId = `REQ-${maxNum + 1}`;
 
     const { todayStr, timeStr } = getLocalDates();
 
@@ -852,18 +861,19 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     return res.status(400).send('Missing required fields or issues array');
   }
 
-  // Enforce that a programmer can only raise a request for their assigned lab
-  const authUser = (req as any).user;
-  if (authUser && authUser.role === 'ROLE_PROGRAMMER') {
-    if (!authUser.labId || Number(targetLabId) !== Number(authUser.labId)) {
-      return res.status(403).send('Programmers are only authorized to raise repair requests for their assigned lab.');
-    }
-  }
-
   try {
-    const requester = await db.get('SELECT id, name, department_id FROM users WHERE id = ?', [requesterId]);
+    const requester = await db.get('SELECT id, name, department_id, lab_id FROM users WHERE id = ?', [requesterId]);
     if (!requester) {
       return res.status(400).send('User not found');
+    }
+
+    // Enforce that a programmer can only raise a request for their assigned lab
+    const authUser = (req as any).user;
+    if (authUser && authUser.role === 'ROLE_PROGRAMMER') {
+      const userLabId = authUser.labId || requester.lab_id;
+      if (userLabId && targetLabId > 0 && Number(targetLabId) !== Number(userLabId)) {
+        return res.status(403).send('Programmers are only authorized to raise repair requests for their assigned lab.');
+      }
     }
 
     let departmentId = requester.department_id;
@@ -871,6 +881,13 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
       const deptRow = await db.get('SELECT id FROM departments WHERE hod_id = ?', [requesterId]);
       if (deptRow) {
         departmentId = deptRow.id;
+      }
+    }
+    if (!departmentId && (requester.lab_id || (authUser && authUser.labId))) {
+      const pLabId = requester.lab_id || (authUser && authUser.labId);
+      const labRow = await db.get('SELECT department_id FROM labs WHERE id = ?', [pLabId]);
+      if (labRow) {
+        departmentId = labRow.department_id;
       }
     }
 
@@ -915,8 +932,30 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
       if (labRow) labStr = `Lab ${labRow.lab_number}`;
     }
 
-    const countRes = await db.get('SELECT COUNT(*) as count FROM repair_requests');
-    let currentCount = countRes ? countRes.count : 0;
+    // Safely generate REQ- IDs without collisions
+    const existingReqRows = await db.all('SELECT id FROM repair_requests');
+    const existingReqIds = new Set(existingReqRows.map((r: any) => r.id));
+    let reqMaxNum = 100;
+    for (const r of existingReqRows) {
+      if (r.id && typeof r.id === 'string') {
+        const match = r.id.match(/^REQ-(\d+)$/i);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (!isNaN(val) && val > reqMaxNum) reqMaxNum = val;
+        }
+      }
+    }
+
+    const getNextWizardReqId = () => {
+      reqMaxNum++;
+      let candidate = `REQ-${reqMaxNum}`;
+      while (existingReqIds.has(candidate)) {
+        reqMaxNum++;
+        candidate = `REQ-${reqMaxNum}`;
+      }
+      existingReqIds.add(candidate);
+      return candidate;
+    };
 
     const { todayStr, timeStr } = getLocalDates();
 
@@ -949,11 +988,12 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
 
           for (let k = 0; k < needed; k++) {
             invIndex++;
+            const cleanType = (type || 'HW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase() || 'AST';
             const randSuffix = Math.floor(1000 + Math.random() * 9000);
             const newAssetId = targetLabId > 0 
-              ? `AST-L${targetLabId}-${type.substring(0, 3).toUpperCase()}-${invIndex}-${randSuffix}`
-              : `${type.substring(0, 3).toUpperCase()}-GEN-${invIndex}-${randSuffix}`;
-            const serialNumber = `SN-GEN-${type.substring(0, 3).toUpperCase()}-${invIndex}-${randSuffix}`;
+              ? `AST-L${targetLabId}-${cleanType}-${invIndex}-${randSuffix}`
+              : `${cleanType}-GEN-${invIndex}-${randSuffix}`;
+            const serialNumber = `SN-GEN-${cleanType}-${invIndex}-${randSuffix}`;
             
             try {
               await db.run(
@@ -961,9 +1001,14 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
                  VALUES (?, ?, ?, ?, ?, 'Auto-generated for repair', ?, 'Repairing')`,
                 [newAssetId, departmentId, targetLabId > 0 ? targetLabId : null, type, brand, serialNumber]
               );
-            } catch (eIns) {}
-            
-            assetIds.push(newAssetId);
+              assetIds.push(newAssetId);
+            } catch (eIns) {
+              console.error('Auto-generated inventory insertion info/fallback:', (eIns as Error).message);
+              const existingAsset = await db.get('SELECT id FROM inventory WHERE id = ?', [newAssetId]);
+              if (existingAsset) {
+                assetIds.push(newAssetId);
+              }
+            }
           }
         }
 
@@ -980,8 +1025,7 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
 
         // Create 1 single batch repair request representing the systems
         if (assetIds.length > 0) {
-          currentCount++;
-          const requestId = `REQ-${101 + currentCount}`;
+          const requestId = getNextWizardReqId();
           generatedRequests.push(requestId);
 
           const primaryAssetId = assetIds[0];
