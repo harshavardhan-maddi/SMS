@@ -98,8 +98,9 @@ function getAssetIdsFromRequest(request: any): string[] {
 }
 
 // 1. Get all repair requests (optionally filtered by departmentId)
-router.get('/', authenticateJWT, async (req, res) => {
+router.get('/', authenticateJWT, async (req: any, res) => {
   const departmentId = req.query.departmentId;
+  const isEEEAssetManager = req.user?.role === 'ROLE_EEE_ASSET_MANAGER';
   try {
     let query = BASE_REPAIR_QUERY;
     const params: any[] = [];
@@ -113,7 +114,23 @@ router.get('/', authenticateJWT, async (req, res) => {
     query += ' ORDER BY r.initiated_date DESC, r.initiated_time DESC';
 
     const rows = await db.all(query, params);
-    res.json(rows.map(formatRepairRequest));
+    let formatted = rows.map(formatRepairRequest);
+
+    // EEE Asset Manager can ONLY see Electrical Hardware issue requests
+    if (isEEEAssetManager) {
+      formatted = formatted.filter((r: any) => {
+        const typeStr = (r.inventory?.type || '').toLowerCase();
+        const titleStr = (r.title || '').toLowerCase();
+        const descStr = (r.description || '').toLowerCase();
+        return (
+          typeStr.includes('electrical') ||
+          titleStr.includes('electrical') ||
+          descStr.includes('electrical')
+        );
+      });
+    }
+
+    res.json(formatted);
   } catch (err) {
     console.error('Get repairs error:', err);
     res.status(500).send('Internal server error');

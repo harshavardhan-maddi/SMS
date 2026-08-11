@@ -70,11 +70,16 @@ export const EEEAssetManagerDashboard: React.FC = () => {
 
       // EEE Asset Manager can ONLY see Electrical Hardware issue requests, not any others
       const allRequests = repairsRes.data || [];
-      const electricalRequests = allRequests.filter((r: any) => 
-        r.inventory?.type === 'Electrical Hardware' ||
-        (r.title && r.title.includes('Electrical Hardware')) ||
-        (r.description && r.description.includes('Electrical Hardware'))
-      );
+      const electricalRequests = allRequests.filter((r: any) => {
+        const typeStr = (r.inventory?.type || '').toLowerCase();
+        const titleStr = (r.title || '').toLowerCase();
+        const descStr = (r.description || '').toLowerCase();
+        return (
+          typeStr.includes('electrical') ||
+          titleStr.includes('electrical') ||
+          descStr.includes('electrical')
+        );
+      });
 
       setRequests(electricalRequests);
 
@@ -197,14 +202,25 @@ export const EEEAssetManagerDashboard: React.FC = () => {
     if (!selectedReq) return;
 
     try {
-      await api.post(`/repairs/${selectedReq.id}/update-progress`, {
-        status: progressStatus,
-        description: progressDescription,
-        requiredParts,
-        problemFound: progressStatus === 'Resolved' ? (problemFound || 'Electrical repair completed') : undefined,
-        solution: progressStatus === 'Resolved' ? (solution || progressDescription || 'Restored hardware asset functionality') : undefined
-      });
-      toast.success(`Progress updated for Request ${selectedReq.id}`);
+      if (progressStatus === 'Dead Stock') {
+        if (!window.confirm(`Are you sure you want to decommission Request ${selectedReq.id} to Dead Stock?`)) {
+          return;
+        }
+        await api.post(`/repairs/${selectedReq.id}/dead-stock`, {
+          reason: progressDescription || 'Marked as Dead Stock during progress update',
+          description: progressDescription
+        });
+        toast.success(`Asset marked as Dead Stock.`);
+      } else {
+        await api.post(`/repairs/${selectedReq.id}/update-progress`, {
+          status: progressStatus,
+          description: progressDescription,
+          requiredParts,
+          problemFound: progressStatus === 'Resolved' ? (problemFound || 'Electrical repair completed') : undefined,
+          solution: progressStatus === 'Resolved' ? (solution || progressDescription || 'Restored hardware asset functionality') : undefined
+        });
+        toast.success(`Progress updated for Request ${selectedReq.id}`);
+      }
       setProgressModalOpen(false);
       setProgressDescription('');
       setRequiredParts('');
@@ -538,22 +554,36 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                                   )}
 
                                   {isAssigned && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedReq(req);
-                                        setProgressStatus(req.status === 'Accepted' || req.status === 'Initiated' ? 'In Progress' : req.status);
-                                        setProgressDescription('');
-                                        setRequiredParts('');
-                                        setProblemFound('');
-                                        setSolution('');
-                                        setProgressModalOpen(true);
-                                        setActiveDropdownRow(null);
-                                      }}
-                                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
-                                    >
-                                      <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-                                      <span>Update Progress</span>
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedReq(req);
+                                          setProgressStatus(req.status === 'Accepted' || req.status === 'Initiated' ? 'In Progress' : req.status);
+                                          setProgressDescription('');
+                                          setRequiredParts('');
+                                          setProblemFound('');
+                                          setSolution('');
+                                          setProgressModalOpen(true);
+                                          setActiveDropdownRow(null);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                                        <span>Update Progress</span>
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setSelectedReq(req);
+                                          setDeadModalOpen(true);
+                                          setActiveDropdownRow(null);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                        <span>Mark as Dead Stock</span>
+                                      </button>
+                                    </>
                                   )}
 
                                   <button
@@ -565,18 +595,6 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                                   >
                                     <FileText className="w-3.5 h-3.5 text-slate-400" />
                                     <span>View Request Details</span>
-                                  </button>
-
-                                  <button
-                                    onClick={() => {
-                                      setSelectedReq(req);
-                                      setDeadModalOpen(true);
-                                      setActiveDropdownRow(null);
-                                    }}
-                                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                    <span>Mark as Dead Stock</span>
                                   </button>
                                 </>
                               ) : (
@@ -875,6 +893,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
               <option value="In Progress">In Progress (Electrician working on repair)</option>
               <option value="Parts Requested">Parts Requested (Awaiting spare parts/components)</option>
               <option value="Resolved">Resolved (Repair completed & asset restored)</option>
+              <option value="Dead Stock">Dead Stock (Decommission asset to Dead Stock)</option>
             </select>
           </div>
 
