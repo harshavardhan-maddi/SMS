@@ -12,6 +12,7 @@ export async function seedData() {
     await db.run("INSERT INTO roles (id, name) VALUES (4, 'ROLE_TECHNICIAN') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (5, 'ROLE_PROGRAMMER') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER') ON CONFLICT (id) DO NOTHING");
+    await db.run("INSERT INTO roles (id, name) VALUES (7, 'ROLE_ELEC_COMPLAINTER') ON CONFLICT (id) DO NOTHING");
   } catch (e) {
     // SQLite fallback for ON CONFLICT
     try {
@@ -21,6 +22,7 @@ export async function seedData() {
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (4, 'ROLE_TECHNICIAN')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (5, 'ROLE_PROGRAMMER')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER')");
+      await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (7, 'ROLE_ELEC_COMPLAINTER')");
     } catch (e2) {}
   }
 
@@ -82,7 +84,8 @@ export async function seedData() {
       { id: 4, name: 'Prof. Charles Babbage', email: 'dean@sms.edu', roleId: 3, deptId: null },
       { id: 5, name: 'Hardware Technician', email: 'tech@sms.edu', roleId: 4, deptId: null },
       { id: 6, name: 'Dr. Nikola Tesla', email: 'hod.eee@sms.edu', roleId: 2, deptId: eeeDeptId },
-      { id: 7, name: 'EEE Asset Manager', email: 'eee.manager@sms.edu', roleId: 6, deptId: eeeDeptId }
+      { id: 7, name: 'EEE Asset Manager', email: 'eee.manager@sms.edu', roleId: 6, deptId: eeeDeptId },
+      { id: 8, name: 'Electrical Complainter', email: 'elec.complainter@sms.edu', roleId: 7, deptId: null }
     ];
 
     for (const u of demoUsers) {

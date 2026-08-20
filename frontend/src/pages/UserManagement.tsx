@@ -251,6 +251,7 @@ export const UserManagement: React.FC = () => {
     if (role === 'ROLE_TECHNICIAN') return 'Hardware Technician';
     if (role === 'ROLE_PROGRAMMER') return 'Programmer';
     if (role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager';
+    if (role === 'ROLE_ELEC_COMPLAINTER') return 'Elec Complainter';
     return role;
   };
 
@@ -268,7 +269,7 @@ export const UserManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-black text-slate-800 tracking-tight">User Management</h2>
-          <p className="text-xs text-brand-textMuted font-medium">Create and manage access accounts for Department HODs, Computer Dean, and Hardware Technicians</p>
+          <p className="text-xs text-brand-textMuted font-medium">Create and manage access accounts for Department HODs, Computer Dean, Hardware Technicians, and Elec Complainters</p>
         </div>
 
         {currentUser?.role === 'ROLE_PRINCIPAL' && (
@@ -306,7 +307,7 @@ export const UserManagement: React.FC = () => {
                     <td className="py-3.5 px-4 text-slate-500">{u.email}</td>
                     <td className="py-3.5 px-4">
                       <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${
-                        u.role.name === 'ROLE_PRINCIPAL' ? 'bg-purple-100 text-purple-700' : u.role.name === 'ROLE_DEAN' ? 'bg-blue-100 text-blue-700' : u.role.name === 'ROLE_TECHNICIAN' ? 'bg-amber-100 text-amber-700' : u.role.name === 'ROLE_PROGRAMMER' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'
+                        u.role.name === 'ROLE_PRINCIPAL' ? 'bg-purple-100 text-purple-700' : u.role.name === 'ROLE_DEAN' ? 'bg-blue-100 text-blue-700' : u.role.name === 'ROLE_TECHNICIAN' ? 'bg-amber-100 text-amber-700' : u.role.name === 'ROLE_PROGRAMMER' ? 'bg-indigo-100 text-indigo-700' : u.role.name === 'ROLE_ELEC_COMPLAINTER' ? 'bg-orange-100 text-orange-700 font-bold' : 'bg-slate-100 text-slate-700'
                       }`}>
                         {getDisplayRoleName(u.role.name)}
                       </span>
@@ -443,6 +444,7 @@ export const UserManagement: React.FC = () => {
                   <option value="ROLE_HOD">HOD (Department Head)</option>
                   <option value="ROLE_DEAN">Computer Dean</option>
                   <option value="ROLE_EEE_ASSET_MANAGER">EEE Asset Manager</option>
+                  <option value="ROLE_ELEC_COMPLAINTER">Elec Complainter</option>
                   <option value="ROLE_TECHNICIAN">Hardware Technician</option>
                   <option value="ROLE_PROGRAMMER">Programmer</option>
                 </>

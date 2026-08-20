@@ -21,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
     if (user.role === 'ROLE_PRINCIPAL') return 'Principal';
     if (user.role === 'ROLE_DEAN') return 'Computer Dean';
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager';
+    if (user.role === 'ROLE_ELEC_COMPLAINTER') return 'Elec Complainter';
     if (user.role === 'ROLE_HOD') {
       const dept = user.departmentCode ? ` (${user.departmentCode})` : '';
       return `HOD${dept}`;
@@ -34,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
     if (user.role === 'ROLE_PRINCIPAL') return 'Principal Command Center - Institution Overview';
     if (user.role === 'ROLE_DEAN') return 'Computer Dean Dashboard - Repair Management Overview';
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return 'EEE Asset Manager Dashboard - Department Maintenance Overview';
+    if (user.role === 'ROLE_ELEC_COMPLAINTER') return 'Electrical Complaint Portal - Cross-Department Tickets';
     if (user.role === 'ROLE_HOD') return `${user.departmentCode || 'Department'} Head Dashboard - Lab Hardware Overview`;
     if (user.role === 'ROLE_TECHNICIAN') return 'Hardware Technician Workspace - Maintenance Queue';
     if (user.role === 'ROLE_PROGRAMMER') return 'Programmer / Lab Assistant Workspace - Repair Operations';

@@ -116,6 +116,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
+  const getElecComplainterMenu = () => [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Raise Ticket', path: '/dashboard', icon: PlusCircle },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
   const AlertCircleIcon = HelpCircle; // Quick fallback for simple mapping
 
   const getMenu = () => {
@@ -124,6 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     if (user.role === 'ROLE_TECHNICIAN') return getTechnicianMenu();
     if (user.role === 'ROLE_PROGRAMMER') return getProgrammerMenu();
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return getEEEAssetManagerMenu();
+    if (user.role === 'ROLE_ELEC_COMPLAINTER') return getElecComplainterMenu();
     return getDeanMenu();
   };
 

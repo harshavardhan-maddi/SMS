@@ -11,6 +11,7 @@ import { ComputerDeanDashboard } from './pages/ComputerDeanDashboard';
 import { HardwareTechnicianDashboard } from './pages/HardwareTechnicianDashboard';
 import { ProgrammerDashboard } from './pages/ProgrammerDashboard';
 import { EEEAssetManagerDashboard } from './pages/EEEAssetManagerDashboard';
+import { ElecComplainterDashboard } from './pages/ElecComplainterDashboard';
 import { DepartmentManagement } from './pages/DepartmentManagement';
 import { UserManagement } from './pages/UserManagement';
 import { ReportsPage } from './pages/ReportsPage';
@@ -53,6 +54,9 @@ const DynamicDashboard: React.FC = () => {
   }
   if (user.role === 'ROLE_EEE_ASSET_MANAGER') {
     return <EEEAssetManagerDashboard />;
+  }
+  if (user.role === 'ROLE_ELEC_COMPLAINTER') {
+    return <ElecComplainterDashboard />;
   }
   return <ComputerDeanDashboard />;
 };

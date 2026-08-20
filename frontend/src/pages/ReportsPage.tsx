@@ -222,32 +222,64 @@ export const ReportsPage: React.FC = () => {
       } else {
         tableHeadersHtml = `
           <tr>
-            <th>Request ID</th>
-            <th>Lab Name</th>
-            <th>Component</th>
-            <th>Title</th>
-            <th>Programmer</th>
-            <th>Technician</th>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Initiated On</th>
-            <th>Solved On</th>
+            <th>Ticket ID</th>
+            <th>Location & Issue</th>
+            <th>Complaint Raised Date</th>
+            <th>Closing Date</th>
+            <th>No. of Days Taken to Complete</th>
+            <th>Final Result of Ticket</th>
           </tr>
         `;
-        tableRowsHtml = data.map(item => `
-          <tr>
-            <td>${item.id}</td>
-            <td>${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber + ' (' + item.inventory.lab.name + ')' : 'N/A'}</td>
-            <td>${item.inventory?.type || '-'}</td>
-            <td><div style="font-weight: 600;">${item.title}</div></td>
-            <td>${item.requester?.name || '-'}</td>
-            <td>${item.assignedTo?.name || 'Not Assigned'}</td>
-            <td>${item.priority}</td>
-            <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
-            <td>${item.initiatedDate} ${item.initiatedTime}</td>
-            <td>${item.completedDate ? `${item.completedDate} ${item.completedTime || ''}` : 'Pending'}</td>
-          </tr>
-        `).join('');
+        tableRowsHtml = data.map(item => {
+          const raisedDate = `${item.initiatedDate || ''} ${item.initiatedTime || ''}`.trim();
+          const closingDate = item.completedDate ? `${item.completedDate} ${item.completedTime || ''}`.trim() : '-';
+          
+          let daysTaken = '-';
+          if (item.initiatedDate) {
+            const startDate = new Date(item.initiatedDate);
+            const endDate = item.completedDate ? new Date(item.completedDate) : new Date();
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            const diffTime = endDate.getTime() - startDate.getTime();
+            const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+            const isClosed = item.completedDate || ['resolved', 'dead stock'].includes((item.status || '').toLowerCase());
+            daysTaken = isClosed ? `${diffDays} ${diffDays === 1 ? 'day' : 'days'}` : `${diffDays} ${diffDays === 1 ? 'day' : 'days'} (Ongoing)`;
+          }
+
+          const rawStatus = (item.status || '').toLowerCase();
+          let finalResult = 'In Progress';
+          let badgeClass = 'in-progress';
+          if (rawStatus === 'resolved') {
+            finalResult = 'Resolved';
+            badgeClass = 'resolved';
+          } else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') {
+            finalResult = 'Dead Stock';
+            badgeClass = 'dead-stock';
+          } else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') {
+            finalResult = 'Spare Parts Needed';
+            badgeClass = 'spare-parts-needed';
+          } else {
+            finalResult = 'In Progress';
+            badgeClass = 'in-progress';
+          }
+
+          const deptCode = item.inventory?.department?.code || 'N/A';
+          const labInfo = item.inventory?.lab ? `Lab ${item.inventory.lab.labNumber}` : 'General Dept Area';
+
+          return `
+            <tr>
+              <td><strong>${item.id}</strong></td>
+              <td>
+                <div style="font-weight: 700; color: #0f172a;">${item.title || item.inventory?.type || '-'}</div>
+                <div style="font-size: 9px; color: #64748b;">${deptCode} (${labInfo})</div>
+              </td>
+              <td>${raisedDate || '-'}</td>
+              <td>${closingDate}</td>
+              <td><strong>${daysTaken}</strong></td>
+              <td><span class="status-badge ${badgeClass}">${finalResult}</span></td>
+            </tr>
+          `;
+        }).join('');
       }
 
       const htmlContent = `
@@ -414,6 +446,11 @@ export const ReportsPage: React.FC = () => {
                 background-color: #fef3c7;
                 color: #b45309;
                 border: 1px solid #fde68a;
+              }
+              .status-badge.spare-parts-needed {
+                background-color: #f3e8ff;
+                color: #6b21a8;
+                border: 1px solid #e9d5ff;
               }
               .footer-signatures {
                 margin-top: 60px;

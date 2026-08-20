@@ -101,6 +101,7 @@ function getAssetIdsFromRequest(request: any): string[] {
 router.get('/', authenticateJWT, async (req: any, res) => {
   const departmentId = req.query.departmentId;
   const isEEEAssetManager = req.user?.role === 'ROLE_EEE_ASSET_MANAGER';
+  const isElecComplainter = req.user?.role === 'ROLE_ELEC_COMPLAINTER';
   try {
     let query = BASE_REPAIR_QUERY;
     const params: any[] = [];
@@ -127,6 +128,17 @@ router.get('/', authenticateJWT, async (req: any, res) => {
           titleStr.includes('electrical') ||
           descStr.includes('electrical')
         );
+      });
+    }
+
+    if (isElecComplainter) {
+      formatted = formatted.filter((r: any) => {
+        const isReq = r.requester?.id === req.user?.id;
+        const typeStr = (r.inventory?.type || '').toLowerCase();
+        const titleStr = (r.title || '').toLowerCase();
+        const descStr = (r.description || '').toLowerCase();
+        const isElec = typeStr.includes('electrical') || titleStr.includes('electrical') || descStr.includes('electrical');
+        return isReq || isElec;
       });
     }
 
@@ -893,7 +905,23 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
       }
     }
 
-    let departmentId = requester.department_id;
+    if (authUser && authUser.role === 'ROLE_ELEC_COMPLAINTER') {
+      const hasNonElectrical = issues.some((i: any) => {
+        const typeStr = (i.type || '').toLowerCase();
+        return typeStr !== 'electrical hardware' && !typeStr.includes('electrical');
+      });
+      if (hasNonElectrical) {
+        return res.status(403).send('Elec Complainter user is authorized to raise electrical complaints only.');
+      }
+    }
+
+    let departmentId = req.body.departmentId ? parseInt(req.body.departmentId) : requester.department_id;
+    if (!departmentId && targetLabId > 0) {
+      const labRow = await db.get('SELECT department_id FROM labs WHERE id = ?', [targetLabId]);
+      if (labRow) {
+        departmentId = labRow.department_id;
+      }
+    }
     if (!departmentId) {
       const deptRow = await db.get('SELECT id FROM departments WHERE hod_id = ?', [requesterId]);
       if (deptRow) {
@@ -905,6 +933,12 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
       const labRow = await db.get('SELECT department_id FROM labs WHERE id = ?', [pLabId]);
       if (labRow) {
         departmentId = labRow.department_id;
+      }
+    }
+    if (!departmentId && authUser && authUser.role === 'ROLE_ELEC_COMPLAINTER') {
+      const firstDept = await db.get('SELECT id FROM departments LIMIT 1');
+      if (firstDept) {
+        departmentId = firstDept.id;
       }
     }
 

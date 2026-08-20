@@ -289,7 +289,7 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
       }
     } 
     else if (reportType.toLowerCase().includes('repair') || reportType.toLowerCase().includes('history')) {
-      res.write('Request ID,Department,Lab,Type,Title,Priority,Status,Initiated On,Solved On,Programmer Name,Technician Name\n');
+      res.write('Ticket ID,Department,Lab,Title / Issue,Complaint Raised Date,Closing Date,No of Days Taken to Complete,Final Result of Ticket,Requester Name,Technician Name\n');
       
       let query = `
         SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, r.completed_date, r.completed_time,
@@ -326,11 +326,31 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
 
       const list = await db.all(query, params);
       for (const r of list) {
-        const titleClean = (r.title || '').replace(/"/g, '""');
-        const initiatedOn = `${r.initiated_date} ${r.initiated_time}`;
-        const solvedOn = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : 'Pending';
+        const titleClean = (r.title || r.inv_type || '').replace(/"/g, '""');
+        const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
+        const closingDate = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : '-';
+        
+        let daysTaken = '-';
+        if (r.initiated_date) {
+          const sD = new Date(r.initiated_date);
+          const eD = r.completed_date ? new Date(r.completed_date) : new Date();
+          sD.setHours(0, 0, 0, 0);
+          eD.setHours(0, 0, 0, 0);
+          const diffTime = eD.getTime() - sD.getTime();
+          const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+          const isClosed = r.completed_date || (r.status && ['resolved', 'dead stock'].includes(r.status.toLowerCase()));
+          daysTaken = isClosed ? `${diffDays} days` : `${diffDays} days (Ongoing)`;
+        }
+
+        const rawStatus = (r.status || '').toLowerCase();
+        let finalResult = 'In Progress';
+        if (rawStatus === 'resolved') finalResult = 'Resolved';
+        else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') finalResult = 'Dead Stock';
+        else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') finalResult = 'Spare Parts Needed';
+        else finalResult = 'In Progress';
+
         res.write(
-          `"${r.id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number + ' (' + (r.lab_name || '') + ')' : 'N/A'}","${r.inv_type}","${titleClean}","${r.priority}","${r.status}","${initiatedOn}","${solvedOn}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
+          `"${r.id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}","${titleClean}","${raisedDate}","${closingDate}","${daysTaken}","${finalResult}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
         );
       }
     } 

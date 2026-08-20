@@ -41,16 +41,14 @@ async function ensureInitialized() {
   if (isInitialized) return;
   if (!initPromise) {
     initPromise = (async () => {
-      // Fast check database to avoid full schema & seeding checks on cold starts
       try {
         const checkInit = await db.get("SELECT value FROM settings WHERE key = 'schema_initialized'").catch(() => null);
-        if (checkInit && checkInit.value === 'true') {
-          isInitialized = true;
-          return;
+        if (!checkInit || checkInit.value !== 'true') {
+          await initSchema();
         }
-      } catch (e) {}
-
-      await initSchema();
+      } catch (e) {
+        await initSchema();
+      }
       await seedData();
       isInitialized = true;
     })();
