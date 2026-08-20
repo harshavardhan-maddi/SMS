@@ -56,7 +56,17 @@ export const ElecComplainterDashboard: React.FC = () => {
       if (deptsRes.data.length > 0 && !selectedDeptId) {
         setSelectedDeptId(deptsRes.data[0].id.toString());
       }
-      setMyComplaints(repairsRes.data);
+      
+      // Show ONLY electrical tickets raised by current user
+      const filtered = (repairsRes.data || []).filter((item: any) => {
+        const isMine = item.requester?.id === user?.userId;
+        const typeStr = (item.inventory?.type || '').toLowerCase();
+        const titleStr = (item.title || '').toLowerCase();
+        const descStr = (item.description || '').toLowerCase();
+        const isElec = typeStr.includes('electrical') || titleStr.includes('electrical') || descStr.includes('electrical');
+        return isMine && isElec;
+      });
+      setMyComplaints(filtered);
     } catch (err) {
       toast.error('Failed to load dashboard resources');
     } finally {

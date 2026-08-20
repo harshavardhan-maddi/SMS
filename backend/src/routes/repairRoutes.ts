@@ -138,7 +138,7 @@ router.get('/', authenticateJWT, async (req: any, res) => {
         const titleStr = (r.title || '').toLowerCase();
         const descStr = (r.description || '').toLowerCase();
         const isElec = typeStr.includes('electrical') || titleStr.includes('electrical') || descStr.includes('electrical');
-        return isReq || isElec;
+        return isReq && isElec;
       });
     }
 
