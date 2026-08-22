@@ -269,29 +269,63 @@ function getInvStatusRankCompletedToInitiated(statusStr: string) {
   return 5;
 }
 
-// 4. Export CSV Endpoint
+// 4. Export CSV / Excel Endpoint
 router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
-  const { reportType, deptId, labId, startDate, endDate, sortBy } = req.query as { 
+  const { reportType, deptId, labId, startDate, endDate, sortBy, format } = req.query as { 
     reportType: string; 
     deptId?: string; 
     labId?: string;
     startDate?: string;
     endDate?: string;
     sortBy?: string;
+    format?: string;
   };
 
   if (!reportType) {
     return res.status(400).send('Missing reportType query parameter');
   }
 
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.csv"`);
+  const isExcel = !format || format.toLowerCase() === 'excel';
+
+  if (isExcel) {
+    res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.xls"`);
+  } else {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.csv"`);
+  }
   res.write('\uFEFF');
 
   try {
+    // Resolve department label
+    let deptNameStr = 'All Departments';
+    if (deptId && deptId !== 'all' && deptId !== 'undefined' && deptId !== 'null') {
+      const deptRow = await db.get('SELECT name, code FROM departments WHERE id = ?', [parseInt(deptId)]);
+      if (deptRow) deptNameStr = `${deptRow.name} (${deptRow.code})`;
+    } else if (req.user?.departmentCode) {
+      deptNameStr = req.user.departmentCode;
+    }
+
+    // Resolve lab label
+    let labNameStr = 'All Labs';
+    if (labId && labId !== 'all' && labId !== 'undefined' && labId !== 'null') {
+      const labRow = await db.get('SELECT lab_number, name FROM labs WHERE id = ?', [parseInt(labId)]);
+      if (labRow) labNameStr = `Lab ${labRow.lab_number} (${labRow.name})`;
+    }
+
+    // Date range label
+    const dateRangeStr = startDate || endDate ? `${startDate || 'Beginning'} to ${endDate || 'Present'}` : 'All Time';
+
+    // Sort option label
+    let sortByStr = 'Date (Latest First)';
+    if (sortBy === 'status_initiated_to_completed') sortByStr = 'Status (Initiated to Completed)';
+    else if (sortBy === 'status_completed_to_initiated') sortByStr = 'Status (Completed to Initiated Latest)';
+
+    // Compiled by label
+    const compiledByStr = `${req.user?.name || 'Authorized User'} (${req.user?.role === 'ROLE_PRINCIPAL' ? 'Principal' : req.user?.role === 'ROLE_DEAN' ? 'Computer Dean' : req.user?.role === 'ROLE_HOD' ? 'HOD' : 'Asset Manager'})`;
+    const timestampStr = new Date().toLocaleString();
+
     if (reportType.toLowerCase().includes('inventory')) {
-      res.write('Department,Lab,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
-      
       let query = `
         SELECT i.id, i.type, i.brand, i.model, i.serial_number, i.purchase_date, i.warranty_months, i.status, d.code as dept_code, l.lab_number
         FROM inventory i 
@@ -345,15 +379,150 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
         });
       }
 
-      for (const item of items) {
-        res.write(
-          `"${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
-        );
+      if (isExcel) {
+        let tableRows = items.map((item: any) => {
+          const rawStatus = (item.status || '').toLowerCase();
+          let badgeClass = 'status-working';
+          if (rawStatus.includes('new') || rawStatus.includes('unallocated')) badgeClass = 'status-new-stock';
+          else if (rawStatus.includes('dead')) badgeClass = 'status-dead-stock';
+          else if (rawStatus.includes('repair')) badgeClass = 'status-in-progress';
+          else badgeClass = 'status-working';
+
+          return `
+            <tr>
+              <td>${item.dept_code || 'N/A'}</td>
+              <td>${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}</td>
+              <td><strong>${item.type}</strong></td>
+              <td>${item.brand || '-'}</td>
+              <td>${item.model || '-'}</td>
+              <td>${item.serial_number || '-'}</td>
+              <td>${item.purchase_date || '-'}</td>
+              <td style="text-align: center;">${item.warranty_months || 0}</td>
+              <td class="${badgeClass}">${item.status}</td>
+            </tr>
+          `;
+        }).join('');
+
+        if (items.length === 0) {
+          tableRows = `<tr><td colspan="9" style="text-align: center; font-weight: bold; color: #64748B; padding: 20px;">No matching inventory records found</td></tr>`;
+        }
+
+        const htmlContent = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Asset Register</x:Name>
+                    <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+              body { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1e293b; }
+              .college-title { font-size: 16pt; font-weight: bold; color: #0c2340; text-align: center; text-transform: uppercase; }
+              .college-sub { font-size: 10pt; font-weight: bold; color: #c5a059; text-align: center; text-transform: uppercase; }
+              .college-tag { font-size: 8pt; color: #64748b; text-align: center; }
+              .report-title { font-size: 13pt; font-weight: bold; color: #0c2340; text-align: center; text-transform: uppercase; background-color: #f1f5f9; padding: 8px; }
+              .meta-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+              .meta-table td { padding: 6px 10px; font-size: 9pt; border: 1px solid #cbd5e1; }
+              .meta-label { font-weight: bold; color: #475569; background-color: #f8fafc; width: 15%; text-transform: uppercase; }
+              .meta-val { color: #0f172a; font-weight: bold; }
+              .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+              .data-table th { background-color: #0c2340; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; border: 1px solid #0c2340; padding: 8px; text-align: left; }
+              .data-table td { border: 1px solid #cbd5e1; padding: 6px 8px; color: #334155; vertical-align: middle; }
+              .data-table tr:nth-child(even) td { background-color: #f8fafc; }
+              .status-initiated { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
+              .status-in-progress { background-color: #fef3c7; color: #b45309; font-weight: bold; text-align: center; }
+              .status-spare-parts { background-color: #f3e8ff; color: #6b21a8; font-weight: bold; text-align: center; }
+              .status-resolved { background-color: #dcfce7; color: #15803d; font-weight: bold; text-align: center; }
+              .status-dead-stock { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
+              .status-new-stock { background-color: #dbeafe; color: #1d4ed8; font-weight: bold; text-align: center; }
+              .status-working { background-color: #dcfce7; color: #15803d; font-weight: bold; text-align: center; }
+              .sig-cell { text-align: center; font-size: 9.5pt; font-weight: bold; color: #475569; padding-top: 30px; }
+            </style>
+          </head>
+          <body>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td colspan="9" class="college-title">NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)</td></tr>
+              <tr><td colspan="9" class="college-sub">(AUTONOMOUS) &mdash; Approved by AICTE, Permanent Affiliation to JNTUK, Accredited by NBA & NAAC with 'A' Grade</td></tr>
+              <tr><td colspan="9" class="college-tag">Kotappakonda Road, Yellamanda (P.O), Narasaraopet, Palnadu (Dt) - 522601, Andhra Pradesh</td></tr>
+              <tr><td colspan="9" style="height: 10px;"></td></tr>
+              <tr><td colspan="9" class="report-title">Department of ${deptNameStr} &mdash; Hardware Asset Register</td></tr>
+            </table>
+
+            <table class="meta-table">
+              <tr>
+                <td class="meta-label">Department:</td>
+                <td class="meta-val">${deptNameStr}</td>
+                <td class="meta-label">Compiled By:</td>
+                <td class="meta-val">${compiledByStr}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">Laboratory:</td>
+                <td class="meta-val">${labNameStr}</td>
+                <td class="meta-label">Timestamp:</td>
+                <td class="meta-val">${timestampStr}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">Date Filter:</td>
+                <td class="meta-val">${dateRangeStr}</td>
+                <td class="meta-label">Sort Option:</td>
+                <td class="meta-val">${sortByStr}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">Total Records:</td>
+                <td class="meta-val">${items.length} Units</td>
+                <td class="meta-label">Status:</td>
+                <td class="meta-val" style="color: #15803d;">OFFICIAL INDUSTRIAL LEDGER</td>
+              </tr>
+            </table>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th>Laboratory</th>
+                  <th>Asset Type</th>
+                  <th>Brand</th>
+                  <th>Model</th>
+                  <th>Serial Number</th>
+                  <th>Purchase Date</th>
+                  <th>Warranty (Months)</th>
+                  <th>Current Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 40px;">
+              <tr>
+                <td class="sig-cell">----------------------------------------<br/>Prepared By / Lab Programmer</td>
+                <td class="sig-cell">----------------------------------------<br/>Head of the Department</td>
+                <td class="sig-cell">----------------------------------------<br/>Principal</td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `;
+        res.write(htmlContent);
+      } else {
+        res.write('Department,Lab,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
+        for (const item of items) {
+          res.write(
+            `"${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
+          );
+        }
       }
     } 
-    else if (reportType.toLowerCase().includes('repair') || reportType.toLowerCase().includes('history')) {
-      res.write('Ticket ID,Department,Lab,Title / Issue,Complaint Raised Date,Closing Date,No of Days Taken to Complete,Final Result of Ticket,Requester Name,Technician Name\n');
-      
+    else if (reportType.toLowerCase().includes('repair') || reportType.toLowerCase().includes('history') || reportType.toLowerCase().includes('performance')) {
       let query = `
         SELECT r.id, r.inventory_id, r.title, r.priority, r.status, r.initiated_date, r.initiated_time, r.completed_date, r.completed_time,
                inv.type as inv_type, d.code as dept_code, l.lab_number, l.name as lab_name,
@@ -415,46 +584,218 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
         });
       }
 
-      for (const r of list) {
-        const titleClean = (r.title || r.inv_type || '').replace(/"/g, '""');
-        const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
-        const closingDate = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : '-';
-        
-        let daysTaken = '-';
-        if (r.initiated_date) {
-          const sD = new Date(r.initiated_date);
-          const eD = r.completed_date ? new Date(r.completed_date) : new Date();
-          sD.setHours(0, 0, 0, 0);
-          eD.setHours(0, 0, 0, 0);
-          const diffTime = eD.getTime() - sD.getTime();
-          const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
-          const isClosed = r.completed_date || (r.status && ['resolved', 'dead stock'].includes(r.status.toLowerCase()));
-          daysTaken = isClosed ? `${diffDays} days` : `${diffDays} days (Ongoing)`;
+      if (isExcel) {
+        let tableRows = list.map((r: any) => {
+          const titleClean = r.title || r.inv_type || '-';
+          const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
+          const closingDate = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : '-';
+          
+          let daysTaken = '-';
+          if (r.initiated_date) {
+            const sD = new Date(r.initiated_date);
+            const eD = r.completed_date ? new Date(r.completed_date) : new Date();
+            sD.setHours(0, 0, 0, 0);
+            eD.setHours(0, 0, 0, 0);
+            const diffTime = eD.getTime() - sD.getTime();
+            const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+            const isClosed = r.completed_date || (r.status && ['resolved', 'dead stock'].includes(r.status.toLowerCase()));
+            daysTaken = isClosed ? `${diffDays} days` : `${diffDays} days (Ongoing)`;
+          }
+
+          const rawStatus = (r.status || '').toLowerCase();
+          let finalResult = 'In Progress';
+          let badgeClass = 'status-in-progress';
+          if (rawStatus === 'initiated') {
+            finalResult = 'Initiated';
+            badgeClass = 'status-initiated';
+          } else if (rawStatus === 'resolved') {
+            finalResult = 'Resolved';
+            badgeClass = 'status-resolved';
+          } else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') {
+            finalResult = 'Dead Stock';
+            badgeClass = 'status-dead-stock';
+          } else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') {
+            finalResult = 'Spare Parts Needed';
+            badgeClass = 'status-spare-parts';
+          } else {
+            finalResult = 'In Progress';
+            badgeClass = 'status-in-progress';
+          }
+
+          return `
+            <tr>
+              <td><strong>#${r.id}</strong></td>
+              <td>${r.dept_code || 'N/A'}</td>
+              <td>${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}</td>
+              <td><strong>${titleClean}</strong></td>
+              <td>${raisedDate || '-'}</td>
+              <td>${closingDate}</td>
+              <td style="text-align: center;">${daysTaken}</td>
+              <td class="${badgeClass}">${finalResult}</td>
+              <td>${r.req_name || 'N/A'}</td>
+              <td>${r.assigned_name || 'Not Assigned'}</td>
+            </tr>
+          `;
+        }).join('');
+
+        if (list.length === 0) {
+          tableRows = `<tr><td colspan="10" style="text-align: center; font-weight: bold; color: #64748B; padding: 20px;">No matching repair records found</td></tr>`;
         }
 
-        const rawStatus = (r.status || '').toLowerCase();
-        let finalResult = 'In Progress';
-        if (rawStatus === 'initiated') finalResult = 'Initiated';
-        else if (rawStatus === 'resolved') finalResult = 'Resolved';
-        else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') finalResult = 'Dead Stock';
-        else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') finalResult = 'Spare Parts Needed';
-        else finalResult = 'In Progress';
+        const htmlContent = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Repair Ledger</x:Name>
+                    <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+              body { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1e293b; }
+              .college-title { font-size: 16pt; font-weight: bold; color: #0c2340; text-align: center; text-transform: uppercase; }
+              .college-sub { font-size: 10pt; font-weight: bold; color: #c5a059; text-align: center; text-transform: uppercase; }
+              .college-tag { font-size: 8pt; color: #64748b; text-align: center; }
+              .report-title { font-size: 13pt; font-weight: bold; color: #0c2340; text-align: center; text-transform: uppercase; background-color: #f1f5f9; padding: 8px; }
+              .meta-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+              .meta-table td { padding: 6px 10px; font-size: 9pt; border: 1px solid #cbd5e1; }
+              .meta-label { font-weight: bold; color: #475569; background-color: #f8fafc; width: 15%; text-transform: uppercase; }
+              .meta-val { color: #0f172a; font-weight: bold; }
+              .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+              .data-table th { background-color: #0c2340; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; border: 1px solid #0c2340; padding: 8px; text-align: left; }
+              .data-table td { border: 1px solid #cbd5e1; padding: 6px 8px; color: #334155; vertical-align: middle; }
+              .data-table tr:nth-child(even) td { background-color: #f8fafc; }
+              .status-initiated { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
+              .status-in-progress { background-color: #fef3c7; color: #b45309; font-weight: bold; text-align: center; }
+              .status-spare-parts { background-color: #f3e8ff; color: #6b21a8; font-weight: bold; text-align: center; }
+              .status-resolved { background-color: #dcfce7; color: #15803d; font-weight: bold; text-align: center; }
+              .status-dead-stock { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
+              .status-new-stock { background-color: #dbeafe; color: #1d4ed8; font-weight: bold; text-align: center; }
+              .status-working { background-color: #dcfce7; color: #15803d; font-weight: bold; text-align: center; }
+              .sig-cell { text-align: center; font-size: 9.5pt; font-weight: bold; color: #475569; padding-top: 30px; }
+            </style>
+          </head>
+          <body>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td colspan="10" class="college-title">NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)</td></tr>
+              <tr><td colspan="10" class="college-sub">(AUTONOMOUS) &mdash; Approved by AICTE, Permanent Affiliation to JNTUK, Accredited by NBA & NAAC with 'A' Grade</td></tr>
+              <tr><td colspan="10" class="college-tag">Kotappakonda Road, Yellamanda (P.O), Narasaraopet, Palnadu (Dt) - 522601, Andhra Pradesh</td></tr>
+              <tr><td colspan="10" style="height: 10px;"></td></tr>
+              <tr><td colspan="10" class="report-title">Department of ${deptNameStr} &mdash; ${reportType}</td></tr>
+            </table>
 
-        res.write(
-          `"${r.id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}","${titleClean}","${raisedDate}","${closingDate}","${daysTaken}","${finalResult}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
-        );
+            <table class="meta-table">
+              <tr>
+                <td class="meta-label">Department:</td>
+                <td class="meta-val">${deptNameStr}</td>
+                <td class="meta-label">Compiled By:</td>
+                <td class="meta-val">${compiledByStr}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">Laboratory:</td>
+                <td class="meta-val">${labNameStr}</td>
+                <td class="meta-label">Timestamp:</td>
+                <td class="meta-val">${timestampStr}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">Date Filter:</td>
+                <td class="meta-val">${dateRangeStr}</td>
+                <td class="meta-label">Sort Option:</td>
+                <td class="meta-val">${sortByStr}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">Total Records:</td>
+                <td class="meta-val">${list.length} Tickets</td>
+                <td class="meta-label">Status:</td>
+                <td class="meta-val" style="color: #15803d;">OFFICIAL INDUSTRIAL AUDIT LOG</td>
+              </tr>
+            </table>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Department</th>
+                  <th>Laboratory</th>
+                  <th>Location & Issue Title</th>
+                  <th>Complaint Raised Date</th>
+                  <th>Closing Date</th>
+                  <th>Time Taken</th>
+                  <th>Final Result / Status</th>
+                  <th>Requester</th>
+                  <th>Assigned Technician</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 40px;">
+              <tr>
+                <td class="sig-cell">----------------------------------------<br/>Prepared By / Lab Programmer</td>
+                <td class="sig-cell">----------------------------------------<br/>Head of the Department</td>
+                <td class="sig-cell">----------------------------------------<br/>Principal</td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `;
+        res.write(htmlContent);
+      } else {
+        res.write('Ticket ID,Department,Lab,Title / Issue,Complaint Raised Date,Closing Date,No of Days Taken to Complete,Final Result of Ticket,Requester Name,Technician Name\n');
+        for (const r of list) {
+          const titleClean = (r.title || r.inv_type || '').replace(/"/g, '""');
+          const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
+          const closingDate = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : '-';
+          
+          let daysTaken = '-';
+          if (r.initiated_date) {
+            const sD = new Date(r.initiated_date);
+            const eD = r.completed_date ? new Date(r.completed_date) : new Date();
+            sD.setHours(0, 0, 0, 0);
+            eD.setHours(0, 0, 0, 0);
+            const diffTime = eD.getTime() - sD.getTime();
+            const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+            const isClosed = r.completed_date || (r.status && ['resolved', 'dead stock'].includes(r.status.toLowerCase()));
+            daysTaken = isClosed ? `${diffDays} days` : `${diffDays} days (Ongoing)`;
+          }
+
+          const rawStatus = (r.status || '').toLowerCase();
+          let finalResult = 'In Progress';
+          if (rawStatus === 'initiated') finalResult = 'Initiated';
+          else if (rawStatus === 'resolved') finalResult = 'Resolved';
+          else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') finalResult = 'Dead Stock';
+          else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') finalResult = 'Spare Parts Needed';
+          else finalResult = 'In Progress';
+
+          res.write(
+            `"${r.id}","${r.dept_code || 'N/A'}","${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}","${titleClean}","${raisedDate}","${closingDate}","${daysTaken}","${finalResult}","${r.req_name || 'N/A'}","${r.assigned_name || 'Not Assigned'}"\n`
+          );
+        }
       }
     } 
     else {
-      res.write('Report,Generated At\n');
-      res.write(`"${reportType}","${new Date().toISOString().split('T')[0]}"\n`);
+      if (isExcel) {
+        res.write(`<html><body><h2>${reportType}</h2><p>Generated At: ${new Date().toLocaleString()}</p></body></html>`);
+      } else {
+        res.write('Report,Generated At\n');
+        res.write(`"${reportType}","${new Date().toISOString().split('T')[0]}"\n`);
+      }
     }
     
     res.end();
   } catch (err) {
-    console.error('Export CSV error:', err);
+    console.error('Export CSV/Excel error:', err);
     if (!res.headersSent) {
-      res.status(500).send('Error generating CSV report');
+      res.status(500).send('Error generating report');
     }
   }
 });

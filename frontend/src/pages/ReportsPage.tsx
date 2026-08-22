@@ -657,7 +657,7 @@ export const ReportsPage: React.FC = () => {
     const activeDeptId = user?.role === 'ROLE_HOD' ? user?.departmentId : selectedDeptId;
 
     try {
-      let url = `/reports/export/csv?reportType=${type}&sortBy=${sortBy}`;
+      let url = `/reports/export/csv?reportType=${type}&sortBy=${sortBy}&format=${format.toLowerCase()}`;
       if (activeDeptId && activeDeptId !== 'all') url += `&deptId=${activeDeptId}`;
       if (selectedLabId && selectedLabId !== 'all') url += `&labId=${selectedLabId}`;
       if (sDate) url += `&startDate=${sDate}`;
@@ -665,12 +665,15 @@ export const ReportsPage: React.FC = () => {
 
       const response = await api.get(url, { responseType: 'blob' });
       
-      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const isExcel = format.toLowerCase() === 'excel';
+      const ext = isExcel ? 'xls' : 'csv';
+      const mimeType = isExcel ? 'application/vnd.ms-excel;charset=utf-8;' : 'text/csv;charset=utf-8;';
+      const blob = new Blob([response.data], { type: mimeType });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
       const cleanName = reportName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-      link.setAttribute('download', `${cleanName}_report.csv`);
+      link.setAttribute('download', `${cleanName}_report.${ext}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
