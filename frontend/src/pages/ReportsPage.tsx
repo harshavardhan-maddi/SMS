@@ -7,35 +7,31 @@ import { toast } from 'react-hot-toast';
 const getStatusRankInitiatedToCompleted = (statusStr: string, type: string) => {
   const s = (statusStr || '').toLowerCase().trim();
   if (type === 'inventory') {
-    if (s.includes('new') || s.includes('unallocated')) return 1;
-    if (s.includes('working') || s.includes('allocated')) return 2;
-    if (s.includes('repair')) return 3;
-    if (s.includes('dead')) return 4;
+    if (s.includes('new') || s.includes('unallocated') || s.includes('initiated')) return 1;
+    if (s.includes('working') || s.includes('allocated') || s.includes('progress') || s.includes('repair')) return 2;
+    if (s.includes('dead')) return 3;
+    if (s.includes('resolved') || s.includes('completed')) return 4;
     return 5;
   }
   if (s.includes('initiated')) return 1;
-  if (s.includes('in progress') || s.includes('inprogress')) return 2;
-  if (s.includes('part') || s.includes('spare')) return 3;
+  if (s.includes('dead')) return 3;
   if (s.includes('resolved') || s.includes('completed')) return 4;
-  if (s.includes('dead')) return 5;
-  return 6;
+  return 2; // In Progress / Spare Parts Needed / general in-progress states
 };
 
 const getStatusRankCompletedToInitiated = (statusStr: string, type: string) => {
   const s = (statusStr || '').toLowerCase().trim();
   if (type === 'inventory') {
-    if (s.includes('working') || s.includes('allocated')) return 1;
-    if (s.includes('new') || s.includes('unallocated')) return 2;
-    if (s.includes('repair')) return 3;
-    if (s.includes('dead')) return 4;
+    if (s.includes('resolved') || s.includes('completed')) return 1;
+    if (s.includes('dead')) return 2;
+    if (s.includes('working') || s.includes('allocated') || s.includes('progress') || s.includes('repair')) return 3;
+    if (s.includes('new') || s.includes('unallocated') || s.includes('initiated')) return 4;
     return 5;
   }
   if (s.includes('resolved') || s.includes('completed')) return 1;
   if (s.includes('dead')) return 2;
-  if (s.includes('part') || s.includes('spare')) return 3;
-  if (s.includes('in progress') || s.includes('inprogress')) return 4;
-  if (s.includes('initiated')) return 5;
-  return 6;
+  if (s.includes('initiated')) return 4;
+  return 3; // In Progress / Spare Parts Needed / general in-progress states
 };
 
 export const ReportsPage: React.FC = () => {
@@ -311,7 +307,10 @@ export const ReportsPage: React.FC = () => {
           const rawStatus = (item.status || '').toLowerCase();
           let finalResult = 'In Progress';
           let badgeClass = 'in-progress';
-          if (rawStatus === 'resolved') {
+          if (rawStatus === 'initiated') {
+            finalResult = 'Initiated';
+            badgeClass = 'initiated';
+          } else if (rawStatus === 'resolved') {
             finalResult = 'Resolved';
             badgeClass = 'resolved';
           } else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') {
