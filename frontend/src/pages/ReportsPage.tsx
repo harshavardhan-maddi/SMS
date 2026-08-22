@@ -1,8 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { FileText, Download, FileSpreadsheet, Eye, Calendar, Filter, Building2, Layers } from 'lucide-react';
+import { FileText, Download, FileSpreadsheet, Eye, Calendar, Filter, Building2, Layers, ArrowUpDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+
+const getStatusRankInitiatedToCompleted = (statusStr: string, type: string) => {
+  const s = (statusStr || '').toLowerCase().trim();
+  if (type === 'inventory') {
+    if (s.includes('new') || s.includes('unallocated')) return 1;
+    if (s.includes('working') || s.includes('allocated')) return 2;
+    if (s.includes('repair')) return 3;
+    if (s.includes('dead')) return 4;
+    return 5;
+  }
+  if (s.includes('initiated')) return 1;
+  if (s.includes('in progress') || s.includes('inprogress')) return 2;
+  if (s.includes('part') || s.includes('spare')) return 3;
+  if (s.includes('resolved') || s.includes('completed')) return 4;
+  if (s.includes('dead')) return 5;
+  return 6;
+};
+
+const getStatusRankCompletedToInitiated = (statusStr: string, type: string) => {
+  const s = (statusStr || '').toLowerCase().trim();
+  if (type === 'inventory') {
+    if (s.includes('working') || s.includes('allocated')) return 1;
+    if (s.includes('new') || s.includes('unallocated')) return 2;
+    if (s.includes('repair')) return 3;
+    if (s.includes('dead')) return 4;
+    return 5;
+  }
+  if (s.includes('resolved') || s.includes('completed')) return 1;
+  if (s.includes('dead')) return 2;
+  if (s.includes('part') || s.includes('spare')) return 3;
+  if (s.includes('in progress') || s.includes('inprogress')) return 4;
+  if (s.includes('initiated')) return 5;
+  return 6;
+};
 
 export const ReportsPage: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +50,7 @@ export const ReportsPage: React.FC = () => {
   const [timePeriod, setTimePeriod] = useState<'all' | 'today' | 'weekly' | 'monthly' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'status_initiated_to_completed' | 'status_completed_to_initiated'>('date');
 
   // Export Modal State
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
@@ -162,6 +197,33 @@ export const ReportsPage: React.FC = () => {
         } else if (reportName.toLowerCase().includes('resolved') || reportName.toLowerCase().includes('resolution')) {
           data = data.filter(item => item.status.toLowerCase() === 'resolved');
         }
+      }
+
+      // Apply Sort Options
+      if (sortBy === 'date') {
+        data.sort((a, b) => {
+          const dateA = new Date(`${a.initiatedDate || a.purchaseDate || ''} ${a.initiatedTime || ''}`.trim()).getTime() || a.id || 0;
+          const dateB = new Date(`${b.initiatedDate || b.purchaseDate || ''} ${b.initiatedTime || ''}`.trim()).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      } else if (sortBy === 'status_initiated_to_completed') {
+        data.sort((a, b) => {
+          const rankA = getStatusRankInitiatedToCompleted(a.status, type);
+          const rankB = getStatusRankInitiatedToCompleted(b.status, type);
+          if (rankA !== rankB) return rankA - rankB;
+          const dateA = new Date(`${a.initiatedDate || a.purchaseDate || ''} ${a.initiatedTime || ''}`.trim()).getTime() || a.id || 0;
+          const dateB = new Date(`${b.initiatedDate || b.purchaseDate || ''} ${b.initiatedTime || ''}`.trim()).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      } else if (sortBy === 'status_completed_to_initiated') {
+        data.sort((a, b) => {
+          const rankA = getStatusRankCompletedToInitiated(a.status, type);
+          const rankB = getStatusRankCompletedToInitiated(b.status, type);
+          if (rankA !== rankB) return rankA - rankB;
+          const dateA = new Date(`${a.initiatedDate || a.purchaseDate || ''} ${a.initiatedTime || ''}`.trim()).getTime() || a.id || 0;
+          const dateB = new Date(`${b.initiatedDate || b.purchaseDate || ''} ${b.initiatedTime || ''}`.trim()).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
       }
 
       toast.dismiss(loadingToast);
@@ -596,7 +658,7 @@ export const ReportsPage: React.FC = () => {
     const activeDeptId = user?.role === 'ROLE_HOD' ? user?.departmentId : selectedDeptId;
 
     setTimeout(() => {
-      let url = `/api/reports/export/csv?reportType=${type}`;
+      let url = `/api/reports/export/csv?reportType=${type}&sortBy=${sortBy}`;
       if (activeDeptId && activeDeptId !== 'all') url += `&deptId=${activeDeptId}`;
       if (selectedLabId && selectedLabId !== 'all') url += `&labId=${selectedLabId}`;
       if (sDate) url += `&startDate=${sDate}`;
@@ -714,6 +776,22 @@ export const ReportsPage: React.FC = () => {
               <option value="weekly">Weekly (Last 7 Days)</option>
               <option value="monthly">Monthly (Last 30 Days)</option>
               <option value="custom">Custom Range...</option>
+            </select>
+          </div>
+
+          {/* Sort Option Selection */}
+          <div className="space-y-1">
+            <label className="text-xxs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              <ArrowUpDown className="w-3 h-3" /> Sort Option
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-brand-purple bg-white cursor-pointer"
+            >
+              <option value="date">Sort by Date</option>
+              <option value="status_initiated_to_completed">Sort by status - initiated to completed</option>
+              <option value="status_completed_to_initiated">Sort by completed to initiated latest</option>
             </select>
           </div>
 

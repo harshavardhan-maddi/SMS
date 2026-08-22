@@ -235,14 +235,53 @@ router.get('/dean', authenticateJWT, async (req, res) => {
   }
 });
 
+function getRepairStatusRankInitiatedToCompleted(statusStr: string) {
+  const s = (statusStr || '').toLowerCase().trim();
+  if (s.includes('initiated')) return 1;
+  if (s.includes('in progress') || s.includes('inprogress')) return 2;
+  if (s.includes('part') || s.includes('spare')) return 3;
+  if (s.includes('resolved') || s.includes('completed')) return 4;
+  if (s.includes('dead')) return 5;
+  return 6;
+}
+
+function getRepairStatusRankCompletedToInitiated(statusStr: string) {
+  const s = (statusStr || '').toLowerCase().trim();
+  if (s.includes('resolved') || s.includes('completed')) return 1;
+  if (s.includes('dead')) return 2;
+  if (s.includes('part') || s.includes('spare')) return 3;
+  if (s.includes('in progress') || s.includes('inprogress')) return 4;
+  if (s.includes('initiated')) return 5;
+  return 6;
+}
+
+function getInvStatusRankInitiatedToCompleted(statusStr: string) {
+  const s = (statusStr || '').toLowerCase().trim();
+  if (s.includes('new') || s.includes('unallocated')) return 1;
+  if (s.includes('working') || s.includes('allocated')) return 2;
+  if (s.includes('repair')) return 3;
+  if (s.includes('dead')) return 4;
+  return 5;
+}
+
+function getInvStatusRankCompletedToInitiated(statusStr: string) {
+  const s = (statusStr || '').toLowerCase().trim();
+  if (s.includes('working') || s.includes('allocated')) return 1;
+  if (s.includes('new') || s.includes('unallocated')) return 2;
+  if (s.includes('repair')) return 3;
+  if (s.includes('dead')) return 4;
+  return 5;
+}
+
 // 4. Export CSV Endpoint
 router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
-  const { reportType, deptId, labId, startDate, endDate } = req.query as { 
+  const { reportType, deptId, labId, startDate, endDate, sortBy } = req.query as { 
     reportType: string; 
     deptId?: string; 
     labId?: string;
     startDate?: string;
     endDate?: string;
+    sortBy?: string;
   };
 
   if (!reportType) {
@@ -282,6 +321,33 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
       }
 
       const items = await db.all(query, params);
+
+      if (sortBy === 'date') {
+        items.sort((a: any, b: any) => {
+          const dateA = new Date(a.purchase_date || 0).getTime() || a.id || 0;
+          const dateB = new Date(b.purchase_date || 0).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      } else if (sortBy === 'status_initiated_to_completed') {
+        items.sort((a: any, b: any) => {
+          const rankA = getInvStatusRankInitiatedToCompleted(a.status);
+          const rankB = getInvStatusRankInitiatedToCompleted(b.status);
+          if (rankA !== rankB) return rankA - rankB;
+          const dateA = new Date(a.purchase_date || 0).getTime() || a.id || 0;
+          const dateB = new Date(b.purchase_date || 0).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      } else if (sortBy === 'status_completed_to_initiated') {
+        items.sort((a: any, b: any) => {
+          const rankA = getInvStatusRankCompletedToInitiated(a.status);
+          const rankB = getInvStatusRankCompletedToInitiated(b.status);
+          if (rankA !== rankB) return rankA - rankB;
+          const dateA = new Date(a.purchase_date || 0).getTime() || a.id || 0;
+          const dateB = new Date(b.purchase_date || 0).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      }
+
       for (const item of items) {
         res.write(
           `"${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
@@ -325,6 +391,33 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
       }
 
       const list = await db.all(query, params);
+
+      if (sortBy === 'date') {
+        list.sort((a: any, b: any) => {
+          const dateA = new Date(`${a.initiated_date || ''} ${a.initiated_time || ''}`.trim()).getTime() || a.id || 0;
+          const dateB = new Date(`${b.initiated_date || ''} ${b.initiated_time || ''}`.trim()).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      } else if (sortBy === 'status_initiated_to_completed') {
+        list.sort((a: any, b: any) => {
+          const rankA = getRepairStatusRankInitiatedToCompleted(a.status);
+          const rankB = getRepairStatusRankInitiatedToCompleted(b.status);
+          if (rankA !== rankB) return rankA - rankB;
+          const dateA = new Date(`${a.initiated_date || ''} ${a.initiated_time || ''}`.trim()).getTime() || a.id || 0;
+          const dateB = new Date(`${b.initiated_date || ''} ${b.initiated_time || ''}`.trim()).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      } else if (sortBy === 'status_completed_to_initiated') {
+        list.sort((a: any, b: any) => {
+          const rankA = getRepairStatusRankCompletedToInitiated(a.status);
+          const rankB = getRepairStatusRankCompletedToInitiated(b.status);
+          if (rankA !== rankB) return rankA - rankB;
+          const dateA = new Date(`${a.initiated_date || ''} ${a.initiated_time || ''}`.trim()).getTime() || a.id || 0;
+          const dateB = new Date(`${b.initiated_date || ''} ${b.initiated_time || ''}`.trim()).getTime() || b.id || 0;
+          return dateB - dateA;
+        });
+      }
+
       for (const r of list) {
         const titleClean = (r.title || r.inv_type || '').replace(/"/g, '""');
         const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
