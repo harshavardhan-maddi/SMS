@@ -619,7 +619,7 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
-  const handleExport = (reportName: string, format: 'PDF' | 'CSV' | 'Excel' | 'Excel') => {
+  const handleExport = async (reportName: string, format: 'PDF' | 'CSV' | 'Excel' | 'Excel') => {
     if (format === 'PDF') {
       handlePrintPDF(reportName);
       return;
@@ -646,7 +646,7 @@ export const ReportsPage: React.FC = () => {
       eDate = endDate;
     }
 
-    toast.loading(`Preparing ${reportName} in ${format} format...`, { duration: 1500 });
+    const loadingToast = toast.loading(`Preparing ${reportName} in ${format} format...`);
     
     // Resolve report type parameter
     let type = 'inventory';
@@ -656,16 +656,33 @@ export const ReportsPage: React.FC = () => {
 
     const activeDeptId = user?.role === 'ROLE_HOD' ? user?.departmentId : selectedDeptId;
 
-    setTimeout(() => {
-      let url = `/api/reports/export/csv?reportType=${type}&sortBy=${sortBy}`;
+    try {
+      let url = `/reports/export/csv?reportType=${type}&sortBy=${sortBy}`;
       if (activeDeptId && activeDeptId !== 'all') url += `&deptId=${activeDeptId}`;
       if (selectedLabId && selectedLabId !== 'all') url += `&labId=${selectedLabId}`;
       if (sDate) url += `&startDate=${sDate}`;
       if (eDate) url += `&endDate=${eDate}`;
 
-      window.location.href = url;
+      const response = await api.get(url, { responseType: 'blob' });
+      
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const cleanName = reportName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      link.setAttribute('download', `${cleanName}_report.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast.dismiss(loadingToast);
       toast.success(`${reportName} successfully downloaded.`);
-    }, 1500);
+    } catch (err: any) {
+      console.error('Export download error:', err);
+      toast.dismiss(loadingToast);
+      toast.error(`Failed to download ${reportName}.`);
+    }
   };
 
   const getPrincipalReportsList = () => [

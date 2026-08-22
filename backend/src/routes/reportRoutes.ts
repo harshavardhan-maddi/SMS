@@ -284,8 +284,9 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
     return res.status(400).send('Missing reportType query parameter');
   }
 
-  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.csv"`);
+  res.write('\uFEFF');
 
   try {
     if (reportType.toLowerCase().includes('inventory')) {

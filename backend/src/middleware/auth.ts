@@ -17,10 +17,16 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticateJWT = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  let token: string | undefined;
   const authHeader = req.headers.authorization;
   
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token && typeof req.query.token === 'string') {
+    token = req.query.token;
+  }
+  
+  if (token) {
     
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as {
