@@ -24,23 +24,6 @@ import {
 import { toast } from 'react-hot-toast';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
 
-const formatDateOnly = (dateVal: any): string => {
-  if (!dateVal) return '-';
-  const str = String(dateVal).trim();
-  if (!str) return '-';
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    return `${match[1]}-${match[2]}-${match[3]}`;
-  }
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-  return str;
-};
 
 export const EEEAssetManagerDashboard: React.FC = () => {
   const { user } = useAuth();

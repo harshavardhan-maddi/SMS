@@ -1,31 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateOnly } from '../utils/date';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { FileText, Download, FileSpreadsheet, Eye, Calendar, Filter, Building2, Layers, ArrowUpDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
-const formatDateOnly = (dateVal: any): string => {
-  if (!dateVal) return '-';
-  const str = String(dateVal).trim();
-  if (!str) return '-';
-  
-  // If it starts with YYYY-MM-DD
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    return `${match[1]}-${match[2]}-${match[3]}`;
-  }
-
-  // If it can be parsed by new Date()
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  return str;
-};
 
 const getStatusRankInitiatedToCompleted = (statusStr: string, type: string) => {
   const s = (statusStr || '').toLowerCase().trim();

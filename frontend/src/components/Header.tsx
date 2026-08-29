@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDateOnly } from '../utils/date';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -131,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
                           {notif.message}
                         </p>
                         <span className="text-[10px] text-brand-textMuted mt-1 block">
-                          {new Date(notif.createdAt).toLocaleDateString()}
+                          {formatDateOnly(notif.createdAt)}
                         </span>
                       </div>
                       {!notif.readStatus && (

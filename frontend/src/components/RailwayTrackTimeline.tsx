@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDateOnly } from '../utils/date';
 import { Modal } from './ReusableComponents';
 import {
   MapPin,
@@ -67,7 +68,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: 'Initiated',
       isCompleted: true, // Always completed if request exists
       isActive: currentStatus === 'initiated',
-      date: request.initiatedDate,
+      date: formatDateOnly(request.initiatedDate),
       time: request.initiatedTime ? request.initiatedTime.substring(0, 5) : '--:--',
       personnel: request.requester?.name || 'Department HOD',
       role: 'Requester HOD',
@@ -85,7 +86,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: 'Accepted',
       isCompleted: ['accepted', 'in progress', 'parts requested', 'resolved', 'dead stock'].includes(currentStatus),
       isActive: currentStatus === 'accepted',
-      date: acceptedLog?.statusDate || request.initiatedDate,
+      date: formatDateOnly(acceptedLog?.statusDate || request.initiatedDate),
       time: acceptedLog?.statusTime ? acceptedLog.statusTime.substring(0, 5) : (request.initiatedTime ? request.initiatedTime.substring(0, 5) : '--:--'),
       personnel: request.assignedTo?.name || 'Assigned Technician',
       role: 'Hardware Technician',
@@ -99,7 +100,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: 'In Progress',
       isCompleted: ['resolved', 'dead stock'].includes(currentStatus),
       isActive: ['in progress', 'parts requested'].includes(currentStatus),
-      date: inProgressLog?.statusDate || 'Pending',
+      date: inProgressLog?.statusDate ? formatDateOnly(inProgressLog.statusDate) : 'Pending',
       time: inProgressLog?.statusTime ? inProgressLog.statusTime.substring(0, 5) : '--:--',
       personnel: request.assignedTo?.name || 'Hardware Technician',
       role: 'Assigned Technician',
@@ -116,7 +117,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       statusName: currentStatus === 'dead stock' ? 'Dead Stock' : 'Resolved',
       isCompleted: ['resolved', 'dead stock'].includes(currentStatus),
       isActive: ['resolved', 'dead stock'].includes(currentStatus),
-      date: terminalLog?.statusDate || 'Pending Completion',
+      date: terminalLog?.statusDate ? formatDateOnly(terminalLog.statusDate) : 'Pending Completion',
       time: terminalLog?.statusTime ? terminalLog.statusTime.substring(0, 5) : '--:--',
       personnel: terminalLog?.updatedBy?.name || request.assignedTo?.name || 'Technician / Dean',
       role: 'Resolution Authority',

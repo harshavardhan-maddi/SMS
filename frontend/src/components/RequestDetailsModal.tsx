@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateOnly } from '../utils/date';
 import api from '../services/api';
 import { Modal } from './ReusableComponents';
 import {
@@ -159,7 +160,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                 {currentStatus}
               </span>
               <span className="text-[10px] text-slate-300 font-medium flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {new Date(request.initiatedDate).toLocaleDateString()}
+                <Clock className="w-3 h-3" /> {formatDateOnly(request.initiatedDate)}
               </span>
             </div>
           </div>
@@ -290,14 +291,14 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
             <div className="flex justify-between border-t border-slate-200/40 pt-1.5">
               <span className="text-slate-500 font-medium">Initiated Date:</span>
               <span className="font-bold text-slate-800 font-mono">
-                {request.initiatedDate ? new Date(request.initiatedDate).toLocaleDateString() : 'N/A'}
+                {request.initiatedDate ? formatDateOnly(request.initiatedDate) : 'N/A'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500 font-medium">Completed Date:</span>
               <span className="font-bold text-emerald-700 font-mono">
                 {['resolved', 'dead stock'].includes((request.status || '').toLowerCase()) && (request.completedDate || request.updatedAt)
-                  ? new Date(request.completedDate || request.updatedAt).toLocaleDateString()
+                  ? formatDateOnly(request.completedDate || request.updatedAt)
                   : 'Pending Completion'}
               </span>
             </div>
