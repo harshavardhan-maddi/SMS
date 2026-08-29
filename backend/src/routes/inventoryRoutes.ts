@@ -4,6 +4,24 @@ import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
 const router = Router();
 
+function formatDateOnly(dateVal: any): string {
+  if (!dateVal) return '-';
+  const str = String(dateVal).trim();
+  if (!str) return '-';
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return str;
+}
+
 // Helper to format inventory item
 function formatInventory(row: any) {
   return {
@@ -12,7 +30,7 @@ function formatInventory(row: any) {
     brand: row.brand,
     model: row.model,
     serialNumber: row.serial_number,
-    purchaseDate: row.purchase_date,
+    purchaseDate: formatDateOnly(row.purchase_date),
     warrantyMonths: row.warranty_months,
     status: row.status,
     workstationNumber: row.workstation_number || 1,

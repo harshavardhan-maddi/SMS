@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateOnly } from '../utils/date';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -419,10 +420,10 @@ export const ProgrammerDashboard: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 font-medium">
-                      {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                      {req.initiatedDate ? formatDateOnly(req.initiatedDate) : '---'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 font-medium">
-                      {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
+                      {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? formatDateOnly(req.completedDate) : '---'}
                     </td>
                     <td className="py-3.5 px-4">
                       <button
@@ -1165,10 +1166,10 @@ export const ProgrammerDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-slate-500 font-medium">
-                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                        {req.initiatedDate ? formatDateOnly(req.initiatedDate) : '---'}
                       </td>
                       <td className="py-2.5 px-3 text-slate-500 font-medium">
-                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
+                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? formatDateOnly(req.completedDate) : '---'}
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button

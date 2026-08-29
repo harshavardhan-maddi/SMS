@@ -4,6 +4,29 @@ import api from '../services/api';
 import { FileText, Download, FileSpreadsheet, Eye, Calendar, Filter, Building2, Layers, ArrowUpDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+const formatDateOnly = (dateVal: any): string => {
+  if (!dateVal) return '-';
+  const str = String(dateVal).trim();
+  if (!str) return '-';
+  
+  // If it starts with YYYY-MM-DD
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+
+  // If it can be parsed by new Date()
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return str;
+};
+
 const getStatusRankInitiatedToCompleted = (statusStr: string, type: string) => {
   const s = (statusStr || '').toLowerCase().trim();
   if (type === 'inventory') {
@@ -145,10 +168,10 @@ export const ReportsPage: React.FC = () => {
 
         // Filter by date range in frontend if applicable
         if (sDate) {
-          data = data.filter(item => item.purchaseDate >= sDate);
+          data = data.filter(item => formatDateOnly(item.purchaseDate) >= sDate);
         }
         if (eDate) {
-          data = data.filter(item => item.purchaseDate <= eDate);
+          data = data.filter(item => formatDateOnly(item.purchaseDate) <= eDate);
         }
 
         // Apply report specific constraints
@@ -181,10 +204,10 @@ export const ReportsPage: React.FC = () => {
 
         // Filter by date range in frontend
         if (sDate) {
-          data = data.filter(item => item.initiatedDate >= sDate);
+          data = data.filter(item => formatDateOnly(item.initiatedDate) >= sDate);
         }
         if (eDate) {
-          data = data.filter(item => item.initiatedDate <= eDate);
+          data = data.filter(item => formatDateOnly(item.initiatedDate) <= eDate);
         }
 
         // Apply report specific constraints
@@ -198,8 +221,8 @@ export const ReportsPage: React.FC = () => {
       // Apply Sort Options
       if (sortBy === 'date') {
         data.sort((a, b) => {
-          const dateA = new Date(`${a.initiatedDate || a.purchaseDate || ''} ${a.initiatedTime || ''}`.trim()).getTime() || a.id || 0;
-          const dateB = new Date(`${b.initiatedDate || b.purchaseDate || ''} ${b.initiatedTime || ''}`.trim()).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.initiatedDate || a.purchaseDate || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.initiatedDate || b.purchaseDate || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       } else if (sortBy === 'status_initiated_to_completed') {
@@ -207,8 +230,8 @@ export const ReportsPage: React.FC = () => {
           const rankA = getStatusRankInitiatedToCompleted(a.status, type);
           const rankB = getStatusRankInitiatedToCompleted(b.status, type);
           if (rankA !== rankB) return rankA - rankB;
-          const dateA = new Date(`${a.initiatedDate || a.purchaseDate || ''} ${a.initiatedTime || ''}`.trim()).getTime() || a.id || 0;
-          const dateB = new Date(`${b.initiatedDate || b.purchaseDate || ''} ${b.initiatedTime || ''}`.trim()).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.initiatedDate || a.purchaseDate || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.initiatedDate || b.purchaseDate || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       } else if (sortBy === 'status_completed_to_initiated') {
@@ -216,8 +239,8 @@ export const ReportsPage: React.FC = () => {
           const rankA = getStatusRankCompletedToInitiated(a.status, type);
           const rankB = getStatusRankCompletedToInitiated(b.status, type);
           if (rankA !== rankB) return rankA - rankB;
-          const dateA = new Date(`${a.initiatedDate || a.purchaseDate || ''} ${a.initiatedTime || ''}`.trim()).getTime() || a.id || 0;
-          const dateB = new Date(`${b.initiatedDate || b.purchaseDate || ''} ${b.initiatedTime || ''}`.trim()).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.initiatedDate || a.purchaseDate || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.initiatedDate || b.purchaseDate || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       }
@@ -239,7 +262,7 @@ export const ReportsPage: React.FC = () => {
         if (found) labNameStr = `Lab ${found.labNumber} (${found.name})`;
       }
 
-      const dateRangeStr = sDate || eDate ? `${sDate || 'Beginning'} to ${eDate || 'Present'}` : 'All Time';
+      const dateRangeStr = sDate || eDate ? `${formatDateOnly(sDate) || 'Beginning'} to ${formatDateOnly(eDate) || 'Present'}` : 'All Time';
 
       // Open new window for print layout
       const printWindow = window.open('', '_blank');
@@ -273,7 +296,7 @@ export const ReportsPage: React.FC = () => {
             <td>${item.serialNumber || '-'}</td>
             <td>${item.department?.code || 'N/A'}</td>
             <td>${item.lab ? 'Lab ' + item.lab.labNumber : 'N/A'}</td>
-            <td>${item.purchaseDate || '-'}</td>
+            <td>${formatDateOnly(item.purchaseDate)}</td>
             <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
           </tr>
         `).join('');
@@ -289,13 +312,13 @@ export const ReportsPage: React.FC = () => {
           </tr>
         `;
         tableRowsHtml = data.map(item => {
-          const raisedDate = `${item.initiatedDate || ''} ${item.initiatedTime || ''}`.trim();
-          const closingDate = item.completedDate ? `${item.completedDate} ${item.completedTime || ''}`.trim() : '-';
+          const raisedDate = formatDateOnly(item.initiatedDate);
+          const closingDate = item.completedDate ? formatDateOnly(item.completedDate) : '-';
           
           let daysTaken = '-';
           if (item.initiatedDate) {
-            const startDate = new Date(item.initiatedDate);
-            const endDate = item.completedDate ? new Date(item.completedDate) : new Date();
+            const startDate = new Date(formatDateOnly(item.initiatedDate));
+            const endDate = item.completedDate ? new Date(formatDateOnly(item.completedDate)) : new Date();
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(0, 0, 0, 0);
             const diffTime = endDate.getTime() - startDate.getTime();
@@ -334,7 +357,7 @@ export const ReportsPage: React.FC = () => {
                 <div style="font-weight: 700; color: #0f172a;">${item.title || item.inventory?.type || '-'}</div>
                 <div style="font-size: 9px; color: #64748b;">${deptCode} (${labInfo})</div>
               </td>
-              <td>${raisedDate || '-'}</td>
+              <td>${raisedDate}</td>
               <td>${closingDate}</td>
               <td><strong>${daysTaken}</strong></td>
               <td><span class="status-badge ${badgeClass}">${finalResult}</span></td>
@@ -566,7 +589,7 @@ export const ReportsPage: React.FC = () => {
                 </td>
                 <td>
                   <div><span class="meta-label">Compiled By:</span><span class="meta-val">${user?.name} (${user?.role === 'ROLE_PRINCIPAL' ? 'Principal' : user?.role === 'ROLE_DEAN' ? 'Computer Dean' : 'HOD'})</span></div>
-                  <div style="margin-top: 6px;"><span class="meta-label">Timestamp:</span><span class="meta-val">${new Date().toLocaleString()}</span></div>
+                  <div style="margin-top: 6px;"><span class="meta-label">Timestamp:</span><span class="meta-val">${formatDateOnly(new Date())}</span></div>
                   <div style="margin-top: 6px;"><span class="meta-label">Total Records:</span><span class="meta-val">${data.length}</span></div>
                 </td>
               </tr>

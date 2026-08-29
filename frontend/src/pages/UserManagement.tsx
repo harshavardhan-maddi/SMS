@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateOnly } from '../utils/date';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -328,7 +329,7 @@ export const UserManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 font-medium">
-                      {new Date(u.createdAt).toLocaleDateString()}
+                      {formatDateOnly(u.createdAt)}
                     </td>
                     
                     {showActionsHeader && (

@@ -33,6 +33,24 @@ const BASE_REPAIR_QUERY = `
   LEFT JOIN labs l ON inv.lab_id = l.id
 `;
 
+function formatDateOnly(dateVal: any): string {
+  if (!dateVal) return '-';
+  const str = String(dateVal).trim();
+  if (!str) return '-';
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return str;
+}
+
 // Helper to format a single repair request row
 function formatRepairRequest(row: any) {
   return {
@@ -41,9 +59,9 @@ function formatRepairRequest(row: any) {
     description: row.description,
     priority: row.priority,
     status: row.status,
-    initiatedDate: row.initiated_date,
+    initiatedDate: formatDateOnly(row.initiated_date),
     initiatedTime: row.initiated_time,
-    completedDate: row.completed_date || null,
+    completedDate: row.completed_date ? formatDateOnly(row.completed_date) : null,
     completedTime: row.completed_time || null,
     deviceCount: row.device_count !== undefined ? row.device_count : 1,
     inventory: {
@@ -211,7 +229,7 @@ router.get('/:id/history', authenticateJWT, async (req, res) => {
     const history = rows.map((row) => ({
       id: row.id,
       status: row.status,
-      statusDate: row.statusDate,
+      statusDate: formatDateOnly(row.statusDate),
       statusTime: row.statusTime,
       description: row.description,
       partsReplaced: row.partsReplaced,

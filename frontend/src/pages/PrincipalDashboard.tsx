@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateOnly } from '../utils/date';
 import api from '../services/api';
 import { useWebSocket } from '../context/WebSocketContext';
 import { LoadingSkeleton, Modal } from '../components/ReusableComponents';
@@ -461,10 +462,10 @@ export const PrincipalDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-500 font-medium">
-                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                        {req.initiatedDate ? formatDateOnly(req.initiatedDate) : '---'}
                       </td>
                       <td className="py-3.5 px-4 text-slate-500 font-medium">
-                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? new Date(req.completedDate).toLocaleDateString() : '---'}
+                        {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? formatDateOnly(req.completedDate) : '---'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">

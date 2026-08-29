@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateOnly } from '../utils/date';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -22,6 +23,24 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
+
+const formatDateOnly = (dateVal: any): string => {
+  if (!dateVal) return '-';
+  const str = String(dateVal).trim();
+  if (!str) return '-';
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return str;
+};
 
 export const EEEAssetManagerDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -254,8 +273,8 @@ export const EEEAssetManagerDashboard: React.FC = () => {
         <td>${item.assignedElectricianName ? item.assignedElectricianName + ' (Electrician)' : (item.assignedTo?.name || 'Unassigned')}</td>
         <td>${item.priority || 'Medium'}</td>
         <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
-        <td>${item.initiatedDate ? new Date(item.initiatedDate).toLocaleDateString() : '-'}</td>
-        <td>${['Resolved', 'Dead Stock'].includes(item.status) && (item.completedDate || item.updatedAt) ? new Date(item.completedDate || item.updatedAt).toLocaleDateString() : 'Pending'}</td>
+        <td>${item.initiatedDate ? formatDateOnly(item.initiatedDate) : '-'}</td>
+        <td>${['Resolved', 'Dead Stock'].includes(item.status) && (item.completedDate || item.updatedAt) ? formatDateOnly(item.completedDate || item.updatedAt) : 'Pending'}</td>
       </tr>
     `).join('');
 
@@ -285,7 +304,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
             <p>Electrical & Electronics Engineering (EEE) Asset Management - Official Repair Tickets Report</p>
           </div>
           <div style="margin-bottom: 10px; font-size: 11px; color: #475569;">
-            <strong>Generated Date:</strong> ${new Date().toLocaleDateString()} | <strong>Total EEE Tickets:</strong> ${requests.length}
+            <strong>Generated Date:</strong> ${formatDateOnly(new Date().toISOString())} | <strong>Total EEE Tickets:</strong> ${requests.length}
           </div>
           <table>
             <thead>
@@ -518,11 +537,11 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
-                        {req.initiatedDate ? new Date(req.initiatedDate).toLocaleDateString() : '---'}
+                        {req.initiatedDate ? formatDateOnly(req.initiatedDate) : '---'}
                       </td>
                       <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
                         {['Resolved', 'Dead Stock'].includes(req.status) && (req.completedDate || req.updatedAt)
-                          ? new Date(req.completedDate || req.updatedAt).toLocaleDateString()
+                          ? formatDateOnly(req.completedDate || req.updatedAt)
                           : '---'}
                       </td>
                       <td className="py-3.5 px-4 text-right">

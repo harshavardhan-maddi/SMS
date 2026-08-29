@@ -4,6 +4,24 @@ import { authenticateJWT, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+function formatDateOnly(dateVal: any): string {
+  if (!dateVal) return '-';
+  const str = String(dateVal).trim();
+  if (!str) return '-';
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return str;
+}
+
 // Helper to format inventory item
 function formatInventory(row: any) {
   return {
@@ -12,7 +30,7 @@ function formatInventory(row: any) {
     brand: row.brand,
     model: row.model,
     serialNumber: row.serial_number,
-    purchaseDate: row.purchase_date,
+    purchaseDate: formatDateOnly(row.purchase_date),
     warrantyMonths: row.warranty_months,
     status: row.status,
     department: row.department_id ? {
@@ -46,9 +64,9 @@ function formatRepairRequest(row: any) {
     description: row.description,
     priority: row.priority,
     status: row.status,
-    initiatedDate: row.initiated_date,
+    initiatedDate: formatDateOnly(row.initiated_date),
     initiatedTime: row.initiated_time,
-    completedDate: row.completed_date || null,
+    completedDate: row.completed_date ? formatDateOnly(row.completed_date) : null,
     completedTime: row.completed_time || null,
     deviceCount: row.device_count !== undefined ? row.device_count : 1,
     inventory: {
@@ -314,7 +332,7 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
     }
 
     // Date range label
-    const dateRangeStr = startDate || endDate ? `${startDate || 'Beginning'} to ${endDate || 'Present'}` : 'All Time';
+    const dateRangeStr = startDate || endDate ? `${formatDateOnly(startDate) || 'Beginning'} to ${formatDateOnly(endDate) || 'Present'}` : 'All Time';
 
     // Sort option label
     let sortByStr = 'Date (Latest First)';
@@ -323,7 +341,7 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
 
     // Compiled by label
     const compiledByStr = `${req.user?.name || 'Authorized User'} (${req.user?.role === 'ROLE_PRINCIPAL' ? 'Principal' : req.user?.role === 'ROLE_DEAN' ? 'Computer Dean' : req.user?.role === 'ROLE_HOD' ? 'HOD' : 'Asset Manager'})`;
-    const timestampStr = new Date().toLocaleString();
+    const timestampStr = formatDateOnly(new Date());
 
     if (reportType.toLowerCase().includes('inventory')) {
       let query = `
@@ -355,8 +373,8 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
 
       if (sortBy === 'date') {
         items.sort((a: any, b: any) => {
-          const dateA = new Date(a.purchase_date || 0).getTime() || a.id || 0;
-          const dateB = new Date(b.purchase_date || 0).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.purchase_date || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.purchase_date || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       } else if (sortBy === 'status_initiated_to_completed') {
@@ -364,8 +382,8 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
           const rankA = getInvStatusRankInitiatedToCompleted(a.status);
           const rankB = getInvStatusRankInitiatedToCompleted(b.status);
           if (rankA !== rankB) return rankA - rankB;
-          const dateA = new Date(a.purchase_date || 0).getTime() || a.id || 0;
-          const dateB = new Date(b.purchase_date || 0).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.purchase_date || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.purchase_date || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       } else if (sortBy === 'status_completed_to_initiated') {
@@ -373,8 +391,8 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
           const rankA = getInvStatusRankCompletedToInitiated(a.status);
           const rankB = getInvStatusRankCompletedToInitiated(b.status);
           if (rankA !== rankB) return rankA - rankB;
-          const dateA = new Date(a.purchase_date || 0).getTime() || a.id || 0;
-          const dateB = new Date(b.purchase_date || 0).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.purchase_date || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.purchase_date || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       }
@@ -396,7 +414,7 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
               <td>${item.brand || '-'}</td>
               <td>${item.model || '-'}</td>
               <td>${item.serial_number || '-'}</td>
-              <td>${item.purchase_date || '-'}</td>
+              <td>${formatDateOnly(item.purchase_date)}</td>
               <td style="text-align: center;">${item.warranty_months || 0}</td>
               <td class="${badgeClass}">${item.status}</td>
             </tr>
@@ -517,7 +535,7 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
         res.write('Department,Lab,Type,Brand,Model,Serial Number,Purchase Date,Warranty (Months),Status\n');
         for (const item of items) {
           res.write(
-            `"${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${item.purchase_date || ''}",${item.warranty_months || 0},"${item.status}"\n`
+            `"${item.dept_code || 'N/A'}","${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}","${item.type}","${item.brand || ''}","${item.model || ''}","${item.serial_number || ''}","${formatDateOnly(item.purchase_date)}",${item.warranty_months || 0},"${item.status}"\n`
           );
         }
       }
@@ -560,8 +578,8 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
 
       if (sortBy === 'date') {
         list.sort((a: any, b: any) => {
-          const dateA = new Date(`${a.initiated_date || ''} ${a.initiated_time || ''}`.trim()).getTime() || a.id || 0;
-          const dateB = new Date(`${b.initiated_date || ''} ${b.initiated_time || ''}`.trim()).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.initiated_date || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.initiated_date || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       } else if (sortBy === 'status_initiated_to_completed') {
@@ -569,8 +587,8 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
           const rankA = getRepairStatusRankInitiatedToCompleted(a.status);
           const rankB = getRepairStatusRankInitiatedToCompleted(b.status);
           if (rankA !== rankB) return rankA - rankB;
-          const dateA = new Date(`${a.initiated_date || ''} ${a.initiated_time || ''}`.trim()).getTime() || a.id || 0;
-          const dateB = new Date(`${b.initiated_date || ''} ${b.initiated_time || ''}`.trim()).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.initiated_date || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.initiated_date || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       } else if (sortBy === 'status_completed_to_initiated') {
@@ -578,8 +596,8 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
           const rankA = getRepairStatusRankCompletedToInitiated(a.status);
           const rankB = getRepairStatusRankCompletedToInitiated(b.status);
           if (rankA !== rankB) return rankA - rankB;
-          const dateA = new Date(`${a.initiated_date || ''} ${a.initiated_time || ''}`.trim()).getTime() || a.id || 0;
-          const dateB = new Date(`${b.initiated_date || ''} ${b.initiated_time || ''}`.trim()).getTime() || b.id || 0;
+          const dateA = new Date(formatDateOnly(a.initiated_date || '')).getTime() || a.id || 0;
+          const dateB = new Date(formatDateOnly(b.initiated_date || '')).getTime() || b.id || 0;
           return dateB - dateA;
         });
       }
@@ -587,13 +605,13 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
       if (isExcel) {
         let tableRows = list.map((r: any) => {
           const titleClean = r.title || r.inv_type || '-';
-          const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
-          const closingDate = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : '-';
+          const raisedDate = formatDateOnly(r.initiated_date);
+          const closingDate = r.completed_date ? formatDateOnly(r.completed_date) : '-';
           
           let daysTaken = '-';
           if (r.initiated_date) {
-            const sD = new Date(r.initiated_date);
-            const eD = r.completed_date ? new Date(r.completed_date) : new Date();
+            const sD = new Date(formatDateOnly(r.initiated_date));
+            const eD = r.completed_date ? new Date(formatDateOnly(r.completed_date)) : new Date();
             sD.setHours(0, 0, 0, 0);
             eD.setHours(0, 0, 0, 0);
             const diffTime = eD.getTime() - sD.getTime();
@@ -628,7 +646,7 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
               <td>${r.dept_code || 'N/A'}</td>
               <td>${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}</td>
               <td><strong>${titleClean}</strong></td>
-              <td>${raisedDate || '-'}</td>
+              <td>${raisedDate}</td>
               <td>${closingDate}</td>
               <td style="text-align: center;">${daysTaken}</td>
               <td class="${badgeClass}">${finalResult}</td>
@@ -753,13 +771,13 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
         res.write('Ticket ID,Department,Lab,Title / Issue,Complaint Raised Date,Closing Date,No of Days Taken to Complete,Final Result of Ticket,Requester Name,Technician Name\n');
         for (const r of list) {
           const titleClean = (r.title || r.inv_type || '').replace(/"/g, '""');
-          const raisedDate = `${r.initiated_date || ''} ${r.initiated_time || ''}`.trim();
-          const closingDate = r.completed_date ? `${r.completed_date} ${r.completed_time || ''}`.trim() : '-';
+          const raisedDate = formatDateOnly(r.initiated_date);
+          const closingDate = r.completed_date ? formatDateOnly(r.completed_date) : '-';
           
           let daysTaken = '-';
           if (r.initiated_date) {
-            const sD = new Date(r.initiated_date);
-            const eD = r.completed_date ? new Date(r.completed_date) : new Date();
+            const sD = new Date(formatDateOnly(r.initiated_date));
+            const eD = r.completed_date ? new Date(formatDateOnly(r.completed_date)) : new Date();
             sD.setHours(0, 0, 0, 0);
             eD.setHours(0, 0, 0, 0);
             const diffTime = eD.getTime() - sD.getTime();
@@ -784,10 +802,10 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
     } 
     else {
       if (isExcel) {
-        res.write(`<html><body><h2>${reportType}</h2><p>Generated At: ${new Date().toLocaleString()}</p></body></html>`);
+        res.write(`<html><body><h2>${reportType}</h2><p>Generated At: ${formatDateOnly(new Date())}</p></body></html>`);
       } else {
         res.write('Report,Generated At\n');
-        res.write(`"${reportType}","${new Date().toISOString().split('T')[0]}"\n`);
+        res.write(`"${reportType}","${formatDateOnly(new Date())}"\n`);
       }
     }
     
