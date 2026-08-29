@@ -249,15 +249,15 @@ export const EEEAssetManagerDashboard: React.FC = () => {
 
     const tableRowsHtml = requests.map(item => `
       <tr>
-        <td>${item.id}</td>
-        <td>${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber : 'EEE Dept'}</td>
-        <td><div style="font-weight: 600;">${item.title}</div><div style="font-size: 10px; color: #64748b;">${item.description || ''}</div></td>
-        <td>${item.requester?.name || 'EEE Faculty'}</td>
-        <td>${item.assignedElectricianName ? item.assignedElectricianName + ' (Electrician)' : (item.assignedTo?.name || 'Unassigned')}</td>
-        <td>${item.priority || 'Medium'}</td>
-        <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
-        <td>${item.initiatedDate ? formatDateOnly(item.initiatedDate) : '-'}</td>
-        <td>${['Resolved', 'Dead Stock'].includes(item.status) && (item.completedDate || item.updatedAt) ? formatDateOnly(item.completedDate || item.updatedAt) : 'Pending'}</td>
+        <td class="col-fit"><strong>#${item.id}</strong></td>
+        <td class="col-fit">${item.inventory?.lab ? 'Lab ' + item.inventory.lab.labNumber : 'EEE Dept'}</td>
+        <td class="col-expand"><div style="font-weight: 700; color: #0f172a;">${item.title}</div><div style="font-size: 9px; color: #64748b;">${item.description || ''}</div></td>
+        <td class="col-fit">${item.requester?.name || 'EEE Faculty'}</td>
+        <td class="col-fit">${item.assignedElectricianName ? item.assignedElectricianName + ' (Electrician)' : (item.assignedTo?.name || 'Unassigned')}</td>
+        <td class="col-fit text-center">${item.priority || 'Medium'}</td>
+        <td class="col-fit text-center"><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
+        <td class="col-fit">${item.initiatedDate ? formatDateOnly(item.initiatedDate) : '-'}</td>
+        <td class="col-fit">${['Resolved', 'Dead Stock'].includes(item.status) && (item.completedDate || item.updatedAt) ? formatDateOnly(item.completedDate || item.updatedAt) : 'Pending'}</td>
       </tr>
     `).join('');
 
@@ -267,14 +267,17 @@ export const EEEAssetManagerDashboard: React.FC = () => {
           <title>EEE Electrical Repair Tickets Report</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-            body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 20px; font-size: 12px; }
+            body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 20px; font-size: 11px; }
             .header-banner { background: linear-gradient(135deg, #d97706, #ea580c); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
             .header-banner h1 { margin: 0; font-size: 20px; font-weight: 800; }
             .header-banner p { margin: 4px 0 0 0; font-size: 11px; opacity: 0.9; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th { background: #f8fafc; color: #475569; font-size: 10px; text-transform: uppercase; font-weight: 700; text-align: left; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; }
-            td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-            .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: auto; }
+            th { background: #0c2340; color: #ffffff; font-size: 9px; text-transform: uppercase; font-weight: 700; text-align: left; padding: 8px 10px; border: 1px solid #0c2340; white-space: nowrap; }
+            td { padding: 7px 10px; border: 1px solid #cbd5e1; vertical-align: middle; }
+            .col-fit { width: 1%; white-space: nowrap; }
+            .col-expand { width: auto; min-width: 160px; word-break: break-word; }
+            .text-center { text-align: center; }
+            .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
             .initiated { background: #fef3c7; color: #92400e; }
             .in-progress, .accepted { background: #dbeafe; color: #1e40af; }
             .resolved { background: #d1fae5; color: #065f46; }
@@ -292,15 +295,15 @@ export const EEEAssetManagerDashboard: React.FC = () => {
           <table>
             <thead>
               <tr>
-                <th>Ticket ID</th>
-                <th>Location / Lab</th>
-                <th>Electrical Issue Details</th>
-                <th>Requester</th>
-                <th>Assigned Electrician</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Initiated Date</th>
-                <th>Completed Date</th>
+                <th class="col-fit">Ticket ID</th>
+                <th class="col-fit">Location / Lab</th>
+                <th class="col-expand">Electrical Issue Details</th>
+                <th class="col-fit">Requester</th>
+                <th class="col-fit">Assigned Electrician</th>
+                <th class="col-fit text-center">Priority</th>
+                <th class="col-fit text-center">Status</th>
+                <th class="col-fit">Initiated Date</th>
+                <th class="col-fit">Completed Date</th>
               </tr>
             </thead>
             <tbody>

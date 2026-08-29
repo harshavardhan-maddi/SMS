@@ -256,37 +256,37 @@ export const ReportsPage: React.FC = () => {
       if (type === 'inventory') {
         tableHeadersHtml = `
           <tr>
-            <th>Type</th>
-            <th>Brand</th>
-            <th>Model</th>
-            <th>Serial Number</th>
-            <th>Department</th>
-            <th>Lab</th>
-            <th>Purchase Date</th>
-            <th>Status</th>
+            <th class="col-fit">Asset Type</th>
+            <th class="col-fit">Brand</th>
+            <th class="col-expand">Model</th>
+            <th class="col-fit">Serial Number</th>
+            <th class="col-fit">Department</th>
+            <th class="col-fit">Laboratory</th>
+            <th class="col-fit">Purchase Date</th>
+            <th class="col-fit text-center">Status</th>
           </tr>
         `;
         tableRowsHtml = data.map(item => `
           <tr>
-            <td>${item.type}</td>
-            <td>${item.brand || '-'}</td>
-            <td>${item.model || '-'}</td>
-            <td>${item.serialNumber || '-'}</td>
-            <td>${item.department?.code || 'N/A'}</td>
-            <td>${item.lab ? 'Lab ' + item.lab.labNumber : 'N/A'}</td>
-            <td>${formatDateOnly(item.purchaseDate)}</td>
-            <td><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
+            <td class="col-fit"><strong>${item.type}</strong></td>
+            <td class="col-fit">${item.brand || '-'}</td>
+            <td class="col-expand">${item.model || '-'}</td>
+            <td class="col-fit" style="font-family: monospace;">${item.serialNumber || '-'}</td>
+            <td class="col-fit"><strong>${item.department?.code || 'N/A'}</strong></td>
+            <td class="col-fit">${item.lab ? 'Lab ' + item.lab.labNumber : 'N/A'}</td>
+            <td class="col-fit">${formatDateOnly(item.purchaseDate)}</td>
+            <td class="col-fit text-center"><span class="status-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}">${item.status}</span></td>
           </tr>
         `).join('');
       } else {
         tableHeadersHtml = `
           <tr>
-            <th>Ticket ID</th>
-            <th>Location & Issue</th>
-            <th>Complaint Raised Date</th>
-            <th>Closing Date</th>
-            <th>No. of Days Taken to Complete</th>
-            <th>Final Result of Ticket</th>
+            <th class="col-fit">Ticket ID</th>
+            <th class="col-expand">Location & Issue</th>
+            <th class="col-fit">Complaint Raised Date</th>
+            <th class="col-fit">Closing Date</th>
+            <th class="col-fit text-center">No. of Days Taken</th>
+            <th class="col-fit text-center">Final Result of Ticket</th>
           </tr>
         `;
         tableRowsHtml = data.map(item => {
@@ -330,15 +330,15 @@ export const ReportsPage: React.FC = () => {
 
           return `
             <tr>
-              <td><strong>${item.id}</strong></td>
-              <td>
+              <td class="col-fit"><strong>#${item.id}</strong></td>
+              <td class="col-expand">
                 <div style="font-weight: 700; color: #0f172a;">${item.title || item.inventory?.type || '-'}</div>
                 <div style="font-size: 9px; color: #64748b;">${deptCode} (${labInfo})</div>
               </td>
-              <td>${raisedDate}</td>
-              <td>${closingDate}</td>
-              <td><strong>${daysTaken}</strong></td>
-              <td><span class="status-badge ${badgeClass}">${finalResult}</span></td>
+              <td class="col-fit">${raisedDate}</td>
+              <td class="col-fit">${closingDate}</td>
+              <td class="col-fit text-center"><strong>${daysTaken}</strong></td>
+              <td class="col-fit text-center"><span class="status-badge ${badgeClass}">${finalResult}</span></td>
             </tr>
           `;
         }).join('');
@@ -458,7 +458,8 @@ export const ReportsPage: React.FC = () => {
               table.data-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 10px;
+                table-layout: auto;
+                font-size: 9.5px;
                 margin-top: 15px;
               }
               table.data-table th {
@@ -469,14 +470,27 @@ export const ReportsPage: React.FC = () => {
                 font-size: 8px;
                 letter-spacing: 0.5px;
                 border: 1px solid #0c2340;
-                padding: 10px 8px;
+                padding: 8px 10px;
                 text-align: left;
+                white-space: nowrap;
               }
               table.data-table td {
-                border: 1px solid #e2e8f0;
-                padding: 8px 6px;
+                border: 1px solid #cbd5e1;
+                padding: 7px 10px;
                 color: #334155;
-                vertical-align: top;
+                vertical-align: middle;
+              }
+              table.data-table .col-fit {
+                width: 1%;
+                white-space: nowrap;
+              }
+              table.data-table .col-expand {
+                width: auto;
+                min-width: 160px;
+                word-break: break-word;
+              }
+              table.data-table .text-center {
+                text-align: center;
               }
               table.data-table tr:nth-child(even) {
                 background-color: #f8fafc;
@@ -485,9 +499,10 @@ export const ReportsPage: React.FC = () => {
                 font-weight: 700;
                 text-transform: uppercase;
                 font-size: 8px;
-                padding: 2px 6px;
+                padding: 3px 8px;
                 border-radius: 4px;
                 display: inline-block;
+                white-space: nowrap;
               }
               .status-badge.working, .status-badge.resolved {
                 background-color: #dcfce7;

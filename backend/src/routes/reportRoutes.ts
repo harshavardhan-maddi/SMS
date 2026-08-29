@@ -408,15 +408,15 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
 
           return `
             <tr>
-              <td>${item.dept_code || 'N/A'}</td>
-              <td>${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}</td>
-              <td><strong>${item.type}</strong></td>
-              <td>${item.brand || '-'}</td>
-              <td>${item.model || '-'}</td>
-              <td>${item.serial_number || '-'}</td>
-              <td>${formatDateOnly(item.purchase_date)}</td>
-              <td style="text-align: center;">${item.warranty_months || 0}</td>
-              <td class="${badgeClass}">${item.status}</td>
+              <td class="col-fit"><strong>${item.dept_code || 'N/A'}</strong></td>
+              <td class="col-fit">${item.lab_number ? 'Lab ' + item.lab_number : 'N/A'}</td>
+              <td class="col-fit"><strong>${item.type}</strong></td>
+              <td class="col-fit">${item.brand || '-'}</td>
+              <td class="col-expand">${item.model || '-'}</td>
+              <td class="col-fit" style="font-family: monospace;">${item.serial_number || '-'}</td>
+              <td class="col-fit">${formatDateOnly(item.purchase_date)}</td>
+              <td class="col-fit text-center">${item.warranty_months || 0}</td>
+              <td class="col-fit text-center ${badgeClass}">${item.status}</td>
             </tr>
           `;
         }).join('');
@@ -451,9 +451,12 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
               .meta-table td { padding: 6px 10px; font-size: 9pt; border: 1px solid #cbd5e1; }
               .meta-label { font-weight: bold; color: #475569; background-color: #f8fafc; width: 15%; text-transform: uppercase; }
               .meta-val { color: #0f172a; font-weight: bold; }
-              .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-              .data-table th { background-color: #0c2340; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; border: 1px solid #0c2340; padding: 8px; text-align: left; }
-              .data-table td { border: 1px solid #cbd5e1; padding: 6px 8px; color: #334155; vertical-align: middle; }
+              .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; table-layout: auto; }
+              .data-table th { background-color: #0c2340; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; border: 1px solid #0c2340; padding: 8px 10px; text-align: left; white-space: nowrap; }
+              .data-table td { border: 1px solid #cbd5e1; padding: 6px 10px; color: #334155; vertical-align: middle; }
+              .data-table .col-fit { width: 1%; white-space: nowrap; }
+              .data-table .col-expand { width: auto; min-width: 160px; word-break: break-word; }
+              .data-table .text-center { text-align: center; }
               .data-table tr:nth-child(even) td { background-color: #f8fafc; }
               .status-initiated { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
               .status-in-progress { background-color: #fef3c7; color: #b45309; font-weight: bold; text-align: center; }
@@ -504,15 +507,15 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Department</th>
-                  <th>Laboratory</th>
-                  <th>Asset Type</th>
-                  <th>Brand</th>
-                  <th>Model</th>
-                  <th>Serial Number</th>
-                  <th>Purchase Date</th>
-                  <th>Warranty (Months)</th>
-                  <th>Current Status</th>
+                  <th class="col-fit">Department</th>
+                  <th class="col-fit">Laboratory</th>
+                  <th class="col-fit">Asset Type</th>
+                  <th class="col-fit">Brand</th>
+                  <th class="col-expand">Model</th>
+                  <th class="col-fit">Serial Number</th>
+                  <th class="col-fit">Purchase Date</th>
+                  <th class="col-fit text-center">Warranty (Months)</th>
+                  <th class="col-fit text-center">Current Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -642,16 +645,16 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
 
           return `
             <tr>
-              <td><strong>#${r.id}</strong></td>
-              <td>${r.dept_code || 'N/A'}</td>
-              <td>${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}</td>
-              <td><strong>${titleClean}</strong></td>
-              <td>${raisedDate}</td>
-              <td>${closingDate}</td>
-              <td style="text-align: center;">${daysTaken}</td>
-              <td class="${badgeClass}">${finalResult}</td>
-              <td>${r.req_name || 'N/A'}</td>
-              <td>${r.assigned_name || 'Not Assigned'}</td>
+              <td class="col-fit"><strong>#${r.id}</strong></td>
+              <td class="col-fit"><strong>${r.dept_code || 'N/A'}</strong></td>
+              <td class="col-fit">${r.lab_number ? 'Lab ' + r.lab_number : 'N/A'}</td>
+              <td class="col-expand"><strong>${titleClean}</strong></td>
+              <td class="col-fit">${raisedDate}</td>
+              <td class="col-fit">${closingDate}</td>
+              <td class="col-fit text-center">${daysTaken}</td>
+              <td class="col-fit text-center ${badgeClass}">${finalResult}</td>
+              <td class="col-fit">${r.req_name || 'N/A'}</td>
+              <td class="col-fit">${r.assigned_name || 'Not Assigned'}</td>
             </tr>
           `;
         }).join('');
@@ -686,9 +689,12 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
               .meta-table td { padding: 6px 10px; font-size: 9pt; border: 1px solid #cbd5e1; }
               .meta-label { font-weight: bold; color: #475569; background-color: #f8fafc; width: 15%; text-transform: uppercase; }
               .meta-val { color: #0f172a; font-weight: bold; }
-              .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-              .data-table th { background-color: #0c2340; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; border: 1px solid #0c2340; padding: 8px; text-align: left; }
-              .data-table td { border: 1px solid #cbd5e1; padding: 6px 8px; color: #334155; vertical-align: middle; }
+              .data-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; table-layout: auto; }
+              .data-table th { background-color: #0c2340; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; border: 1px solid #0c2340; padding: 8px 10px; text-align: left; white-space: nowrap; }
+              .data-table td { border: 1px solid #cbd5e1; padding: 6px 10px; color: #334155; vertical-align: middle; }
+              .data-table .col-fit { width: 1%; white-space: nowrap; }
+              .data-table .col-expand { width: auto; min-width: 160px; word-break: break-word; }
+              .data-table .text-center { text-align: center; }
               .data-table tr:nth-child(even) td { background-color: #f8fafc; }
               .status-initiated { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
               .status-in-progress { background-color: #fef3c7; color: #b45309; font-weight: bold; text-align: center; }
@@ -739,16 +745,16 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Ticket ID</th>
-                  <th>Department</th>
-                  <th>Laboratory</th>
-                  <th>Location & Issue Title</th>
-                  <th>Complaint Raised Date</th>
-                  <th>Closing Date</th>
-                  <th>Time Taken</th>
-                  <th>Final Result / Status</th>
-                  <th>Requester</th>
-                  <th>Assigned Technician</th>
+                  <th class="col-fit">Ticket ID</th>
+                  <th class="col-fit">Department</th>
+                  <th class="col-fit">Laboratory</th>
+                  <th class="col-expand">Location & Issue Title</th>
+                  <th class="col-fit">Complaint Raised Date</th>
+                  <th class="col-fit">Closing Date</th>
+                  <th class="col-fit text-center">Time Taken</th>
+                  <th class="col-fit text-center">Final Result / Status</th>
+                  <th class="col-fit">Requester</th>
+                  <th class="col-fit">Assigned Technician</th>
                 </tr>
               </thead>
               <tbody>
