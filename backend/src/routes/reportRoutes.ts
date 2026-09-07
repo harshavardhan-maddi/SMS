@@ -635,8 +635,14 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
           } else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') {
             finalResult = 'Dead Stock';
             badgeClass = 'status-dead-stock';
-          } else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') {
-            finalResult = 'Spare Parts Needed';
+          } else if (rawStatus === 'approval pending') {
+            finalResult = 'Approval Pending';
+            badgeClass = 'status-spare-parts';
+          } else if (rawStatus === 'approved') {
+            finalResult = 'Approved';
+            badgeClass = 'status-spare-parts';
+          } else if (rawStatus === 'items ordered') {
+            finalResult = 'Items Ordered';
             badgeClass = 'status-spare-parts';
           } else {
             finalResult = 'In Progress';
@@ -797,7 +803,9 @@ router.get('/export/csv', authenticateJWT, async (req: AuthRequest, res) => {
           if (rawStatus === 'initiated') finalResult = 'Initiated';
           else if (rawStatus === 'resolved') finalResult = 'Resolved';
           else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') finalResult = 'Dead Stock';
-          else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') finalResult = 'Spare Parts Needed';
+          else if (rawStatus === 'approval pending') finalResult = 'Approval Pending';
+          else if (rawStatus === 'approved') finalResult = 'Approved';
+          else if (rawStatus === 'items ordered') finalResult = 'Items Ordered';
           else finalResult = 'In Progress';
 
           res.write(

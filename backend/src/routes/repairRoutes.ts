@@ -582,12 +582,12 @@ router.post('/:id/request-parts', authenticateJWT, async (req, res) => {
 
     await db.transaction(async () => {
       // Update repair request status to Parts Requested
-      await db.run("UPDATE repair_requests SET status = 'Parts Requested' WHERE id = ?", [id]);
+      await db.run("UPDATE repair_requests SET status = 'Approval pending' WHERE id = ?", [id]);
 
       // Create history log
       await db.run(
         `INSERT INTO repair_history (request_id, status, description, required_parts, status_date, status_time, updated_by_id)
-         VALUES (?, 'Parts Requested', ?, ?, ?, ?, ?)`,
+         VALUES (?, 'Approval pending', ?, ?, ?, ?, ?)`,
         [id, `Parts requested for repair: ${requiredParts}`, requiredParts, todayStr, timeStr, technicianId]
       );
     });
@@ -1181,13 +1181,13 @@ router.post('/:id/partial-progress', authenticateJWT, async (req, res) => {
 
     await db.transaction(async () => {
       const parts = requiredParts || 'Spare parts required for remaining units';
-      await db.run("UPDATE repair_requests SET status = 'Parts Requested' WHERE id = ?", [id]);
+      await db.run("UPDATE repair_requests SET status = 'Approval pending' WHERE id = ?", [id]);
 
       const logDesc = `Technician update: ${completedCount || 0} device(s) completed repair. ${remainingCount || 0} device(s) awaiting parts: ${parts}.`;
       
       await db.run(
         `INSERT INTO repair_history (request_id, status, description, required_parts, problem_found, solution, remarks, status_date, status_time, updated_by_id)
-         VALUES (?, 'Parts Requested', ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, 'Approval pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, logDesc, parts, problemFound || null, solution || null, remarks || null, todayStr, timeStr, technicianId]
       );
     });
@@ -1238,7 +1238,7 @@ router.delete('/bulk', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async 
           for (const assetId of assetIds) {
             const activeCount = await db.get(
               `SELECT COUNT(*) as count FROM repair_requests 
-               WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')`,
+               WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered')`,
               [assetId]
             );
 
@@ -1285,7 +1285,7 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
       for (const assetId of assetIds) {
         const activeCount = await db.get(
           `SELECT COUNT(*) as count FROM repair_requests 
-           WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Parts Requested')`,
+           WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered')`,
           [assetId]
         );
 

@@ -317,8 +317,14 @@ export const ReportsPage: React.FC = () => {
           } else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') {
             finalResult = 'Dead Stock';
             badgeClass = 'dead-stock';
-          } else if (rawStatus === 'parts requested' || rawStatus === 'spare parts needed') {
-            finalResult = 'Spare Parts Needed';
+          } else if (rawStatus === 'approval pending') {
+            finalResult = 'Approval Pending';
+            badgeClass = 'spare-parts-needed';
+          } else if (rawStatus === 'approved') {
+            finalResult = 'Approved';
+            badgeClass = 'spare-parts-needed';
+          } else if (rawStatus === 'items ordered') {
+            finalResult = 'Items Ordered';
             badgeClass = 'spare-parts-needed';
           } else {
             finalResult = 'In Progress';

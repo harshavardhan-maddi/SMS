@@ -40,7 +40,7 @@ export interface RepairRequest {
   title: string;
   description: string;
   priority: 'Low' | 'Medium' | 'High';
-  status: 'Initiated' | 'Accepted' | 'In Progress' | 'Parts Requested' | 'Resolved' | 'Dead Stock';
+  status: 'Initiated' | 'Accepted' | 'In Progress' | 'Approval pending' | 'Approved' | 'Items ordered' | 'Resolved' | 'Dead Stock';
   initiatedDate: string;
   initiatedTime: string;
 }

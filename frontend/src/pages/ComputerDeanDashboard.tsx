@@ -216,7 +216,9 @@ export const ComputerDeanDashboard: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'initiated': return 'bg-amber-100 text-amber-700';
       case 'accepted': return 'bg-purple-100 text-purple-700';
-      case 'parts requested': return 'bg-indigo-100 text-indigo-700';
+      case 'approval pending': return 'bg-yellow-100 text-yellow-700';
+      case 'approved': return 'bg-green-100 text-green-700';
+      case 'items ordered': return 'bg-indigo-100 text-indigo-700';
       case 'in progress': return 'bg-blue-100 text-blue-700';
       case 'resolved': return 'bg-emerald-100 text-emerald-700';
       case 'dead stock': return 'bg-red-100 text-red-700';
@@ -399,7 +401,7 @@ export const ComputerDeanDashboard: React.FC = () => {
                         </button>
                       )}
 
-                      {['In Progress', 'Accepted', 'Parts Requested'].includes(req.status) && (
+                      {['In Progress', 'Accepted', 'Approval pending', 'Approved', 'Items ordered'].includes(req.status) && (
                         <div className="relative">
                           <button
                             onClick={() => {
