@@ -73,7 +73,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
   const fetchCatalog = async () => {
     setLoadingItems(true);
     try {
-      const res = await api.get('/api/stationary/items');
+      const res = await api.get('/stationary/items');
       setItemsCatalog(res.data || []);
     } catch (err) {
       console.error('Failed to load stationary catalog:', err);
@@ -88,8 +88,8 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
     setLoadingRequests(true);
     try {
       const [reqsRes, statsRes] = await Promise.all([
-        api.get('/api/stationary/requests'),
-        api.get('/api/stationary/stats'),
+        api.get('/stationary/requests'),
+        api.get('/stationary/stats'),
       ]);
       setRequests(reqsRes.data || []);
       setStats(statsRes.data || { total: 0, pendingAO: 0, forwardedStationary: 0, fulfilled: 0, rejected: 0 });
@@ -183,7 +183,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
         purpose: purpose.trim(),
       };
 
-      const res = await api.post('/api/stationary/requests', payload);
+      const res = await api.post('/stationary/requests', payload);
       toast.success(`Stationary Request ${res.data.id} submitted for AO approval!`);
       setSelectedItemsMap({});
       fetchRequestsData();
@@ -201,7 +201,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
       return;
     }
     try {
-      await api.delete(`/api/stationary/requests/${requestId}`);
+      await api.delete(`/stationary/requests/${requestId}`);
       toast.success(`Request ${requestId} deleted successfully.`);
       fetchRequestsData();
     } catch (err: any) {

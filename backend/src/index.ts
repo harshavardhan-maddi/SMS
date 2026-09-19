@@ -100,6 +100,7 @@ app.use('/seminar-requests', requestsRouter);
 
 app.use('/api/stationary', stationaryRouter);
 app.use('/stationary', stationaryRouter);
+app.use('/api/api/stationary', stationaryRouter);
 
 
 app.get('/api/health', (req, res) => res.send('OK'));

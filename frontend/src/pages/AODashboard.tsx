@@ -41,7 +41,7 @@ export const AODashboard: React.FC = () => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/stationary/requests');
+      const res = await api.get('/stationary/requests');
       setRequests(res.data || []);
     } catch (err) {
       console.error('Failed to load AO requests:', err);
@@ -71,7 +71,7 @@ export const AODashboard: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      await api.patch(`/api/stationary/requests/${selectedReq.id}/ao-action`, {
+      await api.patch(`/stationary/requests/${selectedReq.id}/ao-action`, {
         action: actionType,
         remarks: actionRemarks.trim(),
       });

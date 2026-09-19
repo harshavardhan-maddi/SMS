@@ -51,7 +51,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const [smsRes, shrRes, strRes] = await Promise.allSettled([
         api.get('/repairs'),
         api.get('/seminar-requests'),
-        api.get('/api/stationary/requests'),
+        api.get('/stationary/requests'),
       ]);
 
       if (smsRes.status === 'fulfilled') setSmsRequests(smsRes.value.data || []);
@@ -173,7 +173,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       } else if (item.cardType === 'SHR') {
         await api.delete(`/seminar-requests/${item.id}`);
       } else if (item.cardType === 'STR') {
-        await api.delete(`/api/stationary/requests/${item.id}`);
+        await api.delete(`/stationary/requests/${item.id}`);
       }
       toast.success(`Deleted ${item.cardType} #${item.id}`);
       fetchAllHistory();
@@ -208,7 +208,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const promises: Promise<any>[] = [];
       if (smsIds.length > 0) promises.push(api.post('/repairs/bulk-delete', { ids: smsIds }));
       if (shrIds.length > 0) promises.push(api.post('/seminar-requests/bulk-delete', { ids: shrIds }));
-      if (strIds.length > 0) promises.push(api.post('/api/stationary/requests/bulk-delete', { ids: strIds }));
+      if (strIds.length > 0) promises.push(api.post('/stationary/requests/bulk-delete', { ids: strIds }));
 
       await Promise.all(promises);
       toast.success(`Successfully deleted ${selectedKeys.size} request(s)!`);
@@ -254,7 +254,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const promises: Promise<any>[] = [];
       if (smsIds.length > 0) promises.push(api.post('/repairs/bulk-delete', { ids: smsIds }));
       if (shrIds.length > 0) promises.push(api.post('/seminar-requests/bulk-delete', { ids: shrIds }));
-      if (strIds.length > 0) promises.push(api.post('/api/stationary/requests/bulk-delete', { ids: strIds }));
+      if (strIds.length > 0) promises.push(api.post('/stationary/requests/bulk-delete', { ids: strIds }));
 
       await Promise.all(promises);
       toast.success(`Successfully deleted all ${count} requests from ${cardLabel}!`);

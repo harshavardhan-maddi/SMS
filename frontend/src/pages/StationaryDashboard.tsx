@@ -40,7 +40,7 @@ export const StationaryDashboard: React.FC = () => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/stationary/requests');
+      const res = await api.get('/stationary/requests');
       setRequests(res.data || []);
     } catch (err) {
       console.error('Failed to load stationary store requests:', err);
@@ -95,7 +95,7 @@ export const StationaryDashboard: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      await api.patch(`/api/stationary/requests/${selectedReq.id}/stationary-action`, {
+      await api.patch(`/stationary/requests/${selectedReq.id}/stationary-action`, {
         action: actionType,
         remarks: actionRemarks.trim(),
         items: actionType === 'FULFILL' ? editableItems : undefined,

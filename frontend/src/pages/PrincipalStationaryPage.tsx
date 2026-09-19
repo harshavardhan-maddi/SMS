@@ -57,8 +57,8 @@ export const PrincipalStationaryPage: React.FC = () => {
     setLoading(true);
     try {
       const [accRes, reqRes] = await Promise.all([
-        api.get('/api/stationary/accounts'),
-        api.get('/api/stationary/requests'),
+        api.get('/stationary/accounts'),
+        api.get('/stationary/requests'),
       ]);
       setAccounts(accRes.data || []);
       setRequests(reqRes.data || []);
@@ -82,7 +82,7 @@ export const PrincipalStationaryPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await api.post('/api/stationary/accounts', {
+      await api.post('/stationary/accounts', {
         name: newName.trim(),
         email: newEmail.trim().toLowerCase(),
         password: newPassword,
@@ -109,7 +109,7 @@ export const PrincipalStationaryPage: React.FC = () => {
     if (!deleteConfirmUser) return;
     setIsDeleting(true);
     try {
-      await api.delete(`/api/stationary/accounts/${deleteConfirmUser.id}`);
+      await api.delete(`/stationary/accounts/${deleteConfirmUser.id}`);
       toast.success(`Account "${deleteConfirmUser.name}" deleted successfully.`);
       setDeleteConfirmUser(null);
       fetchAccountsAndRequests();
