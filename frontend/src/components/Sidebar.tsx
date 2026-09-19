@@ -19,8 +19,10 @@ import {
   Menu,
   ShieldCheck,
   ClipboardCheck,
-  Laptop
+  Laptop,
+  CalendarCheck2
 } from 'lucide-react';
+
 
 interface SidebarProps {
   isOpen: boolean;
@@ -55,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Departments', path: '/departments', icon: Building2 },
     { name: 'Department Labs', path: '/labs', icon: Laptop },
+    { name: 'Seminar Halls', path: '/seminar-halls', icon: CalendarCheck2 },
     { name: 'In Progress', path: '/in-progress', icon: Wrench },
     { name: 'Dead Stock', path: '/dead-stock', icon: XCircle },
     { name: 'Reports', path: '/reports', icon: FileBarChart },
@@ -62,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Profile', path: '/profile', icon: User },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
+
 
   const getHodMenu = () => [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -123,6 +127,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
+  const getAllocatorMenu = () => [
+    { name: 'Hall Allocation', path: '/dashboard', icon: CalendarCheck2 },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
   const AlertCircleIcon = HelpCircle; // Quick fallback for simple mapping
 
   const getMenu = () => {
@@ -132,10 +142,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     if (user.role === 'ROLE_PROGRAMMER') return getProgrammerMenu();
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return getEEEAssetManagerMenu();
     if (user.role === 'ROLE_ELEC_COMPLAINTER') return getElecComplainterMenu();
+    if (user.role === 'ROLE_SEMINAR_HALL_ALLOCATOR') return getAllocatorMenu();
     return getDeanMenu();
   };
 
   const menuItems = getMenu();
+
 
   return (
     <>

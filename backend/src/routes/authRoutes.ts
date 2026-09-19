@@ -17,10 +17,12 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await db.get(
-      `SELECT u.id, u.name, u.email, u.password, u.active, u.department_id, u.lab_id, r.name as role_name, d.code as dept_code 
+      `SELECT u.id, u.name, u.email, u.password, u.active, u.department_id, u.lab_id, u.seminar_hall_id, 
+              r.name as role_name, d.code as dept_code, sh.name as seminar_hall_name, sh.block as seminar_hall_block 
        FROM users u 
        LEFT JOIN roles r ON u.role_id = r.id 
        LEFT JOIN departments d ON u.department_id = d.id 
+       LEFT JOIN seminar_halls sh ON u.seminar_hall_id = sh.id
        WHERE LOWER(u.email) = ?`,
       [cleanEmail]
     );
@@ -62,6 +64,8 @@ router.post('/login', async (req, res) => {
         departmentCode: deptCode || null,
         departmentId: deptId || null,
         labId: user.lab_id || null,
+        seminarHallId: user.seminar_hall_id || null,
+        seminarHallName: user.seminar_hall_name || null,
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -76,7 +80,10 @@ router.post('/login', async (req, res) => {
       departmentCode: deptCode || null,
       departmentId: deptId || null,
       labId: user.lab_id || null,
+      seminarHallId: user.seminar_hall_id || null,
+      seminarHallName: user.seminar_hall_name || null,
     });
+
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).send('Internal server error during authentication.');

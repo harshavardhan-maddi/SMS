@@ -13,6 +13,7 @@ export async function seedData() {
     await db.run("INSERT INTO roles (id, name) VALUES (5, 'ROLE_PROGRAMMER') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (7, 'ROLE_ELEC_COMPLAINTER') ON CONFLICT (id) DO NOTHING");
+    await db.run("INSERT INTO roles (id, name) VALUES (8, 'ROLE_SEMINAR_HALL_ALLOCATOR') ON CONFLICT (id) DO NOTHING");
   } catch (e) {
     // SQLite fallback for ON CONFLICT
     try {
@@ -23,6 +24,7 @@ export async function seedData() {
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (5, 'ROLE_PROGRAMMER')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (7, 'ROLE_ELEC_COMPLAINTER')");
+      await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (8, 'ROLE_SEMINAR_HALL_ALLOCATOR')");
     } catch (e2) {}
   }
 
@@ -101,5 +103,56 @@ export async function seedData() {
     }
   } catch (e) {}
 
+  // 4. Initial Seminar Halls Seeding
+  try {
+    const hallCountRow = await db.get("SELECT COUNT(*) as count FROM seminar_halls");
+    const hCount = hallCountRow ? parseInt(hallCountRow.count) : 0;
+    if (hCount === 0) {
+      console.log('Seeding initial seminar halls catalog...');
+      const demoHalls = [
+        { name: 'Block-3 seminar hall', code: 'HALL-B3', block: 'Block-3', capacity: 150, facilities: 'High-res projector, 7.1 surround sound, motorized podium screen, central AC' },
+        { name: 'Tech Hub Seminar hall', code: 'HALL-TH', block: 'Tech Hub', capacity: 250, facilities: 'Dual 4K Laser projectors, wireless lavalier mics, stage lighting, live broadcast rack' },
+        { name: 'Block-4 Seminar Hall', code: 'HALL-B4', block: 'Block-4', capacity: 180, facilities: 'Full HD projector, smart acoustic audio system, conference webcam, AC' }
+      ];
+
+      for (const h of demoHalls) {
+        try {
+          await db.run(
+            "INSERT INTO seminar_halls (name, code, block, capacity, facilities, active) VALUES (?, ?, ?, ?, ?, true)",
+            [h.name, h.code, h.block, h.capacity, h.facilities]
+          );
+        } catch (err) {}
+      }
+    }
+
+    // 5. Seed Allocator Demo Accounts for the 3 Halls
+    const hashedPwd = await bcrypt.hash('password', 10);
+    const halls = await db.all("SELECT id, name FROM seminar_halls ORDER BY id ASC");
+    
+    if (halls && halls.length > 0) {
+      const allocatorAccounts = [
+        { name: 'Block-3 Hall Allocator', email: 'allocator.block3@sms.edu', hallId: halls[0]?.id },
+        { name: 'Tech Hub Allocator', email: 'allocator.techhub@sms.edu', hallId: halls[1]?.id || halls[0]?.id },
+        { name: 'Block-4 Hall Allocator', email: 'allocator.block4@sms.edu', hallId: halls[2]?.id || halls[0]?.id },
+      ];
+
+      for (const alloc of allocatorAccounts) {
+        if (!alloc.hallId) continue;
+        const exists = await db.get("SELECT id FROM users WHERE email = ?", [alloc.email]);
+        if (!exists) {
+          try {
+            await db.run(
+              "INSERT INTO users (name, email, password, role_id, seminar_hall_id, active) VALUES (?, ?, ?, 8, ?, true)",
+              [alloc.name, alloc.email, hashedPwd, alloc.hallId]
+            );
+          } catch (eAlloc) {}
+        }
+      }
+    }
+  } catch (eHalls) {
+    console.error('Error seeding seminar halls and allocators:', eHalls);
+  }
+
   console.log('Database initialization check complete.');
 }
+

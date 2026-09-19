@@ -64,7 +64,43 @@ export interface RepairHistory {
 export interface Notification {
   id: number;
   message: string;
-  type: 'NEW_REPAIR' | 'REPAIR_STARTED' | 'REPAIR_COMPLETED' | 'DEAD_STOCK_ADDED';
+  type: 'NEW_REPAIR' | 'REPAIR_STARTED' | 'REPAIR_COMPLETED' | 'DEAD_STOCK_ADDED' | 'SHR_NEW_REQUEST' | 'SHR_STATUS_APPROVED' | 'SHR_STATUS_REJECTED';
   readStatus: boolean;
   createdAt: string;
 }
+
+export interface SeminarHall {
+  id: number;
+  name: string;
+  code: string;
+  block: string;
+  capacity: number;
+  facilities?: string;
+  active: boolean;
+  createdAt?: string;
+  allocatorName?: string;
+  allocatorEmail?: string;
+}
+
+export interface SeminarHallRequest {
+  id: string; // SHR-101
+  seminarHall: SeminarHall;
+  requester: User;
+  department?: Department | null;
+  resourcePersonName: string;
+  participantsCount: number;
+  eventTitle?: string;
+  eventDescription?: string;
+  noOfDays: number;
+  eventDate?: string;
+  timeSlot?: 'FN' | 'AN' | 'Full Day' | string;
+  startDate?: string;
+  endDate?: string;
+  selectedDates?: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
+  allocatorRemarks?: string;
+  allocatedBy?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+

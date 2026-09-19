@@ -22,6 +22,8 @@ import { DeadStockPage } from './pages/DeadStockPage';
 import { MyDepartmentPage } from './pages/MyDepartmentPage';
 import { ProgrammersPage } from './pages/ProgrammersPage';
 import { PortalIntroAnimation } from './components/PortalIntroAnimation';
+import { SeminarHallAllocatorDashboard } from './pages/SeminarHallAllocatorDashboard';
+import { PrincipalSeminarHallsPage } from './pages/PrincipalSeminarHallsPage';
 
 // 1. Route Guard for Authenticated Session
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -58,8 +60,12 @@ const DynamicDashboard: React.FC = () => {
   if (user.role === 'ROLE_ELEC_COMPLAINTER') {
     return <ElecComplainterDashboard />;
   }
+  if (user.role === 'ROLE_SEMINAR_HALL_ALLOCATOR') {
+    return <SeminarHallAllocatorDashboard />;
+  }
   return <ComputerDeanDashboard />;
 };
+
 
 export const App: React.FC = () => {
   const [showIntro, setShowIntro] = React.useState<boolean>(() => {
@@ -153,6 +159,7 @@ export const App: React.FC = () => {
                       <Route path="/dead-stock" element={<DeadStockPage />} />
                       <Route path="/my-department" element={<MyDepartmentPage />} />
                       <Route path="/programmers" element={<ProgrammersPage />} />
+                      <Route path="/seminar-halls" element={<PrincipalSeminarHallsPage />} />
 
                       {/* Supporting Pages */}
                       <Route path="/settings" element={<SettingsPage />} />

@@ -108,6 +108,39 @@ CREATE TABLE IF NOT EXISTS electricians (
     specialization TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS seminar_halls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    code TEXT,
+    block TEXT,
+    capacity INTEGER DEFAULT 100,
+    facilities TEXT,
+    active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS seminar_hall_requests (
+    id TEXT PRIMARY KEY,
+    seminar_hall_id INTEGER REFERENCES seminar_halls(id) ON DELETE CASCADE,
+    requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    resource_person_name TEXT NOT NULL,
+    participants_count INTEGER NOT NULL,
+    event_title TEXT,
+    event_description TEXT,
+    no_of_days INTEGER NOT NULL DEFAULT 1,
+    event_date TEXT,
+    time_slot TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    selected_dates TEXT,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    allocator_remarks TEXT,
+    allocated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 export async function initSchema() {
@@ -121,6 +154,7 @@ export async function initSchema() {
       try {
         await db.exec(`
           ALTER TABLE users ADD COLUMN IF NOT EXISTS lab_id INTEGER REFERENCES labs(id) ON DELETE SET NULL;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS seminar_hall_id INTEGER REFERENCES seminar_halls(id) ON DELETE SET NULL;
           ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS device_count INTEGER DEFAULT 1;
           ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS completed_date DATE;
           ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS completed_time TIME;
@@ -132,6 +166,37 @@ export async function initSchema() {
             specialization VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
+          CREATE TABLE IF NOT EXISTS seminar_halls (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            code VARCHAR(100),
+            block VARCHAR(100),
+            capacity INTEGER DEFAULT 100,
+            facilities TEXT,
+            active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS seminar_hall_requests (
+            id VARCHAR(50) PRIMARY KEY,
+            seminar_hall_id INTEGER REFERENCES seminar_halls(id) ON DELETE CASCADE,
+            requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+            resource_person_name VARCHAR(255) NOT NULL,
+            participants_count INTEGER NOT NULL,
+            event_title VARCHAR(255),
+            event_description TEXT,
+            no_of_days INTEGER NOT NULL DEFAULT 1,
+            event_date DATE,
+            time_slot VARCHAR(50),
+            start_date DATE,
+            end_date DATE,
+            selected_dates TEXT,
+            status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+            allocator_remarks TEXT,
+            allocated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
           CREATE INDEX IF NOT EXISTS idx_inventory_dept ON inventory(department_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_lab ON inventory(lab_id);
           CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
@@ -140,6 +205,9 @@ export async function initSchema() {
           CREATE INDEX IF NOT EXISTS idx_repairs_requester ON repair_requests(requester_id);
           CREATE INDEX IF NOT EXISTS idx_repairs_assigned ON repair_requests(assigned_to_id);
           CREATE INDEX IF NOT EXISTS idx_history_request ON repair_history(request_id);
+          CREATE INDEX IF NOT EXISTS idx_shr_hall ON seminar_hall_requests(seminar_hall_id);
+          CREATE INDEX IF NOT EXISTS idx_shr_requester ON seminar_hall_requests(requester_id);
+          CREATE INDEX IF NOT EXISTS idx_shr_status ON seminar_hall_requests(status);
         `);
       } catch (e) {}
     } else {
@@ -149,6 +217,12 @@ export async function initSchema() {
     console.log('Initializing SQLite schema');
     await db.exec(sqliteSchema);
     await db.exec('PRAGMA foreign_keys = ON;');
+
+    // Automated lightweight migration for SQLite tables if created under older schema
+    try {
+      await db.exec('ALTER TABLE users ADD COLUMN seminar_hall_id INTEGER REFERENCES seminar_halls(id) ON DELETE SET NULL;');
+    } catch (e) { /* Column already exists */ }
+
 
     // Automated lightweight migration for SQLite tables if created under older schema
     try {

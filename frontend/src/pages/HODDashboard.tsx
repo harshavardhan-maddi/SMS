@@ -25,14 +25,25 @@ import { toast } from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
 import { RailwayTrackTimeline } from '../components/RailwayTrackTimeline';
+import { HODPortalLanding } from './HODPortalLanding';
+import { HODSHRModule } from './HODSHRModule';
 
 export const HODDashboard: React.FC = () => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Portal Landing State: Every HOD sees the 2 cards upon login
+  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr'>(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const mode = searchParams.get('mode');
+    if (mode === 'sms' || mode === 'shr') return mode;
+    return 'portal_selector';
+  });
   
   const [loading, setLoading] = useState(true);
+
   const [stats, setStats] = useState<any>(null);
   const [allRequests, setAllRequests] = useState<any[]>([]);
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
@@ -271,6 +282,16 @@ export const HODDashboard: React.FC = () => {
     }
   };
 
+  // 1. If portalMode is portal_selector, show the 2 cards
+  if (portalMode === 'portal_selector') {
+    return <HODPortalLanding onSelectFlow={(flow) => setPortalMode(flow)} />;
+  }
+
+  // 2. If portalMode is shr, show the SHR Module (Dashboard, History, New Req)
+  if (portalMode === 'shr') {
+    return <HODSHRModule onSwitchToSMS={() => setPortalMode('sms')} />;
+  }
+
   if (loading || !stats) {
     return (
       <div className="space-y-6">
@@ -292,7 +313,32 @@ export const HODDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Module Switcher Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-2xl px-5 py-3 text-xs shadow-md backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-brand-textMuted">Active Module: <strong className="text-white">SMS (Systems Management System)</strong></span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPortalMode('shr')}
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <span>Open SHR (Seminar Hall Request)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setPortalMode('portal_selector')}
+            className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-medium transition-all border border-[#334155]/40"
+            title="Return to Portal Selector"
+          >
+            Portal Hub
+          </button>
+        </div>
+      </div>
+
       {/* 1. Component Cards Row (CPU, Monitor, Keyboard, Mouse, Hotspot) */}
+
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'].map((type) => {
           const typeData = stats[type] || { Total: 0, Working: 0, Repairing: 0, Dead: 0, NewStock: 0 };

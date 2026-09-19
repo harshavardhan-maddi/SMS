@@ -16,6 +16,7 @@ import repairRoutes from './routes/repairRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import reportRoutes from './routes/reportRoutes';
 import electricianRoutes from './routes/electricianRoutes';
+import { hallsRouter, requestsRouter } from './routes/seminarHallRoutes';
 
 dotenv.config();
 
@@ -92,6 +93,13 @@ app.use('/electricians', electricianRoutes);
 
 app.use('/api/reports', reportRoutes);
 app.use('/reports', reportRoutes);
+
+app.use('/api/seminar-halls', hallsRouter);
+app.use('/seminar-halls', hallsRouter);
+
+app.use('/api/seminar-requests', requestsRouter);
+app.use('/seminar-requests', requestsRouter);
+
 
 app.get('/api/health', (req, res) => res.send('OK'));
 app.get('/health', (req, res) => res.send('OK'));

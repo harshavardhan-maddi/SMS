@@ -127,3 +127,43 @@ CREATE INDEX IF NOT EXISTS idx_repairs_requester ON repair_requests(requester_id
 CREATE INDEX IF NOT EXISTS idx_repairs_assigned ON repair_requests(assigned_to_id);
 CREATE INDEX IF NOT EXISTS idx_history_request ON repair_history(request_id);
 
+-- 8. Create Seminar Halls Table
+CREATE TABLE IF NOT EXISTS seminar_halls (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(100),
+    block VARCHAR(100),
+    capacity INTEGER DEFAULT 100,
+    facilities TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS seminar_hall_id INTEGER REFERENCES seminar_halls(id) ON DELETE SET NULL;
+
+-- 9. Create Seminar Hall Requests Table
+CREATE TABLE IF NOT EXISTS seminar_hall_requests (
+    id VARCHAR(50) PRIMARY KEY, -- e.g. SHR-101
+    seminar_hall_id INTEGER REFERENCES seminar_halls(id) ON DELETE CASCADE,
+    requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    resource_person_name VARCHAR(255) NOT NULL,
+    participants_count INTEGER NOT NULL,
+    event_title VARCHAR(255),
+    event_description TEXT,
+    no_of_days INTEGER NOT NULL DEFAULT 1,
+    event_date DATE,
+    time_slot VARCHAR(50), -- 'FN', 'AN', 'Full Day'
+    start_date DATE,
+    end_date DATE,
+    selected_dates TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending', -- 'Pending', 'Approved', 'Rejected'
+    allocator_remarks TEXT,
+    allocated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_shr_hall ON seminar_hall_requests(seminar_hall_id);
+CREATE INDEX IF NOT EXISTS idx_shr_requester ON seminar_hall_requests(requester_id);
+CREATE INDEX IF NOT EXISTS idx_shr_status ON seminar_hall_requests(status);

@@ -22,8 +22,12 @@ function formatUser(row: any) {
     lab: row.lab_id
       ? { id: row.lab_id, name: row.lab_name, labNumber: row.lab_number }
       : null,
+    seminarHall: row.seminar_hall_id
+      ? { id: row.seminar_hall_id, name: row.seminar_hall_name, block: row.seminar_hall_block }
+      : null,
   };
 }
+
 
 // 1. Get all technicians (narrow access for Deans)
 router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN', 'ROLE_EEE_ASSET_MANAGER'), async (req, res) => {
@@ -65,11 +69,17 @@ router.get('/department/:deptId/programmers', authenticateJWT, authorizeRoles('R
 router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
   try {
     const rows = await db.all(
-      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, u.seminar_hall_id,
+              r.id as role_id, r.name as role_name, 
+              d.id as dept_id, d.name as dept_name, d.code as dept_code, 
+              l.id as lab_id, l.name as lab_name, l.lab_number,
+              sh.name as seminar_hall_name, sh.block as seminar_hall_block
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN departments d ON u.department_id = d.id
-       LEFT JOIN labs l ON u.lab_id = l.id`
+       LEFT JOIN labs l ON u.lab_id = l.id
+       LEFT JOIN seminar_halls sh ON u.seminar_hall_id = sh.id
+       ORDER BY u.id ASC`
     );
     res.json(rows.map(formatUser));
   } catch (err) {
@@ -77,6 +87,7 @@ router.get('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, r
     res.status(500).send('Internal server error');
   }
 });
+
 
 // 3. Change own password (all logged in users)
 router.put('/change-password', authenticateJWT, async (req, res) => {
@@ -207,7 +218,7 @@ router.get('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_DEAN'
 
 // 5. Create User (Principal & HOD)
 router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), async (req, res) => {
-  const { name, email, password, roleName, departmentId, labId } = req.body;
+  const { name, email, password, roleName, departmentId, labId, seminarHallId } = req.body;
   const userReq = (req as any).user;
 
   if (!name || !email || !password || !roleName) {
@@ -278,9 +289,9 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), 
 
     await db.transaction(async () => {
       const result = await db.run(
-        `INSERT INTO users (name, email, password, role_id, department_id, lab_id, active) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [name, email, hashedPwd, role.id, targetDeptId, labId || null, activeVal]
+        `INSERT INTO users (name, email, password, role_id, department_id, lab_id, seminar_hall_id, active) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [name, email, hashedPwd, role.id, targetDeptId, labId || null, seminarHallId || null, activeVal]
       );
       
       createdUserId = result.lastID;
@@ -292,11 +303,16 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), 
     });
 
     const created = await db.get(
-      `SELECT u.id, u.name, u.email, u.active, u.created_at, r.id as role_id, r.name as role_name, d.id as dept_id, d.name as dept_name, d.code as dept_code, l.id as lab_id, l.name as lab_name, l.lab_number 
+      `SELECT u.id, u.name, u.email, u.active, u.created_at, u.seminar_hall_id,
+              r.id as role_id, r.name as role_name, 
+              d.id as dept_id, d.name as dept_name, d.code as dept_code, 
+              l.id as lab_id, l.name as lab_name, l.lab_number,
+              sh.name as seminar_hall_name, sh.block as seminar_hall_block
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN departments d ON u.department_id = d.id
        LEFT JOIN labs l ON u.lab_id = l.id
+       LEFT JOIN seminar_halls sh ON u.seminar_hall_id = sh.id
        WHERE u.id = ?`,
       [createdUserId!]
     );
@@ -307,6 +323,7 @@ router.post('/', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), 
     res.status(400).send((err as Error).message);
   }
 });
+
 
 // 5. Reset Password
 router.put('/:id/reset-password', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'ROLE_HOD'), async (req, res) => {
