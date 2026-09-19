@@ -18,7 +18,8 @@ import {
   Wrench,
   Laptop,
   Users,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -27,6 +28,7 @@ import { RequestDetailsModal } from '../components/RequestDetailsModal';
 import { RailwayTrackTimeline } from '../components/RailwayTrackTimeline';
 import { HODPortalLanding } from './HODPortalLanding';
 import { HODSHRModule } from './HODSHRModule';
+import { HODStationaryModule } from './HODStationaryModule';
 
 export const HODDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -34,11 +36,25 @@ export const HODDashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Portal Landing State: Every HOD sees the 2 cards upon login
-  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr'>(() => {
+  const handleDeleteRepairRequest = async (requestId: number) => {
+    if (!window.confirm(`Are you sure you want to delete repair request #${requestId}? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/repairs/${requestId}`);
+      toast.success(`Request #${requestId} deleted successfully.`);
+      fetchHODData();
+    } catch (err: any) {
+      console.error('Failed to delete repair request:', err);
+      toast.error(err.response?.data || 'Failed to delete request.');
+    }
+  };
+
+  // Portal Landing State: Every HOD sees the 3 cards upon login
+  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr' | 'str'>(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mode = searchParams.get('mode');
-    if (mode === 'sms' || mode === 'shr') return mode;
+    if (mode === 'sms' || mode === 'shr' || mode === 'str') return mode;
     return 'portal_selector';
   });
   
@@ -282,14 +298,28 @@ export const HODDashboard: React.FC = () => {
     }
   };
 
-  // 1. If portalMode is portal_selector, show the 2 cards
+  // 1. If portalMode is portal_selector, show the 3 cards
   if (portalMode === 'portal_selector') {
     return <HODPortalLanding onSelectFlow={(flow) => setPortalMode(flow)} />;
   }
 
   // 2. If portalMode is shr, show the SHR Module (Dashboard, History, New Req)
   if (portalMode === 'shr') {
-    return <HODSHRModule onSwitchToSMS={() => setPortalMode('sms')} />;
+    return (
+      <HODSHRModule
+        onSwitchToSMS={() => setPortalMode('sms')}
+      />
+    );
+  }
+
+  // 3. If portalMode is str, show the STR Module (Dashboard, History, New Req with catalog)
+  if (portalMode === 'str') {
+    return (
+      <HODStationaryModule
+        onSwitchToSMS={() => setPortalMode('sms')}
+        onSwitchToSHR={() => setPortalMode('shr')}
+      />
+    );
   }
 
   if (loading || !stats) {
@@ -319,17 +349,24 @@ export const HODDashboard: React.FC = () => {
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-brand-textMuted">Active Module: <strong className="text-white">SMS (Systems Management System)</strong></span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setPortalMode('shr')}
-            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold flex items-center gap-1.5 transition-all shadow-sm"
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
-            <span>Open SHR (Seminar Hall Request)</span>
+            <span>SHR (Seminar Halls)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setPortalMode('str')}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+          >
+            <span>STR (Stationary)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setPortalMode('portal_selector')}
-            className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-medium transition-all border border-[#334155]/40"
+            className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-medium transition-all border border-[#334155]/40 cursor-pointer"
             title="Return to Portal Selector"
           >
             Portal Hub
@@ -499,12 +536,21 @@ export const HODDashboard: React.FC = () => {
                     {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? formatDateOnly(req.completedDate) : '---'}
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => handleViewTimeline(req)}
-                      className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
-                    >
-                      View
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleViewTimeline(req)}
+                        className="px-3 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRepairRequest(req.id)}
+                        className="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 transition-all cursor-pointer"
+                        title="Delete Request"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1271,15 +1317,24 @@ export const HODDashboard: React.FC = () => {
                         {['Resolved', 'Dead Stock'].includes(req.status) && req.completedDate ? formatDateOnly(req.completedDate) : '---'}
                       </td>
                       <td className="py-2.5 px-3 text-right">
-                        <button
-                          onClick={() => {
-                            setMyRequestsModalOpen(false);
-                            handleViewTimeline(req);
-                          }}
-                          className="px-2.5 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
-                        >
-                          Timeline
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setMyRequestsModalOpen(false);
+                              handleViewTimeline(req);
+                            }}
+                            className="px-2.5 py-1 bg-slate-50 hover:bg-brand-purple hover:text-white rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 transition-all cursor-pointer"
+                          >
+                            Timeline
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRepairRequest(req.id)}
+                            className="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 transition-all cursor-pointer"
+                            title="Delete Request"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ));

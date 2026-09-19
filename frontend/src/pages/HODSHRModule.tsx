@@ -21,7 +21,8 @@ import {
   HelpCircle,
   FileText,
   ChevronRight,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SeminarHall, SeminarHallRequest } from '../types';
@@ -58,6 +59,20 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({ onSwitchToSMS }) => 
   const [historySearch, setHistorySearch] = useState('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
   const [viewRequestDetail, setViewRequestDetail] = useState<SeminarHallRequest | null>(null);
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!window.confirm(`Are you sure you want to delete seminar hall request ${requestId}? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/seminar-requests/${requestId}`);
+      toast.success(`Request ${requestId} deleted successfully.`);
+      fetchData();
+    } catch (err: any) {
+      console.error('Failed to delete seminar hall request:', err);
+      toast.error(err.response?.data || 'Failed to delete request.');
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -513,6 +528,13 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({ onSwitchToSMS }) => 
                         {req.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
                         {req.status}
                       </span>
+                      <button
+                        onClick={() => handleDeleteRequest(req.id)}
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer ml-1"
+                        title="Delete this request from history"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 

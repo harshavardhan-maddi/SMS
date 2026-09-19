@@ -24,6 +24,10 @@ import { ProgrammersPage } from './pages/ProgrammersPage';
 import { PortalIntroAnimation } from './components/PortalIntroAnimation';
 import { SeminarHallAllocatorDashboard } from './pages/SeminarHallAllocatorDashboard';
 import { PrincipalSeminarHallsPage } from './pages/PrincipalSeminarHallsPage';
+import { AODashboard } from './pages/AODashboard';
+import { StationaryDashboard } from './pages/StationaryDashboard';
+import { PrincipalStationaryPage } from './pages/PrincipalStationaryPage';
+import { PrincipalHistoryManagementPage } from './pages/PrincipalHistoryManagementPage';
 
 // 1. Route Guard for Authenticated Session
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -62,6 +66,12 @@ const DynamicDashboard: React.FC = () => {
   }
   if (user.role === 'ROLE_SEMINAR_HALL_ALLOCATOR') {
     return <SeminarHallAllocatorDashboard />;
+  }
+  if (user.role === 'ROLE_AO') {
+    return <AODashboard />;
+  }
+  if (user.role === 'ROLE_STATIONARY') {
+    return <StationaryDashboard />;
   }
   return <ComputerDeanDashboard />;
 };
@@ -160,6 +170,8 @@ export const App: React.FC = () => {
                       <Route path="/my-department" element={<MyDepartmentPage />} />
                       <Route path="/programmers" element={<ProgrammersPage />} />
                       <Route path="/seminar-halls" element={<PrincipalSeminarHallsPage />} />
+                      <Route path="/principal/stationary" element={<PrincipalStationaryPage />} />
+                      <Route path="/principal/history" element={<PrincipalHistoryManagementPage />} />
 
                       {/* Supporting Pages */}
                       <Route path="/settings" element={<SettingsPage />} />

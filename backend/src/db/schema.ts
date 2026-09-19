@@ -141,6 +141,35 @@ CREATE TABLE IF NOT EXISTS seminar_hall_requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS stationary_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT DEFAULT 'General',
+    unit TEXT DEFAULT 'Nos',
+    active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS stationary_requests (
+    id TEXT PRIMARY KEY,
+    requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    items_json TEXT NOT NULL,
+    total_items INTEGER DEFAULT 1,
+    total_quantity INTEGER DEFAULT 1,
+    purpose TEXT,
+    status TEXT NOT NULL DEFAULT 'PENDING_AO',
+    ao_remarks TEXT,
+    ao_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    ao_action_at TIMESTAMP,
+    stationary_remarks TEXT,
+    stationary_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    stationary_action_at TIMESTAMP,
+    decrease_remarks TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 export async function initSchema() {
@@ -208,6 +237,42 @@ export async function initSchema() {
           CREATE INDEX IF NOT EXISTS idx_shr_hall ON seminar_hall_requests(seminar_hall_id);
           CREATE INDEX IF NOT EXISTS idx_shr_requester ON seminar_hall_requests(requester_id);
           CREATE INDEX IF NOT EXISTS idx_shr_status ON seminar_hall_requests(status);
+
+          CREATE TABLE IF NOT EXISTS stationary_items (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) DEFAULT 'General',
+            unit VARCHAR(100) DEFAULT 'Nos',
+            active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          CREATE TABLE IF NOT EXISTS stationary_requests (
+            id VARCHAR(50) PRIMARY KEY,
+            requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+            items_json TEXT NOT NULL,
+            total_items INTEGER DEFAULT 1,
+            total_quantity INTEGER DEFAULT 1,
+            purpose TEXT,
+            status VARCHAR(50) NOT NULL DEFAULT 'PENDING_AO',
+            ao_remarks TEXT,
+            ao_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            ao_action_at TIMESTAMP,
+            stationary_remarks TEXT,
+            stationary_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            stationary_action_at TIMESTAMP,
+            decrease_remarks TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          ALTER TABLE stationary_requests ADD COLUMN IF NOT EXISTS decrease_remarks TEXT;
+
+          CREATE INDEX IF NOT EXISTS idx_stationary_items_cat ON stationary_items(category);
+          CREATE INDEX IF NOT EXISTS idx_str_requester ON stationary_requests(requester_id);
+          CREATE INDEX IF NOT EXISTS idx_str_dept ON stationary_requests(department_id);
+          CREATE INDEX IF NOT EXISTS idx_str_status ON stationary_requests(status);
         `);
       } catch (e) {}
     } else {

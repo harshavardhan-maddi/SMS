@@ -1,5 +1,6 @@
 import { db } from './db';
 import bcrypt from 'bcryptjs';
+import { STATIONARY_CATALOG } from './stationaryCatalog';
 
 export async function seedData() {
   console.log('Verifying and seeding demo user accounts...');
@@ -14,6 +15,8 @@ export async function seedData() {
     await db.run("INSERT INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (7, 'ROLE_ELEC_COMPLAINTER') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (8, 'ROLE_SEMINAR_HALL_ALLOCATOR') ON CONFLICT (id) DO NOTHING");
+    await db.run("INSERT INTO roles (id, name) VALUES (9, 'ROLE_AO') ON CONFLICT (id) DO NOTHING");
+    await db.run("INSERT INTO roles (id, name) VALUES (10, 'ROLE_STATIONARY') ON CONFLICT (id) DO NOTHING");
   } catch (e) {
     // SQLite fallback for ON CONFLICT
     try {
@@ -25,6 +28,8 @@ export async function seedData() {
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (6, 'ROLE_EEE_ASSET_MANAGER')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (7, 'ROLE_ELEC_COMPLAINTER')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (8, 'ROLE_SEMINAR_HALL_ALLOCATOR')");
+      await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (9, 'ROLE_AO')");
+      await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (10, 'ROLE_STATIONARY')");
     } catch (e2) {}
   }
 
@@ -87,7 +92,9 @@ export async function seedData() {
       { id: 5, name: 'Hardware Technician', email: 'tech@sms.edu', roleId: 4, deptId: null },
       { id: 6, name: 'Dr. Nikola Tesla', email: 'hod.eee@sms.edu', roleId: 2, deptId: eeeDeptId },
       { id: 7, name: 'EEE Asset Manager', email: 'eee.manager@sms.edu', roleId: 6, deptId: eeeDeptId },
-      { id: 8, name: 'Electrical Complainter', email: 'elec.complainter@sms.edu', roleId: 7, deptId: null }
+      { id: 8, name: 'Electrical Complainter', email: 'elec.complainter@sms.edu', roleId: 7, deptId: null },
+      { id: 9, name: 'Administrative Officer', email: 'ao@sms.edu', roleId: 9, deptId: null },
+      { id: 10, name: 'Stationary Incharge', email: 'stationary@sms.edu', roleId: 10, deptId: null }
     ];
 
     for (const u of demoUsers) {
@@ -151,6 +158,25 @@ export async function seedData() {
     }
   } catch (eHalls) {
     console.error('Error seeding seminar halls and allocators:', eHalls);
+  }
+
+  // 6. Initial Stationary Items Seeding
+  try {
+    const itemCountRow = await db.get("SELECT COUNT(*) as count FROM stationary_items");
+    const iCount = itemCountRow ? parseInt(itemCountRow.count) : 0;
+    if (iCount === 0) {
+      console.log(`Seeding initial stationary items catalog (${STATIONARY_CATALOG.length} items)...`);
+      for (const item of STATIONARY_CATALOG) {
+        try {
+          await db.run(
+            "INSERT INTO stationary_items (name, category, unit, active) VALUES (?, ?, ?, true)",
+            [item.name, item.category, item.unit]
+          );
+        } catch (eItem) {}
+      }
+    }
+  } catch (eCat) {
+    console.error('Error seeding stationary catalog:', eCat);
   }
 
   console.log('Database initialization check complete.');

@@ -104,3 +104,41 @@ export interface SeminarHallRequest {
   updatedAt?: string;
 }
 
+export interface StationaryItem {
+  id: number;
+  name: string;
+  category: string;
+  unit: string;
+  active: boolean;
+  createdAt?: string;
+}
+
+export interface StationaryRequestItem {
+  id: number;
+  name: string;
+  category?: string;
+  count: number;
+  allottedCount?: number;
+  unit?: string;
+}
+
+export interface StationaryRequest {
+  id: string; // STR-1001
+  requester: User;
+  department?: Department | null;
+  items: StationaryRequestItem[];
+  totalItems: number;
+  totalQuantity: number;
+  purpose?: string;
+  status: 'PENDING_AO' | 'FORWARDED_TO_STATIONARY' | 'FULFILLED' | 'REJECTED_AO' | 'REJECTED_STATIONARY';
+  aoRemarks?: string;
+  aoActionBy?: { id: number; name: string } | null;
+  aoActionAt?: string;
+  stationaryRemarks?: string;
+  stationaryActionBy?: { id: number; name: string } | null;
+  stationaryActionAt?: string;
+  decreaseRemarks?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+

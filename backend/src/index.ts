@@ -17,6 +17,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import reportRoutes from './routes/reportRoutes';
 import electricianRoutes from './routes/electricianRoutes';
 import { hallsRouter, requestsRouter } from './routes/seminarHallRoutes';
+import { stationaryRouter } from './routes/stationaryRoutes';
 
 dotenv.config();
 
@@ -43,12 +44,9 @@ async function ensureInitialized() {
   if (!initPromise) {
     initPromise = (async () => {
       try {
-        const checkInit = await db.get("SELECT value FROM settings WHERE key = 'schema_initialized'").catch(() => null);
-        if (!checkInit || checkInit.value !== 'true') {
-          await initSchema();
-        }
-      } catch (e) {
         await initSchema();
+      } catch (e) {
+        console.error('initSchema error (continuing):', e);
       }
       await seedData();
       isInitialized = true;
@@ -99,6 +97,9 @@ app.use('/seminar-halls', hallsRouter);
 
 app.use('/api/seminar-requests', requestsRouter);
 app.use('/seminar-requests', requestsRouter);
+
+app.use('/api/stationary', stationaryRouter);
+app.use('/stationary', stationaryRouter);
 
 
 app.get('/api/health', (req, res) => res.send('OK'));

@@ -1390,4 +1390,80 @@ router.post('/:id/update-progress', authenticateJWT, async (req, res) => {
   }
 });
 
+// DELETE /api/repairs/:id - HOD (own/dept request) or Principal deletes a repair ticket
+router.delete('/:id', authenticateJWT, async (req, res) => {
+  const userReq = (req as any).user;
+  const userRole = userReq.role;
+  const userId = userReq.userId || userReq.id;
+  const deptId = userReq.departmentId;
+  const { id } = req.params;
+
+  try {
+    const existing = await db.get(
+      `SELECT r.id, r.requester_id, i.department_id 
+       FROM repair_requests r 
+       LEFT JOIN inventory i ON r.inventory_id = i.id 
+       WHERE r.id = ?`,
+      [id]
+    );
+
+    if (!existing) {
+      return res.status(404).send('Repair request not found');
+    }
+
+    if (userRole !== 'ROLE_PRINCIPAL' && existing.requester_id !== userId && existing.department_id !== deptId) {
+      return res.status(403).send('Forbidden: You can only delete your own department requests');
+    }
+
+    await db.transaction(async () => {
+      await db.run('DELETE FROM repair_history WHERE request_id = ?', [id]);
+      await db.run('DELETE FROM repair_requests WHERE id = ?', [id]);
+    });
+
+    notificationService.broadcastDashboardUpdate();
+    res.json({ message: `Repair request ${id} deleted successfully` });
+  } catch (err) {
+    console.error('Delete repair request error:', err);
+    res.status(500).send('Failed to delete repair request');
+  }
+});
+
+// POST /api/repairs/bulk-delete - Principal bulk delete
+router.post('/bulk-delete', authenticateJWT, async (req, res) => {
+  const userReq = (req as any).user;
+  if (userReq.role !== 'ROLE_PRINCIPAL') {
+    return res.status(403).send('Only Principal can bulk delete repair requests');
+  }
+
+  const { ids, all } = req.body;
+
+  try {
+    if (all === true) {
+      await db.transaction(async () => {
+        await db.run('DELETE FROM repair_history');
+        await db.run('DELETE FROM repair_requests');
+      });
+      notificationService.broadcastDashboardUpdate();
+      return res.json({ message: 'All repair requests deleted successfully' });
+    }
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).send('Array of ticket IDs is required');
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    await db.transaction(async () => {
+      await db.run(`DELETE FROM repair_history WHERE request_id IN (${placeholders})`, ids);
+      await db.run(`DELETE FROM repair_requests WHERE id IN (${placeholders})`, ids);
+    });
+
+    notificationService.broadcastDashboardUpdate();
+    res.json({ message: `${ids.length} repair requests deleted successfully` });
+  } catch (err) {
+    console.error('Bulk delete repair requests error:', err);
+    res.status(500).send('Failed to bulk delete repair requests');
+  }
+});
+
 export default router;
+

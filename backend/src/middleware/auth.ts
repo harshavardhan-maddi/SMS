@@ -90,3 +90,6 @@ export const authorizeRoles = (...roles: string[]) => {
     next();
   };
 };
+
+export const requireRole = (roles: string[]) => authorizeRoles(...roles);
+

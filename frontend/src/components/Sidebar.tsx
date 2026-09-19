@@ -20,7 +20,10 @@ import {
   ShieldCheck,
   ClipboardCheck,
   Laptop,
-  CalendarCheck2
+  CalendarCheck2,
+  Boxes,
+  PackageCheck,
+  Trash2
 } from 'lucide-react';
 
 
@@ -58,6 +61,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Departments', path: '/departments', icon: Building2 },
     { name: 'Department Labs', path: '/labs', icon: Laptop },
     { name: 'Seminar Halls', path: '/seminar-halls', icon: CalendarCheck2 },
+    { name: 'Stationary & AO', path: '/principal/stationary', icon: Boxes },
+    { name: 'History Management', path: '/principal/history', icon: Trash2 },
     { name: 'In Progress', path: '/in-progress', icon: Wrench },
     { name: 'Dead Stock', path: '/dead-stock', icon: XCircle },
     { name: 'Reports', path: '/reports', icon: FileBarChart },
@@ -133,6 +138,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
+  const getAOMenu = () => [
+    { name: 'Stationary Approvals', path: '/dashboard', icon: ShieldCheck },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
+  const getStationaryMenu = () => [
+    { name: 'Store & Dispatch', path: '/dashboard', icon: PackageCheck },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
   const AlertCircleIcon = HelpCircle; // Quick fallback for simple mapping
 
   const getMenu = () => {
@@ -143,6 +160,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return getEEEAssetManagerMenu();
     if (user.role === 'ROLE_ELEC_COMPLAINTER') return getElecComplainterMenu();
     if (user.role === 'ROLE_SEMINAR_HALL_ALLOCATOR') return getAllocatorMenu();
+    if (user.role === 'ROLE_AO') return getAOMenu();
+    if (user.role === 'ROLE_STATIONARY') return getStationaryMenu();
     return getDeanMenu();
   };
 

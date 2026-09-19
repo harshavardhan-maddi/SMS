@@ -537,8 +537,65 @@ requestsRouter.patch('/:id/status', authenticateJWT, authorizeRoles('ROLE_SEMINA
   }
 });
 
+// DELETE /api/seminar-requests/:id - HOD (own request) or Principal deletes a request
+requestsRouter.delete('/:id', authenticateJWT, async (req, res) => {
+  const userReq = (req as any).user;
+  const userRole = userReq.role;
+  const userId = userReq.userId || userReq.id;
+  const { id } = req.params;
+
+  try {
+    const existing = await db.get('SELECT requester_id FROM seminar_hall_requests WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).send('Seminar hall request not found');
+    }
+
+    if (userRole !== 'ROLE_PRINCIPAL' && existing.requester_id !== userId) {
+      return res.status(403).send('Forbidden: You can only delete your own department requests');
+    }
+
+    await db.run('DELETE FROM seminar_hall_requests WHERE id = ?', [id]);
+    sendToTopic('/topic/dashboard-tick', { type: 'SHR_REQUEST_DELETED', requestId: id });
+    res.json({ message: `Seminar hall request ${id} deleted successfully` });
+  } catch (err) {
+    console.error('Failed to delete SHR request:', err);
+    res.status(500).send('Failed to delete seminar hall request');
+  }
+});
+
+// POST /api/seminar-requests/bulk-delete - Principal bulk delete
+requestsRouter.post('/bulk-delete', authenticateJWT, async (req, res) => {
+  const userReq = (req as any).user;
+  if (userReq.role !== 'ROLE_PRINCIPAL') {
+    return res.status(403).send('Only Principal can bulk delete seminar hall requests');
+  }
+
+  const { ids, all } = req.body;
+
+  try {
+    if (all === true) {
+      await db.run('DELETE FROM seminar_hall_requests');
+      sendToTopic('/topic/dashboard-tick', { type: 'SHR_BULK_DELETED' });
+      return res.json({ message: 'All seminar hall requests deleted successfully' });
+    }
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).send('Array of ticket IDs is required');
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    await db.run(`DELETE FROM seminar_hall_requests WHERE id IN (${placeholders})`, ids);
+    sendToTopic('/topic/dashboard-tick', { type: 'SHR_BULK_DELETED', ids });
+    res.json({ message: `${ids.length} seminar hall requests deleted successfully` });
+  } catch (err) {
+    console.error('Failed to bulk delete SHR requests:', err);
+    res.status(500).send('Failed to bulk delete seminar hall requests');
+  }
+});
+
 // Backward-compatibility default router
 const defaultRouter = Router();
 defaultRouter.use('/requests', requestsRouter);
 defaultRouter.use('/', hallsRouter);
 export default defaultRouter;
+
