@@ -5,10 +5,11 @@ export const notificationService = {
   // Send notification to a specific user ID
   async sendToUser(userId: number, message: string, type: string) {
     try {
+      const readVal = db.getDialect() === 'postgres' ? false : 0;
       const result = await db.run(
         `INSERT INTO notifications (message, type, read_status, user_id)
-         VALUES (?, ?, 0, ?)`,
-        [message, type, userId]
+         VALUES (?, ?, ?, ?)`,
+        [message, type, readVal, userId]
       );
       
       // Construct notification client payload immediately without secondary db query
@@ -40,17 +41,19 @@ export const notificationService = {
       
       if (users.length === 0) return;
 
+      const readVal = db.getDialect() === 'postgres' ? false : 0;
       // Batch insert all notifications in a single transaction write lock
-      const placeholders = users.map(() => '(?, ?, 0, ?)').join(', ');
+      const placeholders = users.map(() => '(?, ?, ?, ?)').join(', ');
       const params: any[] = [];
       users.forEach(u => {
-        params.push(message, type, u.id);
+        params.push(message, type, readVal, u.id);
       });
 
       const result = await db.run(
         `INSERT INTO notifications (message, type, read_status, user_id) VALUES ${placeholders}`,
         params
       );
+
 
       const lastId = result.lastID || 0;
       const count = users.length;

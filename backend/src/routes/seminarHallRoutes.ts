@@ -93,13 +93,43 @@ hallsRouter.put('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async
 hallsRouter.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
   const { id } = req.params;
   try {
-    await db.run('DELETE FROM seminar_halls WHERE id = ?', [id]);
-    res.json({ message: 'Seminar hall deleted successfully' });
+    const existing = await db.get('SELECT * FROM seminar_halls WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).send('Seminar hall not found');
+    }
+
+    await db.transaction(async () => {
+      // 1. Safely unlink any users assigned to this seminar hall
+      await db.run('UPDATE users SET seminar_hall_id = NULL WHERE seminar_hall_id = ?', [id]);
+      // 2. Remove requests for this seminar hall
+      await db.run('DELETE FROM seminar_hall_requests WHERE seminar_hall_id = ?', [id]);
+      // 3. Delete the seminar hall
+      await db.run('DELETE FROM seminar_halls WHERE id = ?', [id]);
+    });
+
+    res.json({ message: `Seminar hall "${existing.name}" deleted successfully` });
   } catch (err) {
     console.error('Failed to delete seminar hall:', err);
     res.status(400).send((err as Error).message);
   }
 });
+
+// Delete allocator account (Principal only)
+hallsRouter.delete('/allocators/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.run(
+      `DELETE FROM users 
+       WHERE id = ? AND role_id = (SELECT id FROM roles WHERE name = 'ROLE_SEMINAR_HALL_ALLOCATOR')`,
+      [id]
+    );
+    res.json({ message: 'Allocator account deleted successfully' });
+  } catch (err) {
+    console.error('Failed to delete allocator:', err);
+    res.status(400).send((err as Error).message);
+  }
+});
+
 
 // Get all allocators (Principal only)
 hallsRouter.get('/allocators', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {

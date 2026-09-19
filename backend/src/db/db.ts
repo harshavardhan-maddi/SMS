@@ -18,11 +18,15 @@ if (dbType === 'postgres') {
     ssl: { rejectUnauthorized: false },
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 3000,
+    connectionTimeoutMillis: 10000,
     keepAlive: true
+  });
+  pgPool.on('error', (err) => {
+    console.error('Unexpected error on idle PostgreSQL client:', err.message);
   });
   console.log('Using PostgreSQL connection pool via DATABASE_URL (Supabase)');
 } else {
+
   // Ensure the directory exists
   const fs = require('fs');
   const dir = path.dirname(sqliteDbPath);

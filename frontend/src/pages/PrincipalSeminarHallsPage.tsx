@@ -50,8 +50,16 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
   const [allocatorHallId, setAllocatorHallId] = useState<number | string>('');
   const [isSubmittingAllocator, setIsSubmittingAllocator] = useState(false);
 
+  // Delete State
+  const [hallToDelete, setHallToDelete] = useState<SeminarHall | null>(null);
+  const [isDeletingHall, setIsDeletingHall] = useState(false);
+
+  const [allocatorToDelete, setAllocatorToDelete] = useState<any | null>(null);
+  const [isDeletingAllocator, setIsDeletingAllocator] = useState(false);
+
   // Filter
   const [searchQuery, setSearchQuery] = useState('');
+
 
   const fetchData = async () => {
     try {
@@ -137,7 +145,40 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
     }
   };
 
+  const handleDeleteHall = async () => {
+    if (!hallToDelete) return;
+    setIsDeletingHall(true);
+    try {
+      await api.delete(`/seminar-halls/${hallToDelete.id}`);
+      toast.success(`Seminar Hall "${hallToDelete.name}" deleted successfully!`);
+      setHallToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      const msg = err.response?.data || 'Failed to delete seminar hall';
+      toast.error(typeof msg === 'string' ? msg : 'Error deleting seminar hall');
+    } finally {
+      setIsDeletingHall(false);
+    }
+  };
+
+  const handleDeleteAllocator = async () => {
+    if (!allocatorToDelete) return;
+    setIsDeletingAllocator(true);
+    try {
+      await api.delete(`/seminar-halls/allocators/${allocatorToDelete.id}`);
+      toast.success(`Allocator "${allocatorToDelete.name}" removed successfully!`);
+      setAllocatorToDelete(null);
+      fetchData();
+    } catch (err: any) {
+      const msg = err.response?.data || 'Failed to remove allocator';
+      toast.error(typeof msg === 'string' ? msg : 'Error removing allocator');
+    } finally {
+      setIsDeletingAllocator(false);
+    }
+  };
+
   return (
+
     <div className="space-y-6 pb-12 animate-fade-in">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -254,8 +295,23 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+                <div className="pt-3.5 border-t border-[#334155]/40 flex items-center justify-between mt-auto">
+                  <span className="text-[10px] text-brand-textMuted font-mono uppercase font-bold tracking-wider">
+                    Hall #{hall.id}
+                  </span>
+                  <button
+                    onClick={() => setHallToDelete(hall)}
+                    className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 hover:border-red-500/40 text-xs font-bold transition-all flex items-center gap-1.5"
+                    title="Delete this seminar hall"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             ))}
+
           </div>
         </div>
       )}
@@ -283,6 +339,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                   <th className="py-3 px-4">Assigned Seminar Hall</th>
                   <th className="py-3 px-4">Block Location</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#334155]/40">
@@ -299,10 +356,21 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                         Active
                       </span>
                     </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => setAllocatorToDelete(alloc)}
+                        className="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 text-xs font-bold transition-all inline-flex items-center gap-1"
+                        title="Delete Allocator"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
           </div>
         </div>
       )}
@@ -536,6 +604,79 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* CONFIRMATION MODAL: DELETE SEMINAR HALL */}
+      {hallToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#1e293b] border border-red-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center mb-4 border border-red-500/30">
+              <Trash2 className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-xl font-bold text-white mb-2">Delete Seminar Hall</h3>
+            <p className="text-xs text-brand-textMuted leading-relaxed mb-6">
+              Are you sure you want to delete <strong className="text-white">"{hallToDelete.name}"</strong>?
+              This will remove the hall from the booking catalog, delete any associated requests, and unlink its allocator.
+            </p>
+
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setHallToDelete(null)}
+                className="px-5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white text-xs font-bold transition-all border border-[#334155]/60"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={isDeletingHall}
+                onClick={handleDeleteHall}
+                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-lg shadow-red-600/30 disabled:opacity-50"
+              >
+                {isDeletingHall ? 'Deleting...' : 'Yes, Delete Hall'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL: DELETE ALLOCATOR */}
+      {allocatorToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#1e293b] border border-red-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center mb-4 border border-red-500/30">
+              <Trash2 className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-xl font-bold text-white mb-2">Remove Allocator Account</h3>
+            <p className="text-xs text-brand-textMuted leading-relaxed mb-6">
+              Are you sure you want to remove allocator <strong className="text-white">"{allocatorToDelete.name}"</strong> ({allocatorToDelete.email})?
+              They will no longer be able to log in to allocate seminar halls.
+            </p>
+
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAllocatorToDelete(null)}
+                className="px-5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white text-xs font-bold transition-all border border-[#334155]/60"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={isDeletingAllocator}
+                onClick={handleDeleteAllocator}
+                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-lg shadow-red-600/30 disabled:opacity-50"
+              >
+                {isDeletingAllocator ? 'Removing...' : 'Yes, Remove Allocator'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
