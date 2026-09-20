@@ -78,7 +78,7 @@ stationaryRouter.get('/items', authenticateJWT, async (req, res) => {
       params.push(`%${q.trim().toLowerCase()}%`);
     }
 
-    sql += ' ORDER BY category ASC, name ASC';
+    sql += ' ORDER BY id ASC';
     const items = await db.all(sql, params);
     res.json(items);
   } catch (err) {

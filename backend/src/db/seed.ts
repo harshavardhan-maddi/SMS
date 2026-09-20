@@ -164,16 +164,31 @@ export async function seedData() {
   try {
     const itemCountRow = await db.get("SELECT COUNT(*) as count FROM stationary_items");
     const iCount = itemCountRow ? parseInt(itemCountRow.count) : 0;
-    if (iCount === 0) {
-      console.log(`Seeding initial stationary items catalog (${STATIONARY_CATALOG.length} items)...`);
+    if (iCount !== STATIONARY_CATALOG.length) {
+      console.log(`Syncing stationary items catalog to exact ${STATIONARY_CATALOG.length} items (current count: ${iCount})...`);
+      // Remove old stationary items to ensure only the new catalog is active
+      await db.run("DELETE FROM stationary_items");
+      if (db.getDialect() === 'postgres') {
+        try {
+          await db.run("ALTER SEQUENCE IF EXISTS stationary_items_id_seq RESTART WITH 1");
+        } catch (seqErr) {}
+      } else {
+        try {
+          await db.run("DELETE FROM sqlite_sequence WHERE name = 'stationary_items'");
+        } catch (seqErr) {}
+      }
+
       for (const item of STATIONARY_CATALOG) {
         try {
           await db.run(
             "INSERT INTO stationary_items (name, category, unit, active) VALUES (?, ?, ?, true)",
             [item.name, item.category, item.unit]
           );
-        } catch (eItem) {}
+        } catch (eItem) {
+          console.error('Failed to insert stationary item:', item.name, eItem);
+        }
       }
+      console.log(`Successfully populated ${STATIONARY_CATALOG.length} stationary items.`);
     }
   } catch (eCat) {
     console.error('Error seeding stationary catalog:', eCat);
