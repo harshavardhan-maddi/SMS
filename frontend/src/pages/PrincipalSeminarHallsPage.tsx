@@ -58,22 +58,21 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
   const [isDeletingAllocator, setIsDeletingAllocator] = useState(false);
 
   // Filter
-  const [searchQuery, setSearchQuery] = useState('');
-
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
     try {
-      const [hallsRes, allocsRes, reqsRes] = await Promise.all([
+      const [hallsRes, allocsRes, bookingsRes] = await Promise.all([
         api.get('/seminar-halls'),
         api.get('/seminar-halls/allocators'),
         api.get('/seminar-requests')
       ]);
       setHalls(hallsRes.data);
       setAllocators(allocsRes.data);
-      setBookings(reqsRes.data);
+      setBookings(bookingsRes.data);
     } catch (err) {
-      console.error('Failed to load Principal seminar data:', err);
-      toast.error('Failed to load seminar halls catalog');
+      console.error('Failed to load seminar halls data:', err);
+      toast.error('Failed to refresh data');
     } finally {
       setLoading(false);
     }
@@ -86,7 +85,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
   const handleAddHall = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hallName.trim() || !hallBlock.trim()) {
-      toast.error('Hall Name and Block are required');
+      toast.error('Hall name and block location are required');
       return;
     }
 
@@ -94,12 +93,12 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
     try {
       await api.post('/seminar-halls', {
         name: hallName.trim(),
-        code: hallCode.trim(),
+        code: hallCode.trim() || undefined,
         block: hallBlock.trim(),
-        capacity: Number(hallCapacity),
-        facilities: hallFacilities.trim()
+        capacity: Number(hallCapacity) || 100,
+        facilities: hallFacilities.trim() || undefined
       });
-      toast.success('Seminar Hall added successfully!');
+      toast.success(`Seminar Hall "${hallName}" added successfully!`);
       setHallModalOpen(false);
       setHallName('');
       setHallCode('');
@@ -109,7 +108,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
       fetchData();
     } catch (err: any) {
       const msg = err.response?.data || 'Failed to add seminar hall';
-      toast.error(typeof msg === 'string' ? msg : 'Error adding seminar hall');
+      toast.error(typeof msg === 'string' ? msg : 'Error adding hall');
     } finally {
       setIsSubmittingHall(false);
     }
@@ -178,19 +177,18 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
   };
 
   return (
-
-    <div className="space-y-6 pb-12 animate-fade-in">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-20 animate-fade-in">
+      {/* Top Banner Header */}
+      <div className="admin-card p-6 sm:p-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">
-            <Building2 className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold uppercase tracking-wider mb-2">
+            <Building2 className="w-4 h-4 text-indigo-600" />
             Institution Hall Management
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Seminar Halls & Allocator Console
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
+            Seminar Halls &amp; Allocator Console
           </h1>
-          <p className="text-xs text-brand-textMuted mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Principal control panel to register institutional halls, configure allocator credentials, and oversee college-wide reservations.
           </p>
         </div>
@@ -199,7 +197,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             onClick={() => setHallModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs"
           >
             <Plus className="w-4 h-4" />
             Add Seminar Hall
@@ -207,7 +205,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
           <button
             onClick={() => setAllocatorModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purple/90 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-purple/30"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs"
           >
             <Users className="w-4 h-4" />
             Add Hall Allocator
@@ -216,13 +214,13 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#334155]/60 pb-3">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
         <button
           onClick={() => setActiveTab('halls')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
             activeTab === 'halls'
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-              : 'bg-[#1e293b]/60 text-brand-textMuted hover:text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -233,8 +231,8 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
           onClick={() => setActiveTab('allocators')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
             activeTab === 'allocators'
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-              : 'bg-[#1e293b]/60 text-brand-textMuted hover:text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -245,8 +243,8 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
           onClick={() => setActiveTab('bookings')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
             activeTab === 'bookings'
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-              : 'bg-[#1e293b]/60 text-brand-textMuted hover:text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
           }`}
         >
           <CalendarCheck2 className="w-4 h-4" />
@@ -261,48 +259,48 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
             {halls.map((hall, idx) => (
               <div
                 key={hall.id}
-                className="rounded-2xl bg-[#1e293b]/80 border border-[#334155]/60 p-6 flex flex-col justify-between backdrop-blur-xl shadow-md hover:border-indigo-400/50 transition-all"
+                className="admin-card p-6 bg-white rounded-2xl border border-slate-200/80 flex flex-col justify-between shadow-xs hover:border-indigo-300 transition-all"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-black tracking-wider uppercase px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                    <span className="text-[11px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
                       {hall.code || `HALL-${idx + 1}`}
                     </span>
-                    <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       Active
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-white mb-2">{hall.name}</h3>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">{hall.name}</h3>
 
-                  <div className="space-y-1.5 text-xs text-brand-textMuted mb-4">
-                    <div>Block / Location: <strong className="text-white">{hall.block}</strong></div>
-                    <div>Seating Capacity: <strong className="text-emerald-400">{hall.capacity} Seats</strong></div>
+                  <div className="space-y-1.5 text-xs text-slate-600 mb-4">
+                    <div>Block / Location: <strong className="text-slate-800">{hall.block}</strong></div>
+                    <div>Seating Capacity: <strong className="text-emerald-700">{hall.capacity} Seats</strong></div>
                     <div>
                       Assigned Allocator:{' '}
                       {hall.allocatorName ? (
-                        <strong className="text-indigo-300">{hall.allocatorName}</strong>
+                        <strong className="text-indigo-700">{hall.allocatorName}</strong>
                       ) : (
-                        <span className="text-amber-400">Not Assigned</span>
+                        <span className="text-amber-700 font-semibold">Not Assigned</span>
                       )}
                     </div>
                   </div>
 
                   {hall.facilities && (
-                    <p className="text-[11px] text-brand-textMuted bg-[#0f172a]/60 p-2.5 rounded-lg border border-[#334155]/40 mb-4">
+                    <p className="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-4">
                       {hall.facilities}
                     </p>
                   )}
                 </div>
 
-                <div className="pt-3.5 border-t border-[#334155]/40 flex items-center justify-between mt-auto">
-                  <span className="text-[10px] text-brand-textMuted font-mono uppercase font-bold tracking-wider">
+                <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between mt-auto">
+                  <span className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wider">
                     Hall #{hall.id}
                   </span>
                   <button
                     onClick={() => setHallToDelete(hall)}
-                    className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 hover:border-red-500/40 text-xs font-bold transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Delete this seminar hall"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -311,19 +309,18 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                 </div>
               </div>
             ))}
-
           </div>
         </div>
       )}
 
       {/* TAB 2: HALL ALLOCATORS */}
       {activeTab === 'allocators' && (
-        <div className="rounded-2xl bg-[#1e293b]/80 border border-[#334155]/60 overflow-hidden backdrop-blur-xl shadow-md animate-fade-in">
-          <div className="p-4 border-b border-[#334155]/60 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Registered Seminar Hall Allocators</h3>
+        <div className="admin-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs animate-fade-in">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800">Registered Seminar Hall Allocators</h3>
             <button
               onClick={() => setAllocatorModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md"
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               New Allocator Login
@@ -331,8 +328,8 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-brand-textMuted">
-              <thead className="bg-[#0f172a]/60 text-white font-semibold uppercase tracking-wider text-[11px] border-b border-[#334155]/60">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Allocator Name</th>
                   <th className="py-3 px-4">Login ID / Email</th>
@@ -342,24 +339,24 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]/40">
+              <tbody className="divide-y divide-slate-100">
                 {allocators.map(alloc => (
-                  <tr key={alloc.id} className="hover:bg-[#1e293b]/50 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-white">{alloc.name}</td>
-                    <td className="py-3.5 px-4 font-mono text-indigo-300">{alloc.email}</td>
-                    <td className="py-3.5 px-4 font-medium text-white">
+                  <tr key={alloc.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-slate-800">{alloc.name}</td>
+                    <td className="py-3.5 px-4 font-mono text-indigo-700">{alloc.email}</td>
+                    <td className="py-3.5 px-4 font-medium text-slate-800">
                       {alloc.seminar_hall_name || 'Unassigned'}
                     </td>
                     <td className="py-3.5 px-4">{alloc.seminar_hall_block || 'N/A'}</td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Active
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => setAllocatorToDelete(alloc)}
-                        className="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 text-xs font-bold transition-all inline-flex items-center gap-1"
+                        className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
                         title="Delete Allocator"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -370,21 +367,20 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-
           </div>
         </div>
       )}
 
       {/* TAB 3: ALL BOOKINGS */}
       {activeTab === 'bookings' && (
-        <div className="rounded-2xl bg-[#1e293b]/80 border border-[#334155]/60 overflow-hidden backdrop-blur-xl shadow-md animate-fade-in">
-          <div className="p-4 border-b border-[#334155]/60">
-            <h3 className="text-sm font-bold text-white">College-Wide Seminar Hall Reservations</h3>
+        <div className="admin-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs animate-fade-in">
+          <div className="p-4 border-b border-slate-100">
+            <h3 className="text-sm font-bold text-slate-800">College-Wide Seminar Hall Reservations</h3>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-brand-textMuted">
-              <thead className="bg-[#0f172a]/60 text-white font-semibold uppercase tracking-wider text-[11px] border-b border-[#334155]/60">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Ticket</th>
                   <th className="py-3 px-4">Seminar Hall</th>
@@ -395,24 +391,24 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                   <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]/40">
+              <tbody className="divide-y divide-slate-100">
                 {bookings.map(b => (
-                  <tr key={b.id} className="hover:bg-[#1e293b]/50 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-indigo-300">{b.id}</td>
-                    <td className="py-3 px-4 font-semibold text-white">{b.seminarHall?.name}</td>
+                  <tr key={b.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-indigo-700">{b.id}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-800">{b.seminarHall?.name}</td>
                     <td className="py-3 px-4">{b.department?.code || b.requester?.name}</td>
-                    <td className="py-3 px-4">{b.resourcePersonName}</td>
-                    <td className="py-3 px-4 text-indigo-300">{b.participantsCount}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-slate-700">{b.resourcePersonName}</td>
+                    <td className="py-3 px-4 text-indigo-700 font-semibold">{b.participantsCount}</td>
+                    <td className="py-3 px-4 text-slate-600">
                       {b.noOfDays === 1 ? `${b.eventDate} (${b.timeSlot})` : `${b.startDate} to ${b.endDate}`}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
                         b.status === 'Approved'
-                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : b.status === 'Rejected'
-                          ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                          : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
                         {b.status}
                       </span>
@@ -427,73 +423,73 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
       {/* MODAL: ADD SEMINAR HALL */}
       {hallModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-indigo-600" />
                 Add New Seminar Hall
               </h3>
-              <button onClick={() => setHallModalOpen(false)} className="text-brand-textMuted hover:text-white">✕</button>
+              <button onClick={() => setHallModalOpen(false)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             <form onSubmit={handleAddHall} className="space-y-4 text-xs">
               <div>
-                <label className="block text-white font-bold mb-1">Seminar Hall Name *</label>
+                <label className="block text-slate-700 font-bold mb-1">Seminar Hall Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Block-3 seminar hall"
                   value={hallName}
                   onChange={e => setHallName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-white font-bold mb-1">Block / Location *</label>
+                <label className="block text-slate-700 font-bold mb-1">Block / Location *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Block-3, 2nd Floor"
                   value={hallBlock}
                   onChange={e => setHallBlock(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-white font-bold mb-1">Code</label>
+                  <label className="block text-slate-700 font-bold mb-1">Code</label>
                   <input
                     type="text"
                     placeholder="e.g. HALL-B3"
                     value={hallCode}
                     onChange={e => setHallCode(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white font-bold mb-1">Seating Capacity</label>
+                  <label className="block text-slate-700 font-bold mb-1">Seating Capacity</label>
                   <input
                     type="number"
                     min={10}
                     value={hallCapacity}
                     onChange={e => setHallCapacity(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-white font-bold mb-1">Facilities & Equipment</label>
+                <label className="block text-slate-700 font-bold mb-1">Facilities &amp; Equipment</label>
                 <textarea
                   rows={2}
                   placeholder="e.g. High-res projector, 7.1 surround sound, podium mic, AC"
                   value={hallFacilities}
                   onChange={e => setHallFacilities(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -501,14 +497,14 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setHallModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-bold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingHall}
-                  className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/30"
+                  className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs"
                 >
                   {isSubmittingHall ? 'Saving...' : 'Create Hall'}
                 </button>
@@ -520,36 +516,36 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
       {/* MODAL: ADD ALLOCATOR */}
       {allocatorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
                 Add Seminar Hall Allocator
               </h3>
-              <button onClick={() => setAllocatorModalOpen(false)} className="text-brand-textMuted hover:text-white">✕</button>
+              <button onClick={() => setAllocatorModalOpen(false)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             <form onSubmit={handleAddAllocator} className="space-y-4 text-xs">
               <div>
-                <label className="block text-white font-bold mb-1">Allocator Name *</label>
+                <label className="block text-slate-700 font-bold mb-1">Allocator Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Block-3 Hall Allocator"
                   value={allocatorName}
                   onChange={e => setAllocatorName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-white font-bold mb-1">Assigned Seminar Hall *</label>
+                <label className="block text-slate-700 font-bold mb-1">Assigned Seminar Hall *</label>
                 <select
                   required
                   value={allocatorHallId}
                   onChange={e => setAllocatorHallId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">-- Select Seminar Hall --</option>
                   {halls.map(h => (
@@ -561,26 +557,26 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-white font-bold mb-1">Login ID / Email *</label>
+                <label className="block text-slate-700 font-bold mb-1">Login ID / Email *</label>
                 <input
                   type="email"
                   required
                   placeholder="e.g. allocator.block3@sms.edu"
                   value={allocatorEmail}
                   onChange={e => setAllocatorEmail(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-white font-bold mb-1">Password *</label>
+                <label className="block text-slate-700 font-bold mb-1">Password *</label>
                 <input
                   type="password"
                   required
                   placeholder="Create strong password"
                   value={allocatorPassword}
                   onChange={e => setAllocatorPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a]/70 border border-[#334155]/60 text-white placeholder:text-brand-textMuted focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -588,14 +584,14 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setAllocatorModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-bold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingAllocator}
-                  className="px-6 py-2 rounded-xl bg-brand-purple hover:bg-brand-purple/90 text-white font-bold shadow-md shadow-brand-purple/30"
+                  className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold shadow-xs"
                 >
                   {isSubmittingAllocator ? 'Creating...' : 'Create Login'}
                 </button>
@@ -607,15 +603,15 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
       {/* CONFIRMATION MODAL: DELETE SEMINAR HALL */}
       {hallToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#1e293b] border border-red-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
-            <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center mb-4 border border-red-500/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4 border border-red-200">
               <Trash2 className="w-8 h-8" />
             </div>
 
-            <h3 className="text-xl font-bold text-white mb-2">Delete Seminar Hall</h3>
-            <p className="text-xs text-brand-textMuted leading-relaxed mb-6">
-              Are you sure you want to delete <strong className="text-white">"{hallToDelete.name}"</strong>?
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Delete Seminar Hall</h3>
+            <p className="text-xs text-slate-600 leading-relaxed mb-6">
+              Are you sure you want to delete <strong className="text-slate-800">&quot;{hallToDelete.name}&quot;</strong>?
               This will remove the hall from the booking catalog, delete any associated requests, and unlink its allocator.
             </p>
 
@@ -623,7 +619,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setHallToDelete(null)}
-                className="px-5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white text-xs font-bold transition-all border border-[#334155]/60"
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
               >
                 Cancel
               </button>
@@ -632,7 +628,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                 type="button"
                 disabled={isDeletingHall}
                 onClick={handleDeleteHall}
-                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-lg shadow-red-600/30 disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50"
               >
                 {isDeletingHall ? 'Deleting...' : 'Yes, Delete Hall'}
               </button>
@@ -643,15 +639,15 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
       {/* CONFIRMATION MODAL: DELETE ALLOCATOR */}
       {allocatorToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#1e293b] border border-red-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
-            <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center mb-4 border border-red-500/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4 border border-red-200">
               <Trash2 className="w-8 h-8" />
             </div>
 
-            <h3 className="text-xl font-bold text-white mb-2">Remove Allocator Account</h3>
-            <p className="text-xs text-brand-textMuted leading-relaxed mb-6">
-              Are you sure you want to remove allocator <strong className="text-white">"{allocatorToDelete.name}"</strong> ({allocatorToDelete.email})?
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Remove Allocator Account</h3>
+            <p className="text-xs text-slate-600 leading-relaxed mb-6">
+              Are you sure you want to remove allocator <strong className="text-slate-800">&quot;{allocatorToDelete.name}&quot;</strong> ({allocatorToDelete.email})?
               They will no longer be able to log in to allocate seminar halls.
             </p>
 
@@ -659,7 +655,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setAllocatorToDelete(null)}
-                className="px-5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white text-xs font-bold transition-all border border-[#334155]/60"
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
               >
                 Cancel
               </button>
@@ -668,7 +664,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                 type="button"
                 disabled={isDeletingAllocator}
                 onClick={handleDeleteAllocator}
-                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-lg shadow-red-600/30 disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50"
               >
                 {isDeletingAllocator ? 'Removing...' : 'Yes, Remove Allocator'}
               </button>
@@ -679,4 +675,4 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
     </div>
   );
 };
-
+export default PrincipalSeminarHallsPage;

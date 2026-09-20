@@ -63,7 +63,8 @@ export const PrincipalStationaryPage: React.FC = () => {
       setAccounts(accRes.data || []);
       setRequests(reqRes.data || []);
     } catch (err) {
-      console.error('Failed to load stationary management data:', err);
+      console.error('Failed to load stationary accounts:', err);
+      toast.error('Failed to load accounts & requests');
     } finally {
       setLoading(false);
     }
@@ -75,8 +76,8 @@ export const PrincipalStationaryPage: React.FC = () => {
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
-      toast.error('All fields are required.');
+    if (!newName.trim() || !newEmail.trim() || !newPassword) {
+      toast.error('Please fill in all required fields.');
       return;
     }
 
@@ -86,11 +87,11 @@ export const PrincipalStationaryPage: React.FC = () => {
         name: newName.trim(),
         email: newEmail.trim().toLowerCase(),
         password: newPassword,
-        role: newRole,
+        roleName: newRole,
       });
 
       toast.success(
-        `Created ${newRole === 'ROLE_AO' ? 'Administrative Officer (AO)' : 'Stationary Store Incharge'} account!`
+        `Account created for ${newName} (${newRole === 'ROLE_AO' ? 'AO' : 'Stationary Store'})!`
       );
       setModalOpen(false);
       setNewName('');
@@ -110,7 +111,7 @@ export const PrincipalStationaryPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await api.delete(`/stationary/accounts/${deleteConfirmUser.id}`);
-      toast.success(`Account "${deleteConfirmUser.name}" deleted successfully.`);
+      toast.success(`Account ${deleteConfirmUser.name} deleted successfully.`);
       setDeleteConfirmUser(null);
       fetchAccountsAndRequests();
     } catch (err: any) {
@@ -122,25 +123,25 @@ export const PrincipalStationaryPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 animate-fade-in">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+      <div className="admin-card p-6 sm:p-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold uppercase tracking-wider">
-            <ShieldCheck className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold uppercase tracking-wider mb-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
             Principal Administrative Console
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
             Stationary Logins &amp; Multi-Tier Workflow
           </h1>
-          <p className="text-xs sm:text-sm text-brand-textMuted">
+          <p className="text-xs sm:text-sm text-slate-500">
             Manage Administrative Officer (AO) and Stationary Store login credentials and monitor college-wide indents.
           </p>
         </div>
 
         <button
           onClick={() => setModalOpen(true)}
-          className="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer self-start md:self-auto"
+          className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start md:self-auto"
         >
           <UserPlus className="w-4 h-4" />
           <span>Create AO / Stationary Login</span>
@@ -148,13 +149,13 @@ export const PrincipalStationaryPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 bg-[#1e293b]/60 border border-[#334155]/60 rounded-2xl p-2 backdrop-blur-md w-fit">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
         <button
           onClick={() => setActiveTab('accounts')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'accounts'
-              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-amber-500 text-slate-950 shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -163,10 +164,10 @@ export const PrincipalStationaryPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('requests')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'requests'
-              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-amber-500 text-slate-950 shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
           }`}
         >
           <ClipboardList className="w-4 h-4" />
@@ -176,16 +177,16 @@ export const PrincipalStationaryPage: React.FC = () => {
 
       {/* Tab 1: Accounts List */}
       {activeTab === 'accounts' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           {loading ? (
-            <div className="text-center py-20 text-slate-400 text-xs">Loading accounts...</div>
+            <div className="text-center py-20 text-slate-500 text-xs">Loading accounts...</div>
           ) : accounts.length === 0 ? (
-            <div className="text-center py-20 bg-[#1e293b]/40 rounded-2xl border border-[#334155]/40 text-slate-400 text-xs space-y-3">
-              <Users className="w-10 h-10 mx-auto text-slate-600" />
-              <p className="font-bold text-white">No AO or Stationary accounts created yet.</p>
+            <div className="admin-card text-center py-20 bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-3">
+              <Users className="w-10 h-10 mx-auto text-slate-300" />
+              <p className="font-bold text-slate-800">No AO or Stationary accounts created yet.</p>
               <button
                 onClick={() => setModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer shadow-xs"
               >
                 Create Account Now
               </button>
@@ -198,41 +199,41 @@ export const PrincipalStationaryPage: React.FC = () => {
                 return (
                   <div
                     key={acc.id}
-                    className="p-5 rounded-2xl bg-[#1e293b]/70 border border-[#334155]/60 backdrop-blur-md flex flex-col justify-between gap-4 hover:border-slate-500 transition-all shadow-md"
+                    className="admin-card p-5 bg-white rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-4 hover:border-amber-300 transition-all shadow-xs"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                             isAO
-                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                              : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
                           }`}
                         >
                           {isAO ? 'Administrative Officer (AO)' : 'Stationary Store Incharge'}
                         </span>
 
-                        <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                           Active
                         </span>
                       </div>
 
-                      <h3 className="text-lg font-black text-white">{acc.name}</h3>
-                      <p className="text-xs text-brand-textMuted flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-slate-800">{acc.name}</h3>
+                      <p className="text-xs text-slate-500 flex items-center gap-2">
                         <Mail className="w-3.5 h-3.5 text-slate-400" />
                         <span>{acc.email}</span>
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-[#334155]/40 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <span className="text-slate-400">
                         Created {new Date(acc.createdAt).toLocaleDateString()}
                       </span>
 
                       <button
                         onClick={() => setDeleteConfirmUser(acc)}
-                        className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold border border-red-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-bold border border-red-200 transition-all cursor-pointer flex items-center gap-1.5"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Delete Account</span>
@@ -248,10 +249,10 @@ export const PrincipalStationaryPage: React.FC = () => {
 
       {/* Tab 2: All Requests Overview */}
       {activeTab === 'requests' && (
-        <div className="space-y-4">
-          <div className="overflow-x-auto rounded-2xl border border-[#334155]/60 bg-[#1e293b]/70 backdrop-blur-md">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#0b1329] text-slate-400 font-bold border-b border-slate-800">
+        <div className="admin-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs animate-fade-in">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Ticket</th>
                   <th className="py-3 px-4">Department / Requester</th>
@@ -261,22 +262,22 @@ export const PrincipalStationaryPage: React.FC = () => {
                   <th className="py-3 px-4">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100">
                 {requests.map((req) => (
-                  <tr key={req.id} className="hover:bg-white/5">
-                    <td className="py-3 px-4 font-black text-white">{req.id}</td>
+                  <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-4 font-black text-slate-800">{req.id}</td>
                     <td className="py-3 px-4">
-                      <div className="font-bold text-slate-200">{req.department?.name || 'Department'}</div>
-                      <div className="text-[11px] text-slate-400">{req.requester?.name}</div>
+                      <div className="font-bold text-slate-800">{req.department?.name || 'Department'}</div>
+                      <div className="text-[11px] text-slate-500">{req.requester?.name}</div>
                     </td>
-                    <td className="py-3 px-4 font-semibold text-amber-300">
+                    <td className="py-3 px-4 font-semibold text-amber-700">
                       {req.totalItems} items ({req.totalQuantity} units)
                     </td>
-                    <td className="py-3 px-4 text-slate-400 max-w-xs truncate">{req.purpose || '---'}</td>
+                    <td className="py-3 px-4 text-slate-500 max-w-xs truncate">{req.purpose || '---'}</td>
                     <td className="py-3 px-4">
-                      <span className="font-bold">{req.status}</span>
+                      <span className="font-bold text-slate-700">{req.status}</span>
                     </td>
-                    <td className="py-3 px-4 text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -287,25 +288,25 @@ export const PrincipalStationaryPage: React.FC = () => {
 
       {/* Create Account Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
                 <UserPlus className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Create New Login Credentials</h3>
-                <p className="text-xs text-brand-textMuted">Create an AO or Stationary Incharge login</p>
+                <h3 className="text-base font-bold text-slate-800">Create New Login Credentials</h3>
+                <p className="text-xs text-slate-500">Create an AO or Stationary Incharge login</p>
               </div>
             </div>
 
             <form onSubmit={handleCreateAccount} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300">Role for Login:</label>
+                <label className="text-xs font-bold text-slate-700">Role for Login:</label>
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as any)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#0f172a] border border-[#334155] text-xs text-white focus:outline-none focus:border-amber-400 font-semibold"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
                 >
                   <option value="ROLE_AO">Administrative Officer (AO) - Approval Authority</option>
                   <option value="ROLE_STATIONARY">Stationary Incharge - Store &amp; Dispatch Authority</option>
@@ -313,38 +314,38 @@ export const PrincipalStationaryPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300">Full Name:</label>
+                <label className="text-xs font-bold text-slate-700">Full Name:</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Administrative Officer Srikanth"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#0f172a] border border-[#334155] text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300">Email Address (Login ID):</label>
+                <label className="text-xs font-bold text-slate-700">Email Address (Login ID):</label>
                 <input
                   type="email"
                   required
                   placeholder="e.g. ao.office@sms.edu"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#0f172a] border border-[#334155] text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300">Password:</label>
+                <label className="text-xs font-bold text-slate-700">Password:</label>
                 <input
                   type="password"
                   required
                   placeholder="Enter strong password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#0f172a] border border-[#334155] text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
@@ -352,14 +353,14 @@ export const PrincipalStationaryPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 border border-slate-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Account'}
                 </button>
@@ -371,20 +372,20 @@ export const PrincipalStationaryPage: React.FC = () => {
 
       {/* Delete Account Modal */}
       {deleteConfirmUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Delete Login Account</h3>
-                <p className="text-xs text-brand-textMuted">This will permanently remove access</p>
+                <h3 className="text-base font-bold text-slate-800">Delete Login Account</h3>
+                <p className="text-xs text-slate-500">This will permanently remove access</p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300">
-              Are you sure you want to delete the account for <strong>{deleteConfirmUser.name}</strong> (
+            <p className="text-xs text-slate-600">
+              Are you sure you want to delete the account for <strong className="text-slate-800">{deleteConfirmUser.name}</strong> (
               {deleteConfirmUser.email})?
             </p>
 
@@ -392,7 +393,7 @@ export const PrincipalStationaryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDeleteConfirmUser(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 border border-slate-200"
               >
                 Cancel
               </button>
@@ -400,7 +401,7 @@ export const PrincipalStationaryPage: React.FC = () => {
                 type="button"
                 onClick={handleDeleteAccount}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs shadow-md shadow-red-500/20 cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting...' : 'Confirm Delete'}
               </button>
