@@ -11,8 +11,8 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('sms_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+      config.headers.Authorization = `Bearer ${token.trim()}`;
     }
     return config;
   },
@@ -25,7 +25,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const url = error.config?.url || '';
+    if (error.response && error.response.status === 401 && !url.includes('/auth/login')) {
       localStorage.removeItem('sms_token');
       localStorage.removeItem('sms_user');
       window.location.href = '/login';

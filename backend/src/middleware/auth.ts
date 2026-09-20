@@ -26,10 +26,9 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
     token = req.query.token;
   }
   
-  if (token) {
-    
+  if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as {
+      const decoded = jwt.verify(token.trim(), JWT_SECRET) as {
         userId: number;
         sub?: string;
         email?: string;
@@ -62,14 +61,15 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
         email: user.email,
         name: user.name,
         role: user.role_name,
+        roleName: user.role_name,
         departmentId: user.department_id,
+        deptId: user.department_id,
         departmentCode: user.dept_code,
         labId: user.lab_id || null,
-      };
+      } as any;
       
       next();
     } catch (err) {
-      console.error('JWT Verification Error:', err);
       return res.status(401).json({ message: 'Unauthorized: Invalid token.' });
     }
   } else {
