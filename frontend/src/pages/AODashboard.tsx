@@ -1016,7 +1016,7 @@ export const AODashboard: React.FC = () => {
                             <Hotel className="w-4 h-4" />
                             <span>Stay: {ra.accommodationType}</span>
                           </div>
-                          <div className="text-slate-700 font-semibold">{ra.accommodationPersonsCount} Persons</div>
+                          <div className="text-slate-700 font-semibold">{ra.accommodationPersonsCount} Persons • {ra.accommodationRoomsCount || 0} Rooms</div>
                           <div className="text-slate-500 text-[11px]">{ra.accommodationFromDate} to {ra.accommodationToDate}</div>
                           <div className="text-slate-600 italic truncate mt-1">"{ra.accommodationPurpose}"</div>
                         </div>

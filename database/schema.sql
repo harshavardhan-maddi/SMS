@@ -205,6 +205,74 @@ ALTER TABLE stationary_requests ADD COLUMN IF NOT EXISTS decrease_remarks TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_str_requester ON stationary_requests(requester_id);
 CREATE INDEX IF NOT EXISTS idx_str_dept ON stationary_requests(department_id);
-CREATE INDEX IF NOT EXISTS idx_str_status ON stationary_requests(status);
+-- 12. Create Refreshment & Accommodation Requests Table
+CREATE TABLE IF NOT EXISTS refreshment_accommodation_requests (
+    id VARCHAR(32) PRIMARY KEY, -- e.g. RA-1001
+    requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    
+    -- Accommodation Options
+    has_accommodation BOOLEAN DEFAULT FALSE,
+    accommodation_type VARCHAR(32), -- 'Boys Hostel', 'Girls Hostel', 'Hotel'
+    accommodation_purpose TEXT,
+    accommodation_persons_count INTEGER DEFAULT 0,
+    accommodation_rooms_count INTEGER DEFAULT 0,
+    accommodation_from_date VARCHAR(32),
+    accommodation_to_date VARCHAR(32),
+
+    -- Target Hostel (when Hostel Food or Tea & Snacks is routed to a hostel)
+    target_hostel VARCHAR(32), -- 'Boys Hostel', 'Girls Hostel'
+    
+    -- Tea & Snacks Options
+    has_tea_snacks BOOLEAN DEFAULT FALSE,
+    tea_snacks_from_date VARCHAR(32),
+    tea_snacks_to_date VARCHAR(32),
+    tea_count INTEGER DEFAULT 0,
+    snacks_count INTEGER DEFAULT 0,
+    tea_snacks_purpose TEXT,
+
+    -- Hostel Food Options
+    has_hostel_food BOOLEAN DEFAULT FALSE,
+    hostel_food_persons_count INTEGER DEFAULT 0,
+    hostel_food_rooms_count INTEGER DEFAULT 0,
+    hostel_food_from_date VARCHAR(32),
+    hostel_food_to_date VARCHAR(32),
+    hostel_food_purpose TEXT,
+
+    -- Restaurant Food Options
+    has_restaurant_food BOOLEAN DEFAULT FALSE,
+    restaurant_food_persons_count INTEGER DEFAULT 0,
+    restaurant_food_from_date VARCHAR(32),
+    restaurant_food_to_date VARCHAR(32),
+    veg_count INTEGER DEFAULT 0,
+    non_veg_count INTEGER DEFAULT 0,
+    restaurant_food_purpose TEXT,
+
+    -- Workflow Status & Tracking
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING_AO',
+    total_guests INTEGER DEFAULT 0,
+    checked_out_count INTEGER DEFAULT 0,
+    checked_out_at TIMESTAMP,
+
+    -- AO Actions
+    ao_remarks TEXT,
+    ao_assigned_hotel TEXT,
+    ao_assigned_restaurant TEXT,
+    ao_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    ao_action_at TIMESTAMP,
+
+    -- Warden Actions
+    warden_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    warden_assigned_rooms TEXT,
+    warden_remarks TEXT,
+    warden_action_at TIMESTAMP,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ra_requester ON refreshment_accommodation_requests(requester_id);
+CREATE INDEX IF NOT EXISTS idx_ra_dept ON refreshment_accommodation_requests(department_id);
+CREATE INDEX IF NOT EXISTS idx_ra_status ON refreshment_accommodation_requests(status);
 
 

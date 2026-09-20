@@ -32,6 +32,7 @@ function formatRARow(row: any) {
     accommodationType: row.accommodation_type || null,
     accommodationPurpose: row.accommodation_purpose || null,
     accommodationPersonsCount: row.accommodation_persons_count || 0,
+    accommodationRoomsCount: row.accommodation_rooms_count || row.hostel_food_rooms_count || 0,
     accommodationFromDate: row.accommodation_from_date || null,
     accommodationToDate: row.accommodation_to_date || null,
 
@@ -193,6 +194,7 @@ raRouter.post('/requests', authenticateJWT, requireRole(['ROLE_HOD', 'ROLE_PRINC
     accommodationType,
     accommodationPurpose,
     accommodationPersonsCount,
+    accommodationRoomsCount,
     accommodationFromDate,
     accommodationToDate,
 
@@ -225,10 +227,25 @@ raRouter.post('/requests', authenticateJWT, requireRole(['ROLE_HOD', 'ROLE_PRINC
     return res.status(400).send('Please select at least one service (Accommodation, Tea & Snacks, Hostel Food, or Restaurant Food).');
   }
 
+  // Enforce Hotel restriction: When Hotel is selected, cannot combine with hostel food, tea & snacks, or restaurant food
+  if (hasAccommodation && accommodationType === 'Hotel') {
+    if (hasTeaSnacks || hasHostelFood || hasRestaurantFood) {
+      return res.status(400).send('When Hotel accommodation is selected, Tea & Snacks, Hostel Food, and Restaurant Food are not accessible.');
+    }
+  }
+
   // Validate Accommodation
   if (hasAccommodation) {
     if (!accommodationType || !['Boys Hostel', 'Girls Hostel', 'Hotel'].includes(accommodationType)) {
       return res.status(400).send('Please select a valid Accommodation type (Boys Hostel, Girls Hostel, or Hotel).');
+    }
+    const accP = parseInt(accommodationPersonsCount, 10) || 0;
+    const accR = parseInt(accommodationRoomsCount, 10) || 0;
+    if (accP <= 0) {
+      return res.status(400).send('Please enter valid number of persons for accommodation.');
+    }
+    if (accR <= 0) {
+      return res.status(400).send('Please enter number of rooms required for accommodation.');
     }
     if (!accommodationPurpose || !accommodationPurpose.trim()) {
       return res.status(400).send('Purpose is required for accommodation.');
@@ -247,12 +264,27 @@ raRouter.post('/requests', authenticateJWT, requireRole(['ROLE_HOD', 'ROLE_PRINC
     }
   }
 
+  // Auto-sync matched fields from accommodation if accommodation was selected
+  let effectiveHostel = targetHostel || null;
+  let effectiveHostelPersons = parseInt(hostelFoodPersonsCount, 10) || 0;
+  let effectiveHostelRooms = parseInt(hostelFoodRoomsCount, 10) || 0;
+
+  if (hasAccommodation) {
+    if (accommodationType === 'Boys Hostel') effectiveHostel = 'Boys Hostel';
+    else if (accommodationType === 'Girls Hostel') effectiveHostel = 'Girls Hostel';
+
+    if (effectiveHostelPersons <= 0) {
+      effectiveHostelPersons = parseInt(accommodationPersonsCount, 10) || 0;
+    }
+    if (effectiveHostelRooms <= 0) {
+      effectiveHostelRooms = parseInt(accommodationRoomsCount, 10) || 0;
+    }
+  }
+
   // Validate Hostel Food
   if (hasHostelFood) {
-    const hPersons = parseInt(hostelFoodPersonsCount, 10) || 0;
-    const hRooms = parseInt(hostelFoodRoomsCount, 10) || 0;
-    if (hPersons <= 0 || hRooms <= 0) {
-      return res.status(400).send('Please enter valid person count and room count for Hostel Food.');
+    if (effectiveHostelPersons <= 0) {
+      return res.status(400).send('Please enter valid person count for Hostel Food.');
     }
     if (!hostelFoodPurpose || !hostelFoodPurpose.trim()) {
       return res.status(400).send('Purpose is required for Hostel Food.');
@@ -275,19 +307,12 @@ raRouter.post('/requests', authenticateJWT, requireRole(['ROLE_HOD', 'ROLE_PRINC
     }
   }
 
-  // Calculate target hostel for warden routing
-  let effectiveHostel = targetHostel || null;
-  if (hasAccommodation) {
-    if (accommodationType === 'Boys Hostel') effectiveHostel = 'Boys Hostel';
-    else if (accommodationType === 'Girls Hostel') effectiveHostel = 'Girls Hostel';
-  }
-
   // Calculate total guests for checkout tracking
   let totalGuests = 0;
   if (hasAccommodation) {
     totalGuests = parseInt(accommodationPersonsCount, 10) || 0;
   } else if (hasHostelFood) {
-    totalGuests = parseInt(hostelFoodPersonsCount, 10) || 0;
+    totalGuests = effectiveHostelPersons;
   } else if (hasRestaurantFood) {
     totalGuests = parseInt(restaurantFoodPersonsCount, 10) || 0;
   }
@@ -299,19 +324,19 @@ raRouter.post('/requests', authenticateJWT, requireRole(['ROLE_HOD', 'ROLE_PRINC
     await db.run(
       `INSERT INTO refreshment_accommodation_requests (
         id, requester_id, department_id,
-        has_accommodation, accommodation_type, accommodation_purpose, accommodation_persons_count, accommodation_from_date, accommodation_to_date,
+        has_accommodation, accommodation_type, accommodation_purpose, accommodation_persons_count, accommodation_rooms_count, accommodation_from_date, accommodation_to_date,
         target_hostel,
         has_tea_snacks, tea_snacks_from_date, tea_snacks_to_date, tea_count, snacks_count, tea_snacks_purpose,
         has_hostel_food, hostel_food_persons_count, hostel_food_rooms_count, hostel_food_from_date, hostel_food_to_date, hostel_food_purpose,
         has_restaurant_food, restaurant_food_persons_count, restaurant_food_from_date, restaurant_food_to_date, veg_count, non_veg_count, restaurant_food_purpose,
         total_guests, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_AO')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_AO')`,
       [
         id, user.id, user.deptId || null,
-        Boolean(hasAccommodation), accommodationType || null, accommodationPurpose ? accommodationPurpose.trim() : null, parseInt(accommodationPersonsCount, 10) || 0, accommodationFromDate || null, accommodationToDate || null,
+        Boolean(hasAccommodation), accommodationType || null, accommodationPurpose ? accommodationPurpose.trim() : null, parseInt(accommodationPersonsCount, 10) || 0, parseInt(accommodationRoomsCount, 10) || 0, accommodationFromDate || null, accommodationToDate || null,
         effectiveHostel,
         Boolean(hasTeaSnacks), teaSnacksFromDate || null, teaSnacksToDate || null, parseInt(teaCount, 10) || 0, parseInt(snacksCount, 10) || 0, teaSnacksPurpose ? teaSnacksPurpose.trim() : null,
-        Boolean(hasHostelFood), parseInt(hostelFoodPersonsCount, 10) || 0, parseInt(hostelFoodRoomsCount, 10) || 0, hostelFoodFromDate || null, hostelFoodToDate || null, hostelFoodPurpose ? hostelFoodPurpose.trim() : null,
+        Boolean(hasHostelFood), effectiveHostelPersons, effectiveHostelRooms, hostelFoodFromDate || null, hostelFoodToDate || null, hostelFoodPurpose ? hostelFoodPurpose.trim() : null,
         Boolean(hasRestaurantFood), parseInt(restaurantFoodPersonsCount, 10) || 0, restaurantFoodFromDate || null, restaurantFoodToDate || null, parseInt(vegCount, 10) || 0, parseInt(nonVegCount, 10) || 0, restaurantFoodPurpose ? restaurantFoodPurpose.trim() : null,
         totalGuests
       ]

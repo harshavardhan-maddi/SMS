@@ -144,7 +144,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
     // 5. R&A (Refreshments & Accommodations)
     raRequests.forEach((r) => {
       const services = [];
-      if (r.hasAccommodation) services.push(`Stay: ${r.accommodationType} (${r.accommodationPersonsCount} Pax)`);
+      if (r.hasAccommodation) services.push(`Stay: ${r.accommodationType} (${r.accommodationPersonsCount} Pax, ${r.accommodationRoomsCount || r.hostelFoodRoomsCount || 0} Rms)`);
       if (r.hasTeaSnacks) services.push(`Tea & Snacks (${r.teaCount}T, ${r.snacksCount}S)`);
       if (r.hasHostelFood) services.push(`Hostel Mess (${r.hostelFoodPersonsCount} Pax, ${r.hostelFoodRoomsCount} Rms)`);
       if (r.hasRestaurantFood) services.push(`Restaurant (${r.vegCount}V, ${r.nonVegCount}NV)`);

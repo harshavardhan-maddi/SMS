@@ -68,6 +68,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
   const [accommodationType, setAccommodationType] = useState<AccommodationType>('Boys Hostel');
   const [accommodationPurpose, setAccommodationPurpose] = useState('');
   const [accommodationPersonsCount, setAccommodationPersonsCount] = useState<number | string>(0);
+  const [accommodationRoomsCount, setAccommodationRoomsCount] = useState<number | string>(0);
   const [accommodationFromDate, setAccommodationFromDate] = useState(new Date().toISOString().split('T')[0]);
   const [accommodationToDate, setAccommodationToDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -100,6 +101,124 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
   const [vegCount, setVegCount] = useState<number | string>(0);
   const [nonVegCount, setNonVegCount] = useState<number | string>(0);
   const [restaurantFoodPurpose, setRestaurantFoodPurpose] = useState('');
+
+  // Derived rules
+  const isHotelSelected = hasAccommodation && accommodationType === 'Hotel';
+  const isHostelAccommodation = hasAccommodation && (accommodationType === 'Boys Hostel' || accommodationType === 'Girls Hostel');
+
+  // Auto-fix accommodation selection
+  const handleSelectAccommodationType = (type: AccommodationType) => {
+    setAccommodationType(type);
+    if (type === 'Hotel') {
+      setHasTeaSnacks(false);
+      setHasHostelFood(false);
+      setHasRestaurantFood(false);
+      toast('When Hotel accommodation is selected, Tea & Snacks, Hostel Food, and Restaurant Food are not accessible.', {
+        icon: '🏨',
+      });
+    } else if (type === 'Boys Hostel') {
+      setTeaSnacksVenue('Boys Hostel');
+      setHostelFoodType('Boys Hostel');
+      setTargetHostel('Boys Hostel');
+    } else if (type === 'Girls Hostel') {
+      setTeaSnacksVenue('Girls Hostel');
+      setHostelFoodType('Girls Hostel');
+      setTargetHostel('Girls Hostel');
+    }
+  };
+
+  // Toggle Accommodation Card
+  const handleToggleAccommodation = () => {
+    const next = !hasAccommodation;
+    setHasAccommodation(next);
+    if (next) {
+      if (accommodationType === 'Hotel') {
+        setHasTeaSnacks(false);
+        setHasHostelFood(false);
+        setHasRestaurantFood(false);
+      } else {
+        setTeaSnacksVenue(accommodationType);
+        setHostelFoodType(accommodationType);
+        setTargetHostel(accommodationType);
+        if (accommodationPersonsCount) setHostelFoodPersonsCount(accommodationPersonsCount);
+        if (accommodationRoomsCount) setHostelFoodRoomsCount(accommodationRoomsCount);
+        if (accommodationFromDate) {
+          setTeaSnacksFromDate(accommodationFromDate);
+          setHostelFoodFromDate(accommodationFromDate);
+        }
+        if (accommodationToDate) {
+          setTeaSnacksToDate(accommodationToDate);
+          setHostelFoodToDate(accommodationToDate);
+        }
+      }
+    }
+  };
+
+  // Toggle Tea & Snacks Card
+  const handleToggleTeaSnacks = () => {
+    if (isHotelSelected) {
+      toast.error('Tea & Snacks is not accessible when Hotel accommodation is selected.');
+      return;
+    }
+    const next = !hasTeaSnacks;
+    setHasTeaSnacks(next);
+    if (next && isHostelAccommodation) {
+      setTeaSnacksVenue(accommodationType as 'Boys Hostel' | 'Girls Hostel');
+      if (accommodationFromDate) setTeaSnacksFromDate(accommodationFromDate);
+      if (accommodationToDate) setTeaSnacksToDate(accommodationToDate);
+    }
+  };
+
+  // Toggle Hostel Food Card
+  const handleToggleHostelFood = () => {
+    if (isHotelSelected) {
+      toast.error('Hostel Food is not accessible when Hotel accommodation is selected.');
+      return;
+    }
+    const next = !hasHostelFood;
+    setHasHostelFood(next);
+    if (next && isHostelAccommodation) {
+      setHostelFoodType(accommodationType as 'Boys Hostel' | 'Girls Hostel');
+      if (accommodationPersonsCount) setHostelFoodPersonsCount(accommodationPersonsCount);
+      if (accommodationRoomsCount) setHostelFoodRoomsCount(accommodationRoomsCount);
+      if (accommodationFromDate) setHostelFoodFromDate(accommodationFromDate);
+      if (accommodationToDate) setHostelFoodToDate(accommodationToDate);
+    }
+  };
+
+  // Toggle Restaurant Food Card
+  const handleToggleRestaurantFood = () => {
+    if (isHotelSelected) {
+      toast.error('Restaurant Food is not accessible when Hotel accommodation is selected.');
+      return;
+    }
+    setHasRestaurantFood(!hasRestaurantFood);
+  };
+
+  // Input matching handlers
+  const handleAccommodationPersonsChange = (val: string) => {
+    setAccommodationPersonsCount(val);
+    setHostelFoodPersonsCount(val);
+  };
+
+  const handleAccommodationRoomsChange = (val: string) => {
+    setAccommodationRoomsCount(val);
+    setHostelFoodRoomsCount(val);
+  };
+
+  const handleAccommodationFromDateChange = (val: string) => {
+    setAccommodationFromDate(val);
+    setTeaSnacksFromDate(val);
+    setHostelFoodFromDate(val);
+    setRestaurantFoodFromDate(val);
+  };
+
+  const handleAccommodationToDateChange = (val: string) => {
+    setAccommodationToDate(val);
+    setTeaSnacksToDate(val);
+    setHostelFoodToDate(val);
+    setRestaurantFoodToDate(val);
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<RefreshmentAccommodationRequest | null>(null);
@@ -147,6 +266,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
     setAccommodationType('Boys Hostel');
     setAccommodationPurpose('');
     setAccommodationPersonsCount(0);
+    setAccommodationRoomsCount(0);
     setAccommodationFromDate(new Date().toISOString().split('T')[0]);
     setAccommodationToDate(new Date().toISOString().split('T')[0]);
 
@@ -184,14 +304,27 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
       return;
     }
 
+    // Hotel Exclusion Rule
+    if (hasAccommodation && accommodationType === 'Hotel') {
+      if (hasTeaSnacks || hasHostelFood || hasRestaurantFood) {
+        toast.error('When Hotel accommodation is selected, Tea & Snacks, Hostel Food, and Restaurant Food are not accessible.');
+        return;
+      }
+    }
+
     if (hasAccommodation) {
       if (!accommodationPurpose.trim()) {
         toast.error('Please enter the Purpose for Accommodation.');
         return;
       }
       const accP = Number(accommodationPersonsCount) || 0;
+      const accR = Number(accommodationRoomsCount) || 0;
       if (accP <= 0) {
         toast.error('Please enter a valid count of persons for Accommodation (greater than 0).');
+        return;
+      }
+      if (accR <= 0) {
+        toast.error('Please enter the number of rooms required for Accommodation (greater than 0).');
         return;
       }
     }
@@ -214,10 +347,9 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
         toast.error('Please enter the Purpose for Hostel Food.');
         return;
       }
-      const hp = Number(hostelFoodPersonsCount) || 0;
-      const hr = Number(hostelFoodRoomsCount) || 0;
-      if (hp <= 0 || hr <= 0) {
-        toast.error('Please enter valid number of persons and rooms for Hostel Food.');
+      const hp = Number(hostelFoodPersonsCount) || Number(accommodationPersonsCount) || 0;
+      if (hp <= 0) {
+        toast.error('Please enter valid number of persons for Hostel Food.');
         return;
       }
     }
@@ -258,6 +390,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
         accommodationType: hasAccommodation ? accommodationType : null,
         accommodationPurpose: hasAccommodation ? accommodationPurpose.trim() : null,
         accommodationPersonsCount: hasAccommodation ? Number(accommodationPersonsCount) : 0,
+        accommodationRoomsCount: hasAccommodation ? Number(accommodationRoomsCount) : 0,
         accommodationFromDate: hasAccommodation ? accommodationFromDate : null,
         accommodationToDate: hasAccommodation ? accommodationToDate : null,
 
@@ -271,8 +404,8 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
         teaSnacksPurpose: hasTeaSnacks ? teaSnacksPurpose.trim() : null,
 
         hasHostelFood,
-        hostelFoodPersonsCount: hasHostelFood ? Number(hostelFoodPersonsCount) : 0,
-        hostelFoodRoomsCount: hasHostelFood ? Number(hostelFoodRoomsCount) : 0,
+        hostelFoodPersonsCount: hasHostelFood ? (Number(hostelFoodPersonsCount) || Number(accommodationPersonsCount) || 0) : 0,
+        hostelFoodRoomsCount: hasAccommodation ? Number(accommodationRoomsCount) : (Number(hostelFoodRoomsCount) || 0),
         hostelFoodFromDate: hasHostelFood ? hostelFoodFromDate : null,
         hostelFoodToDate: hasHostelFood ? hostelFoodToDate : null,
         hostelFoodPurpose: hasHostelFood ? hostelFoodPurpose.trim() : null,
@@ -601,7 +734,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                             )}
                           </div>
                           <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
-                            {req.hasAccommodation && <span>🏨 {req.accommodationType} ({req.accommodationPersonsCount} pax)</span>}
+                            {req.hasAccommodation && <span>🏨 {req.accommodationType} ({req.accommodationPersonsCount} pax, {req.accommodationRoomsCount || 0} rms)</span>}
                             {req.hasTeaSnacks && <span>☕ Tea ({req.teaCount}) &amp; Snacks ({req.snacksCount})</span>}
                             {req.hasHostelFood && <span>🍲 Hostel Food ({req.hostelFoodPersonsCount} pax, {req.hostelFoodRoomsCount} rms)</span>}
                             {req.hasRestaurantFood && <span>🍽️ Restaurant ({req.vegCount} Veg, {req.nonVegCount} Non-Veg)</span>}
@@ -657,7 +790,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Accommodation:</span>
                     <span className="font-bold text-slate-800">
-                      {submittedTicket.accommodationType} • {submittedTicket.accommodationPersonsCount} Persons
+                      {submittedTicket.accommodationType} • {submittedTicket.accommodationPersonsCount} Persons • {submittedTicket.accommodationRoomsCount} Rooms
                     </span>
                   </div>
                 )}
@@ -718,7 +851,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Service 1: Accommodation */}
                 <div
-                  onClick={() => setHasAccommodation(!hasAccommodation)}
+                  onClick={handleToggleAccommodation}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     hasAccommodation
                       ? 'border-rose-600 bg-rose-50/50 shadow-sm'
@@ -744,13 +877,20 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
 
                 {/* Service 2: Tea & Snacks */}
                 <div
-                  onClick={() => setHasTeaSnacks(!hasTeaSnacks)}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                    hasTeaSnacks
-                      ? 'border-purple-600 bg-purple-50/50 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  onClick={handleToggleTeaSnacks}
+                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${
+                    isHotelSelected
+                      ? 'opacity-40 cursor-not-allowed bg-slate-100/80 border-dashed border-slate-300'
+                      : hasTeaSnacks
+                      ? 'border-purple-600 bg-purple-50/50 shadow-sm cursor-pointer'
+                      : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
                   }`}
                 >
+                  {isHotelSelected && (
+                    <span className="absolute top-2 right-2 text-[9px] font-extrabold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200">
+                      Inaccessible
+                    </span>
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <div className={`p-2.5 rounded-xl ${hasTeaSnacks ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
                       <Coffee className="w-5 h-5" />
@@ -758,25 +898,35 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                     <input
                       type="checkbox"
                       checked={hasTeaSnacks}
+                      disabled={isHotelSelected}
                       onChange={() => {}}
                       className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
                     />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-800">Tea &amp; Snacks</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">High tea, coffee &amp; refreshments</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {isHotelSelected ? 'Not allowed with Hotel' : 'High tea, coffee & refreshments'}
+                    </p>
                   </div>
                 </div>
 
                 {/* Service 3: Hostel Food */}
                 <div
-                  onClick={() => setHasHostelFood(!hasHostelFood)}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                    hasHostelFood
-                      ? 'border-amber-600 bg-amber-50/50 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  onClick={handleToggleHostelFood}
+                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${
+                    isHotelSelected
+                      ? 'opacity-40 cursor-not-allowed bg-slate-100/80 border-dashed border-slate-300'
+                      : hasHostelFood
+                      ? 'border-amber-600 bg-amber-50/50 shadow-sm cursor-pointer'
+                      : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
                   }`}
                 >
+                  {isHotelSelected && (
+                    <span className="absolute top-2 right-2 text-[9px] font-extrabold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200">
+                      Inaccessible
+                    </span>
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <div className={`p-2.5 rounded-xl ${hasHostelFood ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
                       <Utensils className="w-5 h-5" />
@@ -784,25 +934,35 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                     <input
                       type="checkbox"
                       checked={hasHostelFood}
+                      disabled={isHotelSelected}
                       onChange={() => {}}
                       className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
                     />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-800">Hostel Food</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Mess breakfast, lunch &amp; dinner</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {isHotelSelected ? 'Not allowed with Hotel' : 'Mess breakfast, lunch & dinner'}
+                    </p>
                   </div>
                 </div>
 
                 {/* Service 4: Restaurant Food */}
                 <div
-                  onClick={() => setHasRestaurantFood(!hasRestaurantFood)}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                    hasRestaurantFood
-                      ? 'border-emerald-600 bg-emerald-50/50 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  onClick={handleToggleRestaurantFood}
+                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${
+                    isHotelSelected
+                      ? 'opacity-40 cursor-not-allowed bg-slate-100/80 border-dashed border-slate-300'
+                      : hasRestaurantFood
+                      ? 'border-emerald-600 bg-emerald-50/50 shadow-sm cursor-pointer'
+                      : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
                   }`}
                 >
+                  {isHotelSelected && (
+                    <span className="absolute top-2 right-2 text-[9px] font-extrabold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200">
+                      Inaccessible
+                    </span>
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <div className={`p-2.5 rounded-xl ${hasRestaurantFood ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
                       <UtensilsCrossed className="w-5 h-5" />
@@ -810,13 +970,16 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                     <input
                       type="checkbox"
                       checked={hasRestaurantFood}
+                      disabled={isHotelSelected}
                       onChange={() => {}}
                       className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-800">Restaurant Food</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Catered Veg / Non-Veg meals</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {isHotelSelected ? 'Not allowed with Hotel' : 'Catered Veg / Non-Veg meals'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -836,7 +999,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                         <button
                           key={type}
                           type="button"
-                          onClick={() => setAccommodationType(type)}
+                          onClick={() => handleSelectAccommodationType(type)}
                           className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                             accommodationType === type
                               ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
@@ -849,20 +1012,31 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                       ))}
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1.5">
-                      {accommodationType === 'Boys Hostel' && 'Once AO accepts, request is forwarded directly to the Boys Hostel Warden desk for room assignment.'}
-                      {accommodationType === 'Girls Hostel' && 'Once AO accepts, request is forwarded directly to the Girls Hostel Warden desk for room assignment.'}
-                      {accommodationType === 'Hotel' && 'AO directly arranges external hotel bookings and room allocations.'}
+                      {accommodationType === 'Boys Hostel' && 'Auto-fixes Tea & Snacks and Hostel Food to Boys Hostel. Once AO accepts, forwarded directly to the Boys Hostel Warden.'}
+                      {accommodationType === 'Girls Hostel' && 'Auto-fixes Tea & Snacks and Hostel Food to Girls Hostel. Once AO accepts, forwarded directly to the Girls Hostel Warden.'}
+                      {accommodationType === 'Hotel' && 'Hotel booking is self-contained. Hostel Food, Tea & Snacks, and Restaurant Food are completely disabled.'}
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Number of Persons *</label>
                       <input
                         type="number"
                         min="0"
                         value={accommodationPersonsCount}
-                        onChange={(e) => setAccommodationPersonsCount(e.target.value)}
+                        onChange={(e) => handleAccommodationPersonsChange(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Number of Rooms Required *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={accommodationRoomsCount}
+                        onChange={(e) => handleAccommodationRoomsChange(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
                         placeholder="0"
                       />
@@ -872,7 +1046,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                       <input
                         type="date"
                         value={accommodationFromDate}
-                        onChange={(e) => setAccommodationFromDate(e.target.value)}
+                        onChange={(e) => handleAccommodationFromDateChange(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
                       />
                     </div>
@@ -881,7 +1055,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                       <input
                         type="date"
                         value={accommodationToDate}
-                        onChange={(e) => setAccommodationToDate(e.target.value)}
+                        onChange={(e) => handleAccommodationToDateChange(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
                       />
                     </div>
@@ -909,27 +1083,46 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">Service Location / Venue *</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-slate-700">Service Location / Venue *</label>
+                      {isHostelAccommodation && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-extrabold border border-purple-200">
+                          🔒 Fixed to {accommodationType} from Accommodation
+                        </span>
+                      )}
+                    </div>
                     <div className="grid grid-cols-3 gap-3">
-                      {(['Boys Hostel', 'Girls Hostel', 'Campus'] as const).map((venue) => (
-                        <button
-                          key={venue}
-                          type="button"
-                          onClick={() => setTeaSnacksVenue(venue)}
-                          className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                            teaSnacksVenue === venue
-                              ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <span>{venue === 'Campus' ? 'Campus / Dept' : venue}</span>
-                        </button>
-                      ))}
+                      {(['Boys Hostel', 'Girls Hostel', 'Campus'] as const).map((venue) => {
+                        const isFixedSelected = isHostelAccommodation ? venue === accommodationType : teaSnacksVenue === venue;
+                        return (
+                          <button
+                            key={venue}
+                            type="button"
+                            disabled={isHostelAccommodation}
+                            onClick={() => !isHostelAccommodation && setTeaSnacksVenue(venue)}
+                            className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                              isHostelAccommodation
+                                ? isFixedSelected
+                                  ? 'bg-purple-600 text-white border-purple-600 shadow-xs cursor-not-allowed'
+                                  : 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed'
+                                : teaSnacksVenue === venue
+                                ? 'bg-purple-600 text-white border-purple-600 shadow-xs cursor-pointer'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 cursor-pointer'
+                            }`}
+                          >
+                            <span>{venue === 'Campus' ? 'Campus / Dept' : venue}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {teaSnacksVenue === 'Boys Hostel' && 'Forwarded to Boys Hostel Warden desk upon AO acceptance.'}
-                      {teaSnacksVenue === 'Girls Hostel' && 'Forwarded to Girls Hostel Warden desk upon AO acceptance.'}
-                      {teaSnacksVenue === 'Campus' && 'AO coordinates college pantry / campus cafeteria arrangements.'}
+                      {isHostelAccommodation
+                        ? `Auto-fixed to ${accommodationType}. Forwarded to ${accommodationType} Warden upon AO acceptance.`
+                        : teaSnacksVenue === 'Boys Hostel'
+                        ? 'Forwarded to Boys Hostel Warden desk upon AO acceptance.'
+                        : teaSnacksVenue === 'Girls Hostel'
+                        ? 'Forwarded to Girls Hostel Warden desk upon AO acceptance.'
+                        : 'AO coordinates college pantry / campus cafeteria arrangements.'}
                     </p>
                   </div>
 
@@ -998,30 +1191,60 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">Select Hostel Mess *</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-slate-700">Select Hostel Mess *</label>
+                      {isHostelAccommodation && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-200">
+                          🔒 Fixed to {accommodationType} Mess from Accommodation
+                        </span>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {(['Boys Hostel', 'Girls Hostel'] as const).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => setHostelFoodType(type)}
-                          className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                            hostelFoodType === type
-                              ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span>{type} Mess</span>
-                        </button>
-                      ))}
+                      {(['Boys Hostel', 'Girls Hostel'] as const).map((type) => {
+                        const isFixedSelected = isHostelAccommodation ? type === accommodationType : hostelFoodType === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            disabled={isHostelAccommodation}
+                            onClick={() => !isHostelAccommodation && setHostelFoodType(type)}
+                            className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                              isHostelAccommodation
+                                ? isFixedSelected
+                                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs cursor-not-allowed'
+                                  : 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed'
+                                : hostelFoodType === type
+                                ? 'bg-amber-600 text-white border-amber-600 shadow-xs cursor-pointer'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 cursor-pointer'
+                            }`}
+                          >
+                            <Building2 className="w-3.5 h-3.5" />
+                            <span>{type} Mess</span>
+                          </button>
+                        );
+                      })}
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Once AO accepts, forwarded directly to the {hostelFoodType} Warden desk for food arrangement.
+                      {isHostelAccommodation
+                        ? `Auto-fixed to ${accommodationType} Mess. Forwarded directly to the ${accommodationType} Warden upon AO acceptance.`
+                        : `Once AO accepts, forwarded directly to the ${hostelFoodType} Warden desk for food arrangement.`}
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  {/* Accommodation match banner */}
+                  {hasAccommodation && (
+                    <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BedDouble className="w-4 h-4 text-amber-600" />
+                        <span>Room Allocation: <strong>{accommodationRoomsCount || 0} Rooms</strong> (Input defined in Accommodation section)</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 uppercase tracking-wider">
+                        Auto-Matched
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Number of Persons *</label>
                       <input
@@ -1029,17 +1252,6 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                         min="0"
                         value={hostelFoodPersonsCount}
                         onChange={(e) => setHostelFoodPersonsCount(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Number of Rooms *</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={hostelFoodRoomsCount}
-                        onChange={(e) => setHostelFoodRoomsCount(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
                         placeholder="0"
                       />
@@ -1277,7 +1489,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                           <td className="py-3.5 px-4 align-top space-y-1">
                             {req.hasAccommodation && (
                               <div className="text-[11px] text-slate-600">
-                                <strong>{req.accommodationPersonsCount}</strong> Guests ({req.accommodationFromDate} to {req.accommodationToDate})
+                                <strong>{req.accommodationPersonsCount}</strong> Guests • <strong>{req.accommodationRoomsCount || 0}</strong> Rooms ({req.accommodationFromDate} to {req.accommodationToDate})
                               </div>
                             )}
                             {req.hasTeaSnacks && (
@@ -1385,7 +1597,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                     <Hotel className="w-3.5 h-3.5" />
                     <span>Accommodation: {selectedRequestDetails.accommodationType}</span>
                   </div>
-                  <div className="text-slate-600">Guests: <strong>{selectedRequestDetails.accommodationPersonsCount}</strong></div>
+                  <div className="text-slate-600">Guests: <strong>{selectedRequestDetails.accommodationPersonsCount}</strong> • Rooms: <strong>{selectedRequestDetails.accommodationRoomsCount || 0}</strong></div>
                   <div className="text-slate-600">Dates: {selectedRequestDetails.accommodationFromDate} to {selectedRequestDetails.accommodationToDate}</div>
                   <div className="text-slate-700 mt-1">Purpose: <em>{selectedRequestDetails.accommodationPurpose}</em></div>
                 </div>

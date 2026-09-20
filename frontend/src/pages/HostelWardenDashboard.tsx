@@ -391,7 +391,7 @@ export const HostelWardenDashboard: React.FC = () => {
                       <Hotel className="w-3.5 h-3.5" />
                       <span>Overnight Accommodation</span>
                     </div>
-                    <div className="text-slate-700 font-semibold">{req.accommodationPersonsCount} Guests</div>
+                    <div className="text-slate-700 font-semibold">{req.accommodationPersonsCount} Guests • {req.accommodationRoomsCount || req.hostelFoodRoomsCount || 0} Rooms</div>
                     <div className="text-slate-500 text-[11px]">{req.accommodationFromDate} to {req.accommodationToDate}</div>
                     <div className="text-slate-600 italic truncate mt-1">"{req.accommodationPurpose}"</div>
                   </div>

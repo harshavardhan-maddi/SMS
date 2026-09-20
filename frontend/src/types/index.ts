@@ -193,6 +193,7 @@ export interface RefreshmentAccommodationRequest {
   accommodationType?: AccommodationType | null;
   accommodationPurpose?: string | null;
   accommodationPersonsCount: number;
+  accommodationRoomsCount: number;
   accommodationFromDate?: string | null;
   accommodationToDate?: string | null;
 
