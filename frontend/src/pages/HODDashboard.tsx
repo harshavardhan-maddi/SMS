@@ -30,6 +30,7 @@ import { HODPortalLanding } from './HODPortalLanding';
 import { HODSHRModule } from './HODSHRModule';
 import { HODStationaryModule } from './HODStationaryModule';
 import { HODTRModule } from './HODTRModule';
+import { HODRAModule } from './HODRAModule';
 
 export const HODDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -52,10 +53,10 @@ export const HODDashboard: React.FC = () => {
   };
 
   // Portal Landing State: Every HOD sees the cards upon login
-  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr' | 'str' | 'tr'>(() => {
+  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr' | 'str' | 'tr' | 'ra'>(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mode = searchParams.get('mode');
-    if (mode === 'sms' || mode === 'shr' || mode === 'str' || mode === 'tr') return mode;
+    if (mode === 'sms' || mode === 'shr' || mode === 'str' || mode === 'tr' || mode === 'ra') return mode;
     return 'portal_selector';
   });
   
@@ -337,6 +338,18 @@ export const HODDashboard: React.FC = () => {
     );
   }
 
+  // 5. If portalMode is ra, show the R&A Module (Dashboard, History, New Req)
+  if (portalMode === 'ra') {
+    return (
+      <HODRAModule
+        onSwitchToSMS={() => setPortalMode('sms')}
+        onSwitchToSHR={() => setPortalMode('shr')}
+        onSwitchToSTR={() => setPortalMode('str')}
+        onSwitchToTR={() => setPortalMode('tr')}
+      />
+    );
+  }
+
   if (loading || !stats) {
     return (
       <div className="space-y-6">
@@ -384,6 +397,13 @@ export const HODDashboard: React.FC = () => {
             className="px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
             <span>TR (Transport)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setPortalMode('ra')}
+            className="px-3.5 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+          >
+            <span>R&A (Hospitality)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button

@@ -23,20 +23,33 @@ import {
   Calendar,
   Navigation,
   CheckCircle2,
-  Trash2
+  Trash2,
+  Hotel,
+  Coffee,
+  Utensils,
+  UtensilsCrossed,
+  DoorClosed,
+  Info
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
-import { StationaryRequest, TransportRequest, TransportType, TransportRequestStatus } from '../types';
+import {
+  StationaryRequest,
+  TransportRequest,
+  TransportType,
+  TransportRequestStatus,
+  RefreshmentAccommodationRequest,
+  RAStatus
+} from '../types';
 import { toast } from 'react-hot-toast';
 
 export const AODashboard: React.FC = () => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
 
-  // Top-Level Active Module: 'STR' (Stationary) or 'TR' (Transport)
-  const [activeModule, setActiveModule] = useState<'STR' | 'TR'>('STR');
+  // Top-Level Active Module: 'STR' (Stationary) or 'TR' (Transport) or 'RA' (Refreshments & Accommodations)
+  const [activeModule, setActiveModule] = useState<'STR' | 'TR' | 'RA'>('STR');
 
   // STR State
   const [requests, setRequests] = useState<StationaryRequest[]>([]);
@@ -63,6 +76,20 @@ export const AODashboard: React.FC = () => {
   const [allocatedVehicleCount, setAllocatedVehicleCount] = useState<number>(0);
   const [trRemarks, setTrRemarks] = useState('');
   const [isProcessingTR, setIsProcessingTR] = useState(false);
+
+  // RA State
+  const [raRequests, setRaRequests] = useState<RefreshmentAccommodationRequest[]>([]);
+  const [loadingRA, setLoadingRA] = useState(true);
+  const [activeTabRA, setActiveTabRA] = useState<'pending' | 'all'>('pending');
+  const [searchQueryRA, setSearchQueryRA] = useState('');
+
+  // RA Action Modal State
+  const [selectedRA, setSelectedRA] = useState<RefreshmentAccommodationRequest | null>(null);
+  const [raActionType, setRaActionType] = useState<'APPROVE' | 'REJECT' | null>(null);
+  const [assignedHotel, setAssignedHotel] = useState('');
+  const [assignedRestaurant, setAssignedRestaurant] = useState('');
+  const [raRemarks, setRaRemarks] = useState('');
+  const [isProcessingRA, setIsProcessingRA] = useState(false);
 
   // Fetch STR Requests
   const fetchSTRRequests = async () => {
@@ -92,12 +119,28 @@ export const AODashboard: React.FC = () => {
     }
   };
 
+  // Fetch RA Requests
+  const fetchRARequests = async () => {
+    setLoadingRA(true);
+    try {
+      const res = await api.get('/ra/requests');
+      setRaRequests(res.data || []);
+    } catch (err) {
+      console.error('Failed to load AO R&A requests:', err);
+      toast.error('Failed to load Refreshments & Accommodations requests.');
+    } finally {
+      setLoadingRA(false);
+    }
+  };
+
   useEffect(() => {
     fetchSTRRequests();
     fetchTRRequests();
+    fetchRARequests();
     const poll = setInterval(() => {
       fetchSTRRequests();
       fetchTRRequests();
+      fetchRARequests();
     }, 3000);
     return () => clearInterval(poll);
   }, [dashboardTick]);
@@ -197,6 +240,72 @@ export const AODashboard: React.FC = () => {
     }
   };
 
+  // RA Action Handlers
+  const handleOpenRAActionModal = (ra: RefreshmentAccommodationRequest, type: 'APPROVE' | 'REJECT') => {
+    setSelectedRA(ra);
+    setRaActionType(type);
+    if (type === 'APPROVE') {
+      setAssignedHotel(ra.hasAccommodation && ra.accommodationType === 'Hotel' ? 'Hotel Grand Minerva (Deluxe Suite AC)' : '');
+      setAssignedRestaurant(ra.hasRestaurantFood ? 'Sri Annapurna Catering / Dining Hall VIP' : '');
+      setRaRemarks('Approved & coordinated. Necessary arrangements initiated.');
+    } else {
+      setAssignedHotel('');
+      setAssignedRestaurant('');
+      setRaRemarks('Arrangements could not be accommodated due to prior college guest commitments.');
+    }
+  };
+
+  const handleConfirmRAAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRA || !raActionType) return;
+
+    if (raActionType === 'APPROVE') {
+      if (selectedRA.hasAccommodation && selectedRA.accommodationType === 'Hotel' && !assignedHotel.trim()) {
+        toast.error('Please enter the assigned Hotel details.');
+        return;
+      }
+      if (selectedRA.hasRestaurantFood && !assignedRestaurant.trim()) {
+        toast.error('Please enter the assigned Restaurant / Caterer details.');
+        return;
+      }
+    } else if (raActionType === 'REJECT') {
+      if (!raRemarks.trim()) {
+        toast.error('Please provide a mandatory reason for declining.');
+        return;
+      }
+    }
+
+    setIsProcessingRA(true);
+    try {
+      const res = await api.patch(`/ra/requests/${selectedRA.id}/ao-action`, {
+        action: raActionType,
+        assignedHotel: assignedHotel.trim(),
+        assignedRestaurant: assignedRestaurant.trim(),
+        remarks: raRemarks.trim(),
+      });
+
+      if (raActionType === 'APPROVE') {
+        const isWarden = res.data.status === 'FORWARDED_WARDEN';
+        toast.success(
+          isWarden
+            ? `Request ${selectedRA.id} approved! Forwarded to ${res.data.targetHostel || 'Hostel'} Warden desk.`
+            : `Request ${selectedRA.id} approved and arrangements finalized!`
+        );
+      } else {
+        toast.success(`Request ${selectedRA.id} declined.`);
+      }
+
+      setSelectedRA(null);
+      setRaActionType(null);
+      fetchRARequests();
+    } catch (err: any) {
+      console.error('Failed to process AO R&A action:', err);
+      toast.error(err.response?.data || 'Failed to update request.');
+    } finally {
+      setIsProcessingRA(false);
+    }
+  };
+
   // Helpers
   const pendingSTRRequests = requests.filter((r) => r.status === 'PENDING_AO');
   const displayedSTRRequests = (activeTabSTR === 'pending' ? pendingSTRRequests : requests).filter((r) => {
@@ -274,6 +383,71 @@ export const AODashboard: React.FC = () => {
     }
   };
 
+  const pendingRARequests = raRequests.filter((r) => r.status === 'PENDING_AO');
+  const displayedRARequests = (activeTabRA === 'pending' ? pendingRARequests : raRequests).filter((r) => {
+    if (!searchQueryRA.trim()) return true;
+    const q = searchQueryRA.toLowerCase();
+    return (
+      r.id.toLowerCase().includes(q) ||
+      (r.accommodationPurpose || '').toLowerCase().includes(q) ||
+      (r.hostelFoodPurpose || '').toLowerCase().includes(q) ||
+      (r.teaSnacksPurpose || '').toLowerCase().includes(q) ||
+      (r.restaurantFoodPurpose || '').toLowerCase().includes(q) ||
+      (r.requester?.name || '').toLowerCase().includes(q) ||
+      (r.department?.name || '').toLowerCase().includes(q) ||
+      (r.department?.code || '').toLowerCase().includes(q)
+    );
+  });
+
+  const getRAStatusBadge = (status: RAStatus) => {
+    switch (status) {
+      case 'PENDING_AO':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800">
+            <Clock className="w-3.5 h-3.5 animate-spin" /> Pending AO Review
+          </span>
+        );
+      case 'APPROVED_AO':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 border border-blue-200 text-blue-800">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Approved by AO
+          </span>
+        );
+      case 'FORWARDED_WARDEN':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 border border-purple-200 text-purple-800">
+            <DoorClosed className="w-3.5 h-3.5" /> Forwarded to Warden
+          </span>
+        );
+      case 'WARDEN_ASSIGNED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-200 text-indigo-800">
+            <Building2 className="w-3.5 h-3.5" /> Rooms Assigned / Active
+          </span>
+        );
+      case 'PARTIALLY_CHECKED_OUT':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 border border-amber-300 text-amber-800">
+            <DoorClosed className="w-3.5 h-3.5" /> Partial Checkout
+          </span>
+        );
+      case 'COMPLETED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <CheckCheck className="w-3.5 h-3.5 text-emerald-600" /> Completed
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 border border-red-200 text-red-700">
+            <XCircle className="w-3.5 h-3.5" /> Declined
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6 pb-16 animate-fade-in text-slate-800">
       {/* Top Header Banner */}
@@ -287,16 +461,16 @@ export const AODashboard: React.FC = () => {
             Central Administrative Desk
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Review college-wide Stationary Indents and manage Fleet Vehicle Allocations for department travels.
+            Review college-wide Stationary Indents, Fleet Allocations, and Refreshments &amp; Accommodations.
           </p>
         </div>
 
-        {/* Primary Module Switcher: STR vs TR */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start md:self-auto">
+        {/* Primary Module Switcher: STR vs TR vs RA */}
+        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start md:self-auto flex-wrap">
           <button
             onClick={() => setActiveModule('STR')}
             id="btn-ao-str-module"
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
               activeModule === 'STR'
                 ? 'bg-amber-500 text-slate-950 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
@@ -314,7 +488,7 @@ export const AODashboard: React.FC = () => {
           <button
             onClick={() => setActiveModule('TR')}
             id="btn-ao-tr-module"
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
               activeModule === 'TR'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
@@ -325,6 +499,24 @@ export const AODashboard: React.FC = () => {
             {pendingTRRequests.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white text-emerald-800 font-black">
                 {pendingTRRequests.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveModule('RA')}
+            id="btn-ao-ra-module"
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
+              activeModule === 'RA'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+          >
+            <Hotel className="w-4 h-4" />
+            <span>Hospitality (R&amp;A)</span>
+            {pendingRARequests.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white text-rose-800 font-black">
+                {pendingRARequests.length}
               </span>
             )}
           </button>
@@ -695,6 +887,215 @@ export const AODashboard: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
+      {/* MODULE 3: REFRESHMENTS & ACCOMMODATIONS (R&A) DESK */}
+      {/* ========================================================================= */}
+      {activeModule === 'RA' && (
+        <div className="space-y-6">
+          {/* Quick Metrics & Sub-Tabs */}
+          <div className="admin-card p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTabRA('pending')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTabRA === 'pending'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Action Required ({pendingRARequests.length})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTabRA('all')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTabRA === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Boxes className="w-3.5 h-3.5" />
+                <span>All Hospitality Indents ({raRequests.length})</span>
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQueryRA}
+                onChange={(e) => setSearchQueryRA(e.target.value)}
+                placeholder="Search ticket, dept, requester..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-rose-500"
+              />
+            </div>
+          </div>
+
+          {/* List of RA Cards */}
+          {loadingRA ? (
+            <div className="text-center py-20 text-slate-500 text-xs">Loading hospitality requests...</div>
+          ) : displayedRARequests.length === 0 ? (
+            <div className="admin-card text-center py-20 bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-2">
+              <CheckCircle className="w-10 h-10 mx-auto text-rose-500" />
+              <p className="text-sm font-bold text-slate-800">No hospitality requests found</p>
+              <p>All hospitality requests have been reviewed or no entries match your search.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayedRARequests.map((ra) => {
+                const isBoysHostel = ra.accommodationType === 'Boys Hostel' || ra.targetHostel === 'Boys Hostel';
+                const isGirlsHostel = ra.accommodationType === 'Girls Hostel' || ra.targetHostel === 'Girls Hostel';
+
+                return (
+                  <div
+                    key={ra.id}
+                    className="admin-card p-6 bg-white rounded-2xl border border-slate-200/80 hover:border-rose-300 shadow-xs space-y-4 transition-all"
+                  >
+                    {/* Top Bar */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-rose-600 text-white flex items-center gap-1.5">
+                            <Hotel className="w-3.5 h-3.5" />
+                            R&amp;A
+                          </span>
+                          <span className="text-lg font-black text-slate-900">{ra.id}</span>
+                          {getRAStatusBadge(ra.status)}
+
+                          {/* Live remaining badge */}
+                          {ra.totalGuests > 0 && ra.status === 'PARTIALLY_CHECKED_OUT' && (
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold border border-amber-300">
+                              {ra.stillInHostel} still in that hostel ({ra.checkedOutCount}/{ra.totalGuests} checked out)
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                          <span className="flex items-center gap-1 font-bold text-slate-800">
+                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                            {ra.department?.name || ra.department?.code || 'Department'}
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            {ra.requester?.name} ({ra.requester?.email})
+                          </span>
+                          <span>•</span>
+                          <span>Submitted {new Date(ra.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons (for Pending AO) */}
+                      {ra.status === 'PENDING_AO' && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenRAActionModal(ra, 'APPROVE')}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Accept Request</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenRAActionModal(ra, 'REJECT')}
+                            className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold flex items-center gap-1.5 transition-all border border-red-200 cursor-pointer"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>Decline</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Services Breakdown Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      {/* Accommodation Item */}
+                      {ra.hasAccommodation ? (
+                        <div className="p-3.5 rounded-xl bg-rose-50/50 border border-rose-200 text-xs space-y-1">
+                          <div className="font-bold text-rose-800 flex items-center gap-1.5">
+                            <Hotel className="w-4 h-4" />
+                            <span>Stay: {ra.accommodationType}</span>
+                          </div>
+                          <div className="text-slate-700 font-semibold">{ra.accommodationPersonsCount} Persons</div>
+                          <div className="text-slate-500 text-[11px]">{ra.accommodationFromDate} to {ra.accommodationToDate}</div>
+                          <div className="text-slate-600 italic truncate mt-1">"{ra.accommodationPurpose}"</div>
+                        </div>
+                      ) : null}
+
+                      {/* Tea & Snacks Item */}
+                      {ra.hasTeaSnacks ? (
+                        <div className="p-3.5 rounded-xl bg-purple-50/50 border border-purple-200 text-xs space-y-1">
+                          <div className="font-bold text-purple-800 flex items-center gap-1.5">
+                            <Coffee className="w-4 h-4" />
+                            <span>Tea &amp; Snacks</span>
+                          </div>
+                          <div className="text-slate-700 font-semibold">{ra.teaCount} Teas • {ra.snacksCount} Snacks</div>
+                          <div className="text-slate-500 text-[11px]">{ra.teaSnacksFromDate} to {ra.teaSnacksToDate}</div>
+                          <div className="text-slate-600 italic truncate mt-1">"{ra.teaSnacksPurpose}"</div>
+                        </div>
+                      ) : null}
+
+                      {/* Hostel Food Item */}
+                      {ra.hasHostelFood ? (
+                        <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200 text-xs space-y-1">
+                          <div className="font-bold text-amber-800 flex items-center gap-1.5">
+                            <Utensils className="w-4 h-4" />
+                            <span>Hostel Food ({ra.targetHostel || 'Mess'})</span>
+                          </div>
+                          <div className="text-slate-700 font-semibold">{ra.hostelFoodPersonsCount} Pax • {ra.hostelFoodRoomsCount} Rooms</div>
+                          <div className="text-slate-500 text-[11px]">{ra.hostelFoodFromDate} to {ra.hostelFoodToDate}</div>
+                          <div className="text-slate-600 italic truncate mt-1">"{ra.hostelFoodPurpose}"</div>
+                        </div>
+                      ) : null}
+
+                      {/* Restaurant Food Item */}
+                      {ra.hasRestaurantFood ? (
+                        <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-200 text-xs space-y-1">
+                          <div className="font-bold text-emerald-800 flex items-center gap-1.5">
+                            <UtensilsCrossed className="w-4 h-4" />
+                            <span>Restaurant Dining</span>
+                          </div>
+                          <div className="text-slate-700 font-semibold">{ra.vegCount} Veg • {ra.nonVegCount} Non-Veg</div>
+                          <div className="text-slate-500 text-[11px]">Serving: {ra.restaurantFoodFromDate}</div>
+                          <div className="text-slate-600 italic truncate mt-1">"{ra.restaurantFoodPurpose}"</div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Routing Explanatory Note */}
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Info className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-600">
+                          {isBoysHostel && 'Boys Hostel request: Upon AO acceptance, forwarded to the Boys Hostel Warden desk for room allotment.'}
+                          {isGirlsHostel && 'Girls Hostel request: Upon AO acceptance, forwarded to the Girls Hostel Warden desk for room allotment.'}
+                          {!isBoysHostel && !isGirlsHostel && 'AO directly coordinates external hotel bookings and restaurant arrangements.'}
+                        </span>
+                      </div>
+                      {ra.aoAssignedHotel && (
+                        <span className="text-blue-700 font-bold text-xs">Hotel: {ra.aoAssignedHotel}</span>
+                      )}
+                      {ra.wardenAssignedRooms && (
+                        <span className="text-indigo-700 font-bold text-xs">Rooms: {ra.wardenAssignedRooms}</span>
+                      )}
+                    </div>
+
+                    {/* Declined Reason */}
+                    {ra.status === 'REJECTED' && ra.aoRemarks && (
+                      <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs">
+                        <span className="font-bold text-red-900 block mb-0.5">AO Decline Reason:</span>
+                        <span className="text-red-800 italic">"{ra.aoRemarks}"</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* STR ACTION MODAL */}
       {/* ========================================================================= */}
       {selectedReq && actionType && (
@@ -899,6 +1300,140 @@ export const AODashboard: React.FC = () => {
                     ? 'Processing...'
                     : trActionType === 'APPROVE'
                     ? 'Confirm & Allocate Vehicle'
+                    : 'Confirm Decline'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* RA ACTION MODAL */}
+      {/* ========================================================================= */}
+      {selectedRA && raActionType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  raActionType === 'APPROVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                }`}
+              >
+                {raActionType === 'APPROVE' ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  {raActionType === 'APPROVE' ? 'Accept & Process Request' : 'Decline Request'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Ticket #{selectedRA.id} • {selectedRA.department?.name || 'Department'}
+                </p>
+              </div>
+            </div>
+
+            {/* Forwarding Notice */}
+            {raActionType === 'APPROVE' && (
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1">
+                <span className="font-bold block">Hospitality Workflow Routing:</span>
+                {(selectedRA.accommodationType === 'Boys Hostel' || selectedRA.targetHostel === 'Boys Hostel') ? (
+                  <p>Status will move to <strong>FORWARDED_WARDEN</strong> and immediately appear on the <strong>Boys Hostel Warden</strong> desk for room allocation &amp; food coordination.</p>
+                ) : (selectedRA.accommodationType === 'Girls Hostel' || selectedRA.targetHostel === 'Girls Hostel') ? (
+                  <p>Status will move to <strong>FORWARDED_WARDEN</strong> and immediately appear on the <strong>Girls Hostel Warden</strong> desk for room allocation &amp; food coordination.</p>
+                ) : (
+                  <p>Status will be <strong>APPROVED_AO</strong> and external hotel / restaurant arrangements will be marked confirmed.</p>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmRAAction} className="space-y-4">
+              {raActionType === 'APPROVE' ? (
+                <>
+                  {/* Hotel Details (if hotel accommodation requested) */}
+                  {selectedRA.hasAccommodation && selectedRA.accommodationType === 'Hotel' && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">
+                        Assigned Hotel Name &amp; Booking Details <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={assignedHotel}
+                        onChange={(e) => setAssignedHotel(e.target.value)}
+                        placeholder="e.g. Hotel Grand Minerva, AC Suite 201 & 202"
+                        className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-rose-500"
+                      />
+                    </div>
+                  )}
+
+                  {/* Restaurant Details (if restaurant food requested) */}
+                  {selectedRA.hasRestaurantFood && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">
+                        Assigned Restaurant / Caterer Name &amp; Menu <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={assignedRestaurant}
+                        onChange={(e) => setAssignedRestaurant(e.target.value)}
+                        placeholder="e.g. Sri Annapurna Caterers - VIP Dining Hall Buffet"
+                        className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-rose-500"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">AO Instructions / Remarks:</label>
+                    <textarea
+                      rows={2}
+                      value={raRemarks}
+                      onChange={(e) => setRaRemarks(e.target.value)}
+                      placeholder="e.g. Approved and coordinated. Necessary arrangements initiated."
+                      className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-rose-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Reason for Declining Request <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={raRemarks}
+                    onChange={(e) => setRaRemarks(e.target.value)}
+                    placeholder="Enter mandatory reason for declining request..."
+                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRA(null);
+                    setRaActionType(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 border border-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessingRA}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer ${
+                    raActionType === 'APPROVE'
+                      ? 'bg-rose-600 hover:bg-rose-700 shadow-xs'
+                      : 'bg-red-600 hover:bg-red-700 shadow-xs'
+                  }`}
+                >
+                  {isProcessingRA
+                    ? 'Processing...'
+                    : raActionType === 'APPROVE'
+                    ? 'Confirm & Process'
                     : 'Confirm Decline'}
                 </button>
               </div>

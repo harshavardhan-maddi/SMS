@@ -16,13 +16,14 @@ import {
   Clock,
   User,
   ShieldAlert,
-  Car
+  Car,
+  Hotel
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
 
 interface UnifiedRequestItem {
-  cardType: 'SMS' | 'SHR' | 'STR' | 'TR';
+  cardType: 'SMS' | 'SHR' | 'STR' | 'TR' | 'RA';
   id: string | number;
   title: string;
   department: string;
@@ -33,7 +34,7 @@ interface UnifiedRequestItem {
 }
 
 export const PrincipalHistoryManagementPage: React.FC = () => {
-  const [activeCardFilter, setActiveCardFilter] = useState<'ALL' | 'SMS' | 'SHR' | 'STR' | 'TR'>('ALL');
+  const [activeCardFilter, setActiveCardFilter] = useState<'ALL' | 'SMS' | 'SHR' | 'STR' | 'TR' | 'RA'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +43,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
   const [shrRequests, setShrRequests] = useState<any[]>([]);
   const [strRequests, setStrRequests] = useState<any[]>([]);
   const [trRequests, setTrRequests] = useState<any[]>([]);
+  const [raRequests, setRaRequests] = useState<any[]>([]);
 
   // Selection state
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -50,17 +52,19 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
   const fetchAllHistory = async () => {
     setLoading(true);
     try {
-      const [smsRes, shrRes, strRes, trRes] = await Promise.allSettled([
+      const [smsRes, shrRes, strRes, trRes, raRes] = await Promise.allSettled([
         api.get('/repairs'),
         api.get('/seminar-requests'),
         api.get('/stationary/requests'),
         api.get('/transport/requests'),
+        api.get('/ra/requests'),
       ]);
 
       if (smsRes.status === 'fulfilled') setSmsRequests(smsRes.value.data || []);
       if (shrRes.status === 'fulfilled') setShrRequests(shrRes.value.data || []);
       if (strRes.status === 'fulfilled') setStrRequests(strRes.value.data || []);
       if (trRes.status === 'fulfilled') setTrRequests(trRes.value.data || []);
+      if (raRes.status === 'fulfilled') setRaRequests(raRes.value.data || []);
     } catch (err) {
       console.error('Failed to load history items:', err);
       toast.error('Failed to refresh history records.');
@@ -137,9 +141,29 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       });
     });
 
+    // 5. R&A (Refreshments & Accommodations)
+    raRequests.forEach((r) => {
+      const services = [];
+      if (r.hasAccommodation) services.push(`Stay: ${r.accommodationType} (${r.accommodationPersonsCount} Pax)`);
+      if (r.hasTeaSnacks) services.push(`Tea & Snacks (${r.teaCount}T, ${r.snacksCount}S)`);
+      if (r.hasHostelFood) services.push(`Hostel Mess (${r.hostelFoodPersonsCount} Pax, ${r.hostelFoodRoomsCount} Rms)`);
+      if (r.hasRestaurantFood) services.push(`Restaurant (${r.vegCount}V, ${r.nonVegCount}NV)`);
+
+      list.push({
+        cardType: 'RA',
+        id: r.id,
+        title: services.join(' • ') || 'Refreshment & Accommodation Request',
+        department: r.department?.name || r.department?.code || 'Campus Dept',
+        requesterName: r.requester?.name || 'HOD',
+        status: r.status || 'PENDING_AO',
+        createdAt: r.createdAt || new Date().toISOString(),
+        details: r.accommodationPurpose || r.hostelFoodPurpose || r.teaSnacksPurpose || r.restaurantFoodPurpose || 'Hospitality Request',
+      });
+    });
+
     // Sort descending by date
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [smsRequests, shrRequests, strRequests, trRequests]);
+  }, [smsRequests, shrRequests, strRequests, trRequests, raRequests]);
 
   // Filtered list
   const filteredItems = useMemo(() => {
@@ -196,6 +220,8 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
         await api.delete(`/stationary/requests/${item.id}`);
       } else if (item.cardType === 'TR') {
         await api.delete(`/transport/requests/${item.id}`);
+      } else if (item.cardType === 'RA') {
+        await api.delete(`/ra/requests/${item.id}`);
       }
       toast.success(`${item.cardType} Request #${item.id} deleted successfully.`);
       fetchAllHistory();
@@ -222,6 +248,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const shrIds: string[] = [];
       const strIds: string[] = [];
       const trIds: string[] = [];
+      const raIds: string[] = [];
 
       selectedKeys.forEach((key) => {
         const [type, id] = key.split(':');
@@ -229,6 +256,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
         else if (type === 'SHR') shrIds.push(id);
         else if (type === 'STR') strIds.push(id);
         else if (type === 'TR') trIds.push(id);
+        else if (type === 'RA') raIds.push(id);
       });
 
       const promises: Promise<any>[] = [];
@@ -236,6 +264,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       if (shrIds.length > 0) promises.push(api.post('/seminar-requests/bulk-delete', { ids: shrIds }));
       if (strIds.length > 0) promises.push(api.post('/stationary/requests/bulk-delete', { ids: strIds }));
       if (trIds.length > 0) promises.push(api.post('/transport/requests/bulk-delete', { ids: trIds }));
+      if (raIds.length > 0) promises.push(api.post('/ra/requests/bulk-delete', { ids: raIds }));
 
       await Promise.all(promises);
       toast.success(`Successfully deleted ${total} selected requests!`);
@@ -273,12 +302,14 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const shrIds: string[] = [];
       const strIds: string[] = [];
       const trIds: string[] = [];
+      const raIds: string[] = [];
 
       filteredItems.forEach((it) => {
         if (it.cardType === 'SMS') smsIds.push(Number(it.id));
         else if (it.cardType === 'SHR') shrIds.push(String(it.id));
         else if (it.cardType === 'STR') strIds.push(String(it.id));
         else if (it.cardType === 'TR') trIds.push(String(it.id));
+        else if (it.cardType === 'RA') raIds.push(String(it.id));
       });
 
       const promises: Promise<any>[] = [];
@@ -286,6 +317,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       if (shrIds.length > 0) promises.push(api.post('/seminar-requests/bulk-delete', { ids: shrIds }));
       if (strIds.length > 0) promises.push(api.post('/stationary/requests/bulk-delete', { ids: strIds }));
       if (trIds.length > 0) promises.push(api.post('/transport/requests/bulk-delete', { ids: trIds }));
+      if (raIds.length > 0) promises.push(api.post('/ra/requests/bulk-delete', { ids: raIds }));
 
       await Promise.all(promises);
       toast.success(`Successfully deleted all ${count} requests from ${cardLabel}!`);
@@ -298,7 +330,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
     }
   };
 
-  const getCardBadge = (type: 'SMS' | 'SHR' | 'STR' | 'TR') => {
+  const getCardBadge = (type: 'SMS' | 'SHR' | 'STR' | 'TR' | 'RA') => {
     switch (type) {
       case 'SMS':
         return (
@@ -322,6 +354,12 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
             <Car className="w-3 h-3" /> TR
+          </span>
+        );
+      case 'RA':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+            <Hotel className="w-3 h-3" /> R&amp;A
           </span>
         );
     }
@@ -362,6 +400,10 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
             <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">TR</span>
             <span className="text-base font-black text-emerald-700">{trRequests.length}</span>
           </div>
+          <div className="px-3.5 py-2 rounded-xl bg-rose-50/70 border border-rose-200 text-center">
+            <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">R&amp;A</span>
+            <span className="text-base font-black text-rose-700">{raRequests.length}</span>
+          </div>
           <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-center">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total</span>
             <span className="text-base font-black text-slate-800">{unifiedItems.length}</span>
@@ -384,6 +426,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
                 { key: 'SHR', label: 'SHR (Seminar Halls)' },
                 { key: 'STR', label: 'STR (Stationary)' },
                 { key: 'TR', label: 'TR (Transport)' },
+                { key: 'RA', label: 'R&A (Hospitality)' },
               ] as const
             ).map((card) => (
               <button

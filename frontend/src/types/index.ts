@@ -172,3 +172,81 @@ export interface TransportRequest {
   updatedAt?: string;
 }
 
+export type AccommodationType = 'Boys Hostel' | 'Girls Hostel' | 'Hotel';
+
+export type RAStatus =
+  | 'PENDING_AO'
+  | 'APPROVED_AO'
+  | 'FORWARDED_WARDEN'
+  | 'WARDEN_ASSIGNED'
+  | 'PARTIALLY_CHECKED_OUT'
+  | 'COMPLETED'
+  | 'REJECTED';
+
+export interface RefreshmentAccommodationRequest {
+  id: string; // RA-1001
+  requester: User;
+  department?: Department | null;
+
+  // Accommodation
+  hasAccommodation: boolean;
+  accommodationType?: AccommodationType | null;
+  accommodationPurpose?: string | null;
+  accommodationPersonsCount: number;
+  accommodationFromDate?: string | null;
+  accommodationToDate?: string | null;
+
+  // Target Hostel for Warden routing
+  targetHostel?: 'Boys Hostel' | 'Girls Hostel' | null;
+
+  // Tea & Snacks
+  hasTeaSnacks: boolean;
+  teaSnacksFromDate?: string | null;
+  teaSnacksToDate?: string | null;
+  teaCount: number;
+  snacksCount: number;
+  teaSnacksPurpose?: string | null;
+
+  // Hostel Food
+  hasHostelFood: boolean;
+  hostelFoodPersonsCount: number;
+  hostelFoodRoomsCount: number;
+  hostelFoodFromDate?: string | null;
+  hostelFoodToDate?: string | null;
+  hostelFoodPurpose?: string | null;
+
+  // Restaurant Food
+  hasRestaurantFood: boolean;
+  restaurantFoodPersonsCount: number;
+  restaurantFoodFromDate?: string | null;
+  restaurantFoodToDate?: string | null;
+  vegCount: number;
+  nonVegCount: number;
+  restaurantFoodPurpose?: string | null;
+
+  // Workflow & Status
+  status: RAStatus;
+
+  // AO Actions
+  aoActionBy?: { id: number; name: string } | null;
+  aoRemarks?: string | null;
+  aoAssignedHotel?: string | null;
+  aoAssignedRestaurant?: string | null;
+  aoActionAt?: string | null;
+
+  // Warden Actions
+  warden?: { id: number; name: string } | null;
+  wardenAssignedRooms?: string | null;
+  wardenRemarks?: string | null;
+  wardenActionAt?: string | null;
+
+  // Guest Checkout Tracker
+  totalGuests: number;
+  checkedOutCount: number;
+  stillInHostel: number;
+  checkedOutAt?: string | null;
+
+  createdAt: string;
+  updatedAt?: string;
+}
+

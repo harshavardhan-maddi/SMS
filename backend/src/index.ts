@@ -19,6 +19,7 @@ import electricianRoutes from './routes/electricianRoutes';
 import { hallsRouter, requestsRouter } from './routes/seminarHallRoutes';
 import { stationaryRouter } from './routes/stationaryRoutes';
 import { transportRouter } from './routes/transportRoutes';
+import { raRouter } from './routes/refreshmentAccommodationRoutes';
 
 dotenv.config();
 
@@ -106,6 +107,10 @@ app.use('/api/api/stationary', stationaryRouter);
 app.use('/api/transport', transportRouter);
 app.use('/transport', transportRouter);
 app.use('/api/api/transport', transportRouter);
+
+app.use('/api/ra', raRouter);
+app.use('/ra', raRouter);
+app.use('/api/api/ra', raRouter);
 
 app.get('/api/health', (req, res) => res.send('OK'));
 app.get('/health', (req, res) => res.send('OK'));

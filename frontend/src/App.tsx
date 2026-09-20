@@ -28,6 +28,7 @@ import { AODashboard } from './pages/AODashboard';
 import { StationaryDashboard } from './pages/StationaryDashboard';
 import { PrincipalStationaryPage } from './pages/PrincipalStationaryPage';
 import { PrincipalHistoryManagementPage } from './pages/PrincipalHistoryManagementPage';
+import { HostelWardenDashboard } from './pages/HostelWardenDashboard';
 
 // 1. Route Guard for Authenticated Session
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -72,6 +73,9 @@ const DynamicDashboard: React.FC = () => {
   }
   if (user.role === 'ROLE_STATIONARY') {
     return <StationaryDashboard />;
+  }
+  if (user.role === 'ROLE_BOYS_HOSTEL_WARDEN' || user.role === 'ROLE_GIRLS_HOSTEL_WARDEN') {
+    return <HostelWardenDashboard />;
   }
   return <ComputerDeanDashboard />;
 };

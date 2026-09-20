@@ -10,12 +10,13 @@ import {
   PenTool,
   Boxes,
   Car,
-  Navigation
+  Navigation,
+  Hotel
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface HODPortalLandingProps {
-  onSelectFlow: (flow: 'sms' | 'shr' | 'str' | 'tr') => void;
+  onSelectFlow: (flow: 'sms' | 'shr' | 'str' | 'tr' | 'ra') => void;
 }
 
 export const HODPortalLanding: React.FC<HODPortalLandingProps> = ({ onSelectFlow }) => {
@@ -43,8 +44,8 @@ export const HODPortalLanding: React.FC<HODPortalLandingProps> = ({ onSelectFlow
         </p>
       </div>
 
-      {/* The 4 Primary Module Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl px-2">
+      {/* The 5 Primary Module Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 w-full max-w-7xl px-2">
         {/* Card 1: SMS */}
         <div
           onClick={() => onSelectFlow('sms')}
@@ -241,6 +242,56 @@ export const HODPortalLanding: React.FC<HODPortalLandingProps> = ({ onSelectFlow
 
           <div className="pt-4 border-t border-[#334155]/40 flex items-center justify-between text-sm font-semibold text-white group-hover:text-emerald-400">
             <span>Enter Transport Portal</span>
+            <ArrowRight className="w-5 h-5 transform group-hover:translate-x-1.5 transition-transform" />
+          </div>
+        </div>
+
+        {/* Card 5: R&A - Refreshments and Accommodations */}
+        <div
+          onClick={() => onSelectFlow('ra')}
+          id="card-ra-module"
+          className="group relative cursor-pointer rounded-2xl bg-gradient-to-b from-[#1e293b]/80 to-[#0f172a]/95 border border-[#334155]/60 hover:border-rose-400/60 p-7 transition-all duration-300 transform hover:-translate-y-1.5 hover:shadow-[0_20px_40px_-15px_rgba(244,63,94,0.35)] backdrop-blur-xl flex flex-col justify-between"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/15 transition-all duration-300" />
+
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="w-13 h-13 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                <Hotel className="w-6 h-6" />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                Hospitality
+              </span>
+            </div>
+
+            <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-rose-400 transition-colors">
+              R&amp;A
+            </h2>
+            <p className="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-3">
+              Refreshments &amp; Accommodations
+            </p>
+            <p className="text-sm text-brand-textMuted leading-relaxed mb-6">
+              Book Boys/Girls Hostel or Hotel stays, arrange Tea &amp; Snacks, Mess Dining, and Restaurant meals with live guest checkout tracking.
+            </p>
+
+            <ul className="space-y-2 mb-6 text-xs text-brand-textMuted">
+              <li className="flex items-center gap-2">
+                <CheckCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                <span>Hostel (Boys/Girls) or Hotel</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                <span>Tea, Snacks &amp; Hostel Food Forwarding</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                <span>Live Guest Checkout Counting</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="pt-4 border-t border-[#334155]/40 flex items-center justify-between text-sm font-semibold text-white group-hover:text-rose-400">
+            <span>Enter R&amp;A Portal</span>
             <ArrowRight className="w-5 h-5 transform group-hover:translate-x-1.5 transition-transform" />
           </div>
         </div>

@@ -139,13 +139,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   ];
 
   const getAOMenu = () => [
-    { name: 'Stationary Approvals', path: '/dashboard', icon: ShieldCheck },
+    { name: 'AO Central Desk', path: '/dashboard', icon: ShieldCheck },
     { name: 'Profile', path: '/profile', icon: User },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   const getStationaryMenu = () => [
     { name: 'Store & Dispatch', path: '/dashboard', icon: PackageCheck },
+    { name: 'Profile', path: '/profile', icon: User },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
+  const getWardenMenu = () => [
+    { name: 'Hostel Desk', path: '/dashboard', icon: Building2 },
     { name: 'Profile', path: '/profile', icon: User },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
@@ -162,6 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     if (user.role === 'ROLE_SEMINAR_HALL_ALLOCATOR') return getAllocatorMenu();
     if (user.role === 'ROLE_AO') return getAOMenu();
     if (user.role === 'ROLE_STATIONARY') return getStationaryMenu();
+    if (user.role === 'ROLE_BOYS_HOSTEL_WARDEN' || user.role === 'ROLE_GIRLS_HOSTEL_WARDEN') return getWardenMenu();
     return getDeanMenu();
   };
 
