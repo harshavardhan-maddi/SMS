@@ -214,37 +214,37 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
     switch (status) {
       case 'PENDING_AO':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
             <Clock className="w-3.5 h-3.5" /> Pending AO Approval
           </span>
         );
       case 'FORWARDED_TO_STATIONARY':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
             <Truck className="w-3.5 h-3.5" /> Forwarded to Store
           </span>
         );
       case 'FULFILLED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <CheckCheck className="w-3.5 h-3.5" /> Fulfilled &amp; Issued
           </span>
         );
       case 'REJECTED_AO':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
             <XCircle className="w-3.5 h-3.5" /> Declined by AO
           </span>
         );
       case 'REJECTED_STATIONARY':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
             <XCircle className="w-3.5 h-3.5" /> Declined by Store
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
             {status}
           </span>
         );
@@ -252,15 +252,15 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-fade-in">
       {/* Top Switcher Navigation Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-2xl px-5 py-3 text-xs shadow-md backdrop-blur-md">
+      <div className="admin-card p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-brand-textMuted">
-            Active Module: <strong className="text-white">STR (Stationary Requests)</strong>
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-slate-600">
+            Active Module: <strong className="text-slate-800">STR (Stationary Requests)</strong>
           </span>
-          <span className="hidden md:inline-block text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium">
+          <span className="hidden md:inline-block text-[11px] px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold">
             AO &amp; Store Dispatch Flow
           </span>
         </div>
@@ -269,7 +269,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
           {onSwitchToSHR && (
             <button
               onClick={onSwitchToSHR}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold transition-all cursor-pointer"
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Switch to SHR</span>
@@ -278,7 +278,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
           <button
             onClick={onSwitchToSMS}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-purple/10 hover:bg-brand-purple/20 border border-brand-purple/30 text-brand-purple font-semibold transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold transition-all cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to SMS Core</span>
@@ -287,26 +287,26 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
       </div>
 
       {/* Main Header & Sub-Tabs Navigation */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-b from-[#1e293b]/80 to-[#0f172a]/90 border border-[#334155]/50 rounded-2xl p-6 backdrop-blur-xl shadow-lg">
+      <div className="admin-card p-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
-            <Boxes className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">
+            <Boxes className="w-4 h-4 text-amber-600" />
             <span>Stationary Procurement &amp; Indent System</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Department Stationary Portal</h1>
-          <p className="text-xs sm:text-sm text-brand-textMuted mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800">Department Stationary Portal</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Select items from the 150+ catalog with adjacent counts. Requests route to the Administrative Officer (AO) then to Stationary Store.
           </p>
         </div>
 
         {/* 3 Tab Buttons */}
-        <div className="flex items-center gap-2 bg-[#0b1329]/80 p-1.5 rounded-xl border border-[#334155]/60 self-start md:self-auto shadow-inner">
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'dashboard'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
             <Boxes className="w-4 h-4" />
@@ -317,14 +317,14 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
             onClick={() => setActiveTab('new_request')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'new_request'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
             <span>New Req</span>
             {totalSelectedCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-amber-400 text-[10px] font-extrabold">
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-amber-400 text-[10px] font-black">
                 {totalSelectedCount}
               </span>
             )}
@@ -334,14 +334,16 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'history'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
             <ClipboardList className="w-4 h-4" />
             <span>History</span>
             {requests.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 text-[10px]">
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeTab === 'history' ? 'bg-slate-950 text-amber-400' : 'bg-slate-200 text-slate-700'
+              }`}>
                 {requests.length}
               </span>
             )}
@@ -353,60 +355,60 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
       {/* TAB 1: DASHBOARD VIEW                                          */}
       {/* ============================================================== */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <div className="p-4 rounded-xl bg-gradient-to-b from-[#1e293b]/70 to-[#0f172a]/80 border border-[#334155]/60 shadow-md">
-              <span className="text-[11px] font-semibold text-brand-textMuted uppercase tracking-wider block mb-1">
+            <div className="admin-card p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Total Requests
               </span>
-              <div className="text-2xl font-black text-white">{stats.total}</div>
+              <div className="text-2xl font-black text-slate-800">{stats.total}</div>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-b from-amber-500/10 to-[#0f172a]/80 border border-amber-500/30 shadow-md">
-              <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block mb-1">
+            <div className="admin-card p-4 bg-white rounded-2xl border border-amber-200/80 shadow-xs bg-amber-50/20">
+              <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block mb-1">
                 Pending AO
               </span>
-              <div className="text-2xl font-black text-amber-300">{stats.pendingAO}</div>
+              <div className="text-2xl font-black text-amber-600">{stats.pendingAO}</div>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-b from-blue-500/10 to-[#0f172a]/80 border border-blue-500/30 shadow-md">
-              <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider block mb-1">
-                Forwarded to Store
+            <div className="admin-card p-4 bg-white rounded-2xl border border-blue-200/80 shadow-xs bg-blue-50/20">
+              <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block mb-1">
+                Forwarded Store
               </span>
-              <div className="text-2xl font-black text-blue-300">{stats.forwardedStationary}</div>
+              <div className="text-2xl font-black text-blue-600">{stats.forwardedStationary}</div>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-b from-emerald-500/10 to-[#0f172a]/80 border border-emerald-500/30 shadow-md">
-              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block mb-1">
+            <div className="admin-card p-4 bg-white rounded-2xl border border-emerald-200/80 shadow-xs bg-emerald-50/20">
+              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">
                 Fulfilled
               </span>
-              <div className="text-2xl font-black text-emerald-300">{stats.fulfilled}</div>
+              <div className="text-2xl font-black text-emerald-600">{stats.fulfilled}</div>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-b from-red-500/10 to-[#0f172a]/80 border border-red-500/30 shadow-md col-span-2 sm:col-span-1">
-              <span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider block mb-1">
+            <div className="admin-card p-4 bg-white rounded-2xl border border-red-200/80 shadow-xs bg-red-50/20 col-span-2 sm:col-span-1">
+              <span className="text-[11px] font-bold text-red-700 uppercase tracking-wider block mb-1">
                 Declined
               </span>
-              <div className="text-2xl font-black text-red-300">{stats.rejected}</div>
+              <div className="text-2xl font-black text-red-600">{stats.rejected}</div>
             </div>
           </div>
 
           {/* Action Prompt Banner */}
-          <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-[#1e293b]/90 to-[#0f172a]/95 border border-amber-500/30 p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="rounded-2xl bg-amber-50/70 border border-amber-200/80 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold uppercase">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 text-xs font-bold uppercase">
+                <Sparkles className="w-3.5 h-3.5 text-amber-700" />
                 Quick Stationary Order
               </div>
-              <h2 className="text-xl font-bold text-white">Need exam sheets, gel pens, marker inks or folders?</h2>
-              <p className="text-xs sm:text-sm text-brand-textMuted">
+              <h2 className="text-xl font-bold text-slate-800">Need exam sheets, gel pens, marker inks or folders?</h2>
+              <p className="text-xs sm:text-sm text-slate-600">
                 Pick items from our 150+ catalog, set counts right beside each item, and submit directly for Administrative Officer approval.
               </p>
             </div>
             <button
               onClick={() => setActiveTab('new_request')}
-              className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-2"
+              className="px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow-xs transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-2 flex-shrink-0"
             >
               <PlusCircle className="w-5 h-5" />
               <span>Raise New Request</span>
@@ -414,16 +416,16 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
           </div>
 
           {/* Recent Requests Section */}
-          <div className="bg-[#1e293b]/60 border border-[#334155]/60 rounded-2xl p-6 backdrop-blur-md space-y-4">
+          <div className="admin-card p-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-amber-400" />
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-amber-600" />
                 <span>Recent Department Stationary Requests</span>
               </h3>
               {requests.length > 0 && (
                 <button
                   onClick={() => setActiveTab('history')}
-                  className="text-xs font-semibold text-amber-400 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-amber-700 hover:text-amber-800 cursor-pointer"
                 >
                   View All ({requests.length}) →
                 </button>
@@ -431,12 +433,12 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
             </div>
 
             {requests.length === 0 ? (
-              <div className="text-center py-12 text-brand-textMuted text-xs space-y-3">
-                <Boxes className="w-10 h-10 mx-auto text-slate-600" />
+              <div className="text-center py-12 text-slate-500 text-xs space-y-3">
+                <Boxes className="w-10 h-10 mx-auto text-slate-300" />
                 <p>No stationary requests submitted yet.</p>
                 <button
                   onClick={() => setActiveTab('new_request')}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs cursor-pointer shadow-xs"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Create First Request</span>
@@ -447,24 +449,24 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                 {requests.slice(0, 4).map((req) => (
                   <div
                     key={req.id}
-                    className="p-4 rounded-xl bg-[#0f172a]/70 border border-[#334155]/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-amber-500/40 transition-colors"
+                    className="p-4 rounded-xl bg-slate-50/70 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-amber-300 hover:bg-white transition-colors"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-extrabold text-white">{req.id}</span>
+                        <span className="text-sm font-extrabold text-slate-800">{req.id}</span>
                         {getStatusBadge(req.status)}
                       </div>
-                      <p className="text-xs text-brand-textMuted">
+                      <p className="text-xs text-slate-600">
                         <strong>{req.totalItems} distinct items</strong> ({req.totalQuantity} total units) •{' '}
                         {req.purpose || 'Academic usage'}
                       </p>
-                      <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
+                      <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
                         <span>Submitted on {new Date(req.createdAt).toLocaleDateString()}</span>
                         {req.aoRemarks && (
-                          <span className="text-amber-400 font-medium">AO: &quot;{req.aoRemarks}&quot;</span>
+                          <span className="text-amber-700 font-semibold">AO: &quot;{req.aoRemarks}&quot;</span>
                         )}
                         {req.stationaryRemarks && (
-                          <span className="text-emerald-400 font-medium">Store: &quot;{req.stationaryRemarks}&quot;</span>
+                          <span className="text-emerald-700 font-semibold">Store: &quot;{req.stationaryRemarks}&quot;</span>
                         )}
                       </div>
                     </div>
@@ -474,7 +476,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                         setExpandedRequestId(req.id);
                         setActiveTab('history');
                       }}
-                      className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition-all cursor-pointer flex items-center gap-1"
+                      className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
                     >
                       <span>Inspect Items</span>
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -491,9 +493,9 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
       {/* TAB 2: NEW REQUEST (ITEM PICKER WITH ADJACENT COUNTS)           */}
       {/* ============================================================== */}
       {activeTab === 'new_request' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
           {/* Top Filter & Search Bar */}
-          <div className="bg-[#1e293b]/70 border border-[#334155]/60 rounded-2xl p-5 backdrop-blur-md space-y-4">
+          <div className="admin-card p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -502,14 +504,14 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                   placeholder="Search by item name (e.g. Apsara, Gel Pen, Marker, Folder, Staples, Canon)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0f172a]/90 border border-[#334155] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
                 />
               </div>
 
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 rounded-xl"
+                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl border border-slate-200"
                 >
                   Clear Search
                 </button>
@@ -522,10 +524,10 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap font-semibold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl whitespace-nowrap font-bold transition-all cursor-pointer ${
                     selectedCategory === cat
-                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                      : 'bg-[#0f172a]/80 text-slate-300 hover:bg-slate-800 border border-[#334155]/50'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
                   {cat}
@@ -536,19 +538,19 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
           {/* Catalog Grid of Items with Adjacent Counts */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs text-brand-textMuted px-1">
+            <div className="flex items-center justify-between text-xs text-slate-500 px-1">
               <span>Showing {filteredItems.length} available items in catalog</span>
               {totalSelectedCount > 0 && (
-                <span className="text-amber-400 font-bold">
+                <span className="text-amber-700 font-bold bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
                   {totalSelectedCount} item(s) selected ({totalUnitsCount} units)
                 </span>
               )}
             </div>
 
             {loadingItems ? (
-              <div className="text-center py-16 text-slate-400 text-xs">Loading stationary items...</div>
+              <div className="text-center py-16 text-slate-500 text-xs">Loading stationary items...</div>
             ) : filteredItems.length === 0 ? (
-              <div className="text-center py-16 bg-[#1e293b]/40 rounded-2xl border border-[#334155]/40 text-slate-400 text-xs">
+              <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs">
                 No stationary items match your search filter.
               </div>
             ) : (
@@ -562,8 +564,8 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                       key={item.id}
                       className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-4 ${
                         isSelected
-                          ? 'bg-gradient-to-r from-amber-500/15 via-[#1e293b]/90 to-[#1e293b] border-amber-500/60 shadow-md shadow-amber-500/10'
-                          : 'bg-[#1e293b]/60 border-[#334155]/60 hover:border-slate-500'
+                          ? 'bg-amber-50/40 border-amber-300 shadow-xs'
+                          : 'bg-white border-slate-200 hover:border-amber-300 hover:shadow-xs'
                       }`}
                     >
                       {/* Left: Checkbox & Item Info */}
@@ -580,23 +582,23 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                         <div className="space-y-0.5">
                           <h4
                             className={`text-xs font-bold leading-snug transition-colors ${
-                              isSelected ? 'text-amber-200' : 'text-white'
+                              isSelected ? 'text-amber-900' : 'text-slate-800'
                             }`}
                           >
                             {item.name}
                           </h4>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                            <span className="px-2 py-0.2 rounded bg-slate-800 text-slate-300 font-medium">
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <span className="px-2 py-0.2 rounded bg-slate-100 text-slate-700 font-medium">
                               {item.category || 'General'}
                             </span>
-                            <span>• Packaging / Unit: {item.unit || 'Nos'}</span>
+                            <span>• Unit: {item.unit || 'Nos'}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Right: Adjacent Count Selector (Appears when Selected) */}
                       {isSelected ? (
-                        <div className="flex items-center gap-2 bg-[#0b1329] p-1 rounded-xl border border-amber-500/40 shadow-inner flex-shrink-0 animate-fade-in">
+                        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-amber-300 shadow-xs flex-shrink-0 animate-fade-in">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -607,7 +609,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                                 toggleItemSelection(item.id);
                               }
                             }}
-                            className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                             title="Decrease or Remove"
                           >
                             <Minus className="w-3 h-3" />
@@ -622,7 +624,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                               const val = parseInt(e.target.value, 10);
                               updateItemCount(item.id, isNaN(val) ? 1 : val);
                             }}
-                            className="w-12 text-center text-xs font-extrabold bg-transparent text-amber-300 focus:outline-none"
+                            className="w-12 text-center text-xs font-black bg-transparent text-amber-700 focus:outline-none"
                           />
 
                           <button
@@ -631,7 +633,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                               e.stopPropagation();
                               updateItemCount(item.id, currentCount + 1);
                             }}
-                            className="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold flex items-center justify-center transition-colors cursor-pointer"
                             title="Increase"
                           >
                             <Plus className="w-3 h-3" />
@@ -641,7 +643,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                         <button
                           type="button"
                           onClick={() => toggleItemSelection(item.id)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-amber-500 hover:text-slate-950 text-slate-300 text-xs font-semibold border border-slate-700 transition-all cursor-pointer flex-shrink-0"
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer flex-shrink-0"
                         >
                           + Select
                         </button>
@@ -655,25 +657,25 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
           {/* Sticky Bottom Summary Tray when items are selected */}
           {totalSelectedCount > 0 && (
-            <div className="fixed bottom-4 left-4 right-4 max-w-5xl mx-auto z-40 bg-[#0f172a]/95 border border-amber-500/40 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-fade-in flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <div className="fixed bottom-4 left-4 right-4 max-w-5xl mx-auto z-40 bg-white/95 border border-amber-400 rounded-2xl p-4 shadow-xl backdrop-blur-md animate-fade-in flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span className="text-xs font-extrabold text-white uppercase tracking-wider">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
                     {totalSelectedCount} Stationary Item{totalSelectedCount > 1 ? 's' : ''} Selected
                   </span>
-                  <span className="text-xs text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                  <span className="text-xs text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
                     Total: {totalUnitsCount} Units
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-slate-400">Purpose / Note:</label>
+                  <label className="text-[11px] font-semibold text-slate-600">Purpose / Note:</label>
                   <input
                     type="text"
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
                     placeholder="e.g. End Semester Exam Stationery / Lab Documentation"
-                    className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-400 w-64 md:w-80"
+                    className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-amber-500 w-64 md:w-80"
                   />
                 </div>
               </div>
@@ -682,9 +684,9 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedItemsMap({})}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
                   <span>Clear All</span>
                 </button>
 
@@ -692,7 +694,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                   type="button"
                   onClick={handleSubmitRequest}
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs shadow-xs transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
                   <Send className="w-4 h-4" />
                   <span>{isSubmitting ? 'Submitting...' : 'Submit to AO'}</span>
@@ -707,24 +709,24 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
       {/* TAB 3: HISTORY VIEW                                            */}
       {/* ============================================================== */}
       {activeTab === 'history' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-amber-400" />
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-amber-600" />
               <span>Department Stationary Requests History</span>
             </h3>
-            <span className="text-xs text-brand-textMuted">{requests.length} total request(s)</span>
+            <span className="text-xs text-slate-500">{requests.length} total request(s)</span>
           </div>
 
           {loadingRequests ? (
-            <div className="text-center py-16 text-slate-400 text-xs">Loading request history...</div>
+            <div className="text-center py-16 text-slate-500 text-xs">Loading request history...</div>
           ) : requests.length === 0 ? (
-            <div className="text-center py-16 bg-[#1e293b]/40 rounded-2xl border border-[#334155]/40 text-slate-400 text-xs space-y-3">
-              <Boxes className="w-10 h-10 mx-auto text-slate-600" />
+            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-3">
+              <Boxes className="w-10 h-10 mx-auto text-slate-300" />
               <p>No stationary request history found.</p>
               <button
                 onClick={() => setActiveTab('new_request')}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer shadow-xs"
               >
                 Create New Request
               </button>
@@ -737,33 +739,33 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                 return (
                   <div
                     key={req.id}
-                    className="bg-[#1e293b]/70 border border-[#334155]/60 rounded-2xl p-5 backdrop-blur-md space-y-4 hover:border-slate-500 transition-colors"
+                    className="admin-card p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4 hover:border-amber-300 transition-colors"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-3">
-                          <span className="text-base font-black text-white">{req.id}</span>
+                          <span className="text-base font-black text-slate-800">{req.id}</span>
                           {getStatusBadge(req.status)}
                         </div>
-                        <p className="text-xs text-brand-textMuted">
-                          Purpose: <span className="text-slate-300 font-medium">{req.purpose || 'Department Requirement'}</span>
+                        <p className="text-xs text-slate-600">
+                          Purpose: <span className="text-slate-800 font-semibold">{req.purpose || 'Department Requirement'}</span>
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-brand-textMuted mr-1">
+                        <span className="text-slate-500 mr-1">
                           {new Date(req.createdAt).toLocaleDateString()} at{' '}
                           {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <button
                           onClick={() => setExpandedRequestId(isExpanded ? null : req.id)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700 transition-all cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
                         >
                           <span>{isExpanded ? 'Collapse' : 'View Items'} ({req.totalItems})</span>
                         </button>
                         <button
                           onClick={() => handleDeleteRequest(req.id)}
-                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer"
+                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-all cursor-pointer"
                           title="Delete this request from history"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -773,31 +775,31 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
                     {/* Timeline & Feedback Remarks */}
                     {(req.aoRemarks || req.stationaryRemarks || req.decreaseRemarks) && (
-                      <div className="pt-2 border-t border-[#334155]/40 space-y-2 text-xs">
+                      <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {req.aoRemarks && (
-                            <div className="p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                              <span className="text-[10px] font-bold uppercase text-amber-400 block mb-0.5">
+                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-slate-700">
+                              <span className="text-[10px] font-bold uppercase text-amber-800 block mb-0.5">
                                 AO Review Note ({req.aoActionBy?.name || 'Administrative Officer'}):
                               </span>
-                              <p className="text-slate-200">{req.aoRemarks}</p>
+                              <p className="text-slate-800">{req.aoRemarks}</p>
                             </div>
                           )}
                           {req.stationaryRemarks && (
-                            <div className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                              <span className="text-[10px] font-bold uppercase text-emerald-400 block mb-0.5">
+                            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-slate-700">
+                              <span className="text-[10px] font-bold uppercase text-emerald-800 block mb-0.5">
                                 Store Dispatch Note ({req.stationaryActionBy?.name || 'Stationary Store'}):
                               </span>
-                              <p className="text-slate-200">{req.stationaryRemarks}</p>
+                              <p className="text-slate-800">{req.stationaryRemarks}</p>
                             </div>
                           )}
                         </div>
 
                         {req.decreaseRemarks && (
-                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                             <div>
-                              <span className="font-bold text-amber-300">Store Quantity Adjustment Reason: </span>
+                              <span className="font-bold text-amber-900">Store Quantity Adjustment Reason: </span>
                               &quot;{req.decreaseRemarks}&quot;
                             </div>
                           </div>
@@ -807,59 +809,59 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
                     {/* Expandable Items List Table */}
                     {isExpanded && (
-                      <div className="pt-3 border-t border-[#334155]/50 animate-fade-in space-y-2">
-                        <div className="text-xs font-bold text-slate-300">Requested vs Allotted Items:</div>
-                        <div className="overflow-x-auto rounded-xl border border-slate-800">
+                      <div className="pt-3 border-t border-slate-100 animate-fade-in space-y-2">
+                        <div className="text-xs font-bold text-slate-700">Requested vs Allotted Items:</div>
+                        <div className="overflow-x-auto rounded-xl border border-slate-200">
                           <table className="w-full text-left text-xs">
-                            <thead className="bg-[#0b1329] text-slate-400 font-semibold border-b border-slate-800">
+                            <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                               <tr>
-                                <th className="py-2 px-3">#</th>
-                                <th className="py-2 px-3">Item Name</th>
-                                <th className="py-2 px-3">Category</th>
-                                <th className="py-2 px-3">Packaging / Unit</th>
-                                <th className="py-2 px-3 text-right">Requested</th>
-                                <th className="py-2 px-3 text-right">Allotted</th>
+                                <th className="py-2.5 px-3">#</th>
+                                <th className="py-2.5 px-3">Item Name</th>
+                                <th className="py-2.5 px-3">Category</th>
+                                <th className="py-2.5 px-3">Packaging / Unit</th>
+                                <th className="py-2.5 px-3 text-right">Requested</th>
+                                <th className="py-2.5 px-3 text-right">Allotted</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800 text-slate-300">
+                            <tbody className="divide-y divide-slate-100 text-slate-700">
                               {req.items?.map((item, idx) => {
                                 const isDecreased = item.allottedCount !== undefined && item.allottedCount < item.count;
                                 return (
-                                  <tr key={idx} className="hover:bg-white/5">
-                                    <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
-                                    <td className="py-2 px-3 font-bold text-white">{item.name}</td>
-                                    <td className="py-2 px-3 text-slate-400">{item.category || 'General'}</td>
-                                    <td className="py-2 px-3 text-slate-400">{item.unit || 'Nos'}</td>
-                                    <td className="py-2 px-3 text-right font-medium text-slate-300">
+                                  <tr key={idx} className="hover:bg-slate-50/60">
+                                    <td className="py-2 px-3 text-slate-400">{idx + 1}</td>
+                                    <td className="py-2 px-3 font-bold text-slate-800">{item.name}</td>
+                                    <td className="py-2 px-3 text-slate-600">{item.category || 'General'}</td>
+                                    <td className="py-2 px-3 text-slate-600">{item.unit || 'Nos'}</td>
+                                    <td className="py-2 px-3 text-right font-semibold text-slate-800">
                                       {item.count}
                                     </td>
                                     <td className="py-2 px-3 text-right">
                                       {req.status === 'FULFILLED' ? (
-                                        <span className={`font-black ${isDecreased ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                        <span className={`font-black ${isDecreased ? 'text-amber-700' : 'text-emerald-700'}`}>
                                           {item.allottedCount ?? item.count}
                                           {isDecreased && (
-                                            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                                            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
                                               (-{item.count - (item.allottedCount ?? item.count)})
                                             </span>
                                           )}
                                         </span>
                                       ) : (
-                                        <span className="text-slate-500 italic">Pending Issue</span>
+                                        <span className="text-slate-400 italic">Pending Issue</span>
                                       )}
                                     </td>
                                   </tr>
                                 );
                               })}
                             </tbody>
-                            <tfoot className="bg-[#0b1329]/90 font-bold border-t border-slate-800">
+                            <tfoot className="bg-slate-50 font-bold border-t border-slate-200">
                               <tr>
-                                <td colSpan={4} className="py-2.5 px-3 text-right text-slate-400">
+                                <td colSpan={4} className="py-2.5 px-3 text-right text-slate-600">
                                   Total Units:
                                 </td>
-                                <td className="py-2.5 px-3 text-right text-slate-300 font-bold">
+                                <td className="py-2.5 px-3 text-right text-slate-800 font-bold">
                                   {req.totalQuantity} Req
                                 </td>
-                                <td className="py-2.5 px-3 text-right text-emerald-400 font-black">
+                                <td className="py-2.5 px-3 text-right text-emerald-700 font-black">
                                   {req.status === 'FULFILLED'
                                     ? req.items?.reduce((sum, it) => sum + (it.allottedCount ?? it.count), 0) ?? req.totalQuantity
                                     : '—'}

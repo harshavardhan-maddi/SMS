@@ -271,8 +271,8 @@ requestsRouter.get('/', authenticateJWT, async (req, res) => {
     if (userRole === 'ROLE_HOD') {
       const deptId = userReq.departmentId;
       if (deptId) {
-        sql += ` WHERE (r.requester_id = ? OR r.department_id = ?)`;
-        params.push(userId, deptId);
+        sql += ` WHERE (r.department_id = ? OR (r.department_id IS NULL AND r.requester_id = ?))`;
+        params.push(deptId, userId);
       } else {
         sql += ` WHERE r.requester_id = ?`;
         params.push(userId);
@@ -315,8 +315,8 @@ requestsRouter.get('/stats', authenticateJWT, async (req, res) => {
     if (userRole === 'ROLE_HOD') {
       const deptId = userReq.departmentId;
       if (deptId) {
-        whereClause = ` WHERE (requester_id = ? OR department_id = ?)`;
-        params.push(userId, deptId);
+        whereClause = ` WHERE (department_id = ? OR (department_id IS NULL AND requester_id = ?))`;
+        params.push(deptId, userId);
       } else {
         whereClause = ` WHERE requester_id = ?`;
         params.push(userId);

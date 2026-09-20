@@ -148,8 +148,14 @@ stationaryRouter.get('/requests', authenticateJWT, async (req, res) => {
 
     // Role-based restrictions
     if (userRole === 'ROLE_HOD') {
-      sql += ' AND (sr.requester_id = ? OR sr.department_id = ?)';
-      params.push(userId, user.departmentId || -1);
+      const deptId = user.departmentId;
+      if (deptId) {
+        sql += ' AND (sr.department_id = ? OR (sr.department_id IS NULL AND sr.requester_id = ?))';
+        params.push(deptId, userId);
+      } else {
+        sql += ' AND sr.requester_id = ?';
+        params.push(userId);
+      }
     } else if (userRole === 'ROLE_AO') {
       // AO can see all requests; if filter by view=pending, show PENDING_AO
       if (view === 'pending') {
@@ -195,8 +201,14 @@ stationaryRouter.get('/stats', authenticateJWT, async (req, res) => {
     const params: any[] = [];
 
     if (userRole === 'ROLE_HOD') {
-      sql += ' AND (requester_id = ? OR department_id = ?)';
-      params.push(userId, user.departmentId || -1);
+      const deptId = user.departmentId;
+      if (deptId) {
+        sql += ' AND (department_id = ? OR (department_id IS NULL AND requester_id = ?))';
+        params.push(deptId, userId);
+      } else {
+        sql += ' AND requester_id = ?';
+        params.push(userId);
+      }
     }
 
     sql += ' GROUP BY status';

@@ -124,7 +124,13 @@ router.get('/', authenticateJWT, async (req: any, res) => {
     let query = BASE_REPAIR_QUERY;
     const params: any[] = [];
 
-    if (departmentId) {
+    if (req.user?.role === 'ROLE_HOD') {
+      const deptId = req.user.departmentId || departmentId;
+      if (deptId) {
+        query += ' WHERE (inv.department_id = ? OR r.requester_id = ?)';
+        params.push(deptId, req.user.id);
+      }
+    } else if (departmentId) {
       query += ' WHERE inv.department_id = ?';
       params.push(departmentId);
     }

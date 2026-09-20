@@ -1260,8 +1260,8 @@ export const HODDashboard: React.FC = () => {
         timelineData={selectedTimeline}
       />
 
-      {/* MODAL 3: My Submitted Requests */}
-      <Modal isOpen={myRequestsModalOpen} onClose={handleCloseMyRequestsModal} title="My Submitted Requests">
+      {/* MODAL 3: My Department Requests */}
+      <Modal isOpen={myRequestsModalOpen} onClose={handleCloseMyRequestsModal} title="Department Repair Requests History">
         <div className="space-y-4 text-left">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -1280,12 +1280,12 @@ export const HODDashboard: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {(() => {
-                  const myRequests = allRequests.filter(r => r.requester?.id === user?.userId);
+                  const myRequests = allRequests;
                   if (myRequests.length === 0) {
                     return (
                       <tr>
                         <td colSpan={9} className="py-8 text-center text-slate-400 font-medium italic">
-                          You have not submitted any repair requests.
+                          No repair requests found for your department.
                         </td>
                       </tr>
                     );
