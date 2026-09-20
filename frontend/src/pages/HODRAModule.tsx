@@ -50,7 +50,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'new_req'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'new_req'>('new_req');
   const [requests, setRequests] = useState<RefreshmentAccommodationRequest[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -230,9 +230,9 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
   const [deleteModalReq, setDeleteModalReq] = useState<RefreshmentAccommodationRequest | null>(null);
   const [actionProcessing, setActionProcessing] = useState(false);
 
-  // Fetch Requests & Stats
-  const fetchRARequests = async () => {
-    setLoading(true);
+  // Fetch Requests & Stats (Silent background refresh on WebSocket ticks)
+  const fetchRARequests = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const [reqRes, statRes] = await Promise.all([
         api.get('/ra/requests'),
@@ -250,14 +250,19 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
       });
     } catch (err) {
       console.error('Failed to load R&A requests:', err);
-      toast.error('Failed to refresh Refreshments & Accommodations data.');
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRARequests();
+    fetchRARequests(true);
+  }, []);
+
+  useEffect(() => {
+    if (dashboardTick > 0) {
+      fetchRARequests(false);
+    }
   }, [dashboardTick]);
 
   // Form Reset
@@ -523,7 +528,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
       {/* 1. Header Bar with Switchers */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-2xl px-5 py-3 text-xs shadow-md backdrop-blur-md">
         <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
           <span className="text-brand-textMuted">
             Active Module: <strong className="text-white">R&A (Refreshments & Accommodations)</strong>
           </span>
@@ -852,7 +857,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                 {/* Service 1: Accommodation */}
                 <div
                   onClick={handleToggleAccommodation}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-colors duration-150 flex flex-col justify-between ${
                     hasAccommodation
                       ? 'border-rose-600 bg-rose-50/50 shadow-sm'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -865,8 +870,8 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                     <input
                       type="checkbox"
                       checked={hasAccommodation}
-                      onChange={() => {}}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
+                      readOnly
+                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 pointer-events-none"
                     />
                   </div>
                   <div>
@@ -878,7 +883,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                 {/* Service 2: Tea & Snacks */}
                 <div
                   onClick={handleToggleTeaSnacks}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${
+                  className={`p-4 rounded-2xl border-2 transition-colors duration-150 flex flex-col justify-between relative ${
                     isHotelSelected
                       ? 'opacity-40 cursor-not-allowed bg-slate-100/80 border-dashed border-slate-300'
                       : hasTeaSnacks
@@ -899,8 +904,8 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                       type="checkbox"
                       checked={hasTeaSnacks}
                       disabled={isHotelSelected}
-                      onChange={() => {}}
-                      className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                      readOnly
+                      className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 pointer-events-none"
                     />
                   </div>
                   <div>
@@ -914,7 +919,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                 {/* Service 3: Hostel Food */}
                 <div
                   onClick={handleToggleHostelFood}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${
+                  className={`p-4 rounded-2xl border-2 transition-colors duration-150 flex flex-col justify-between relative ${
                     isHotelSelected
                       ? 'opacity-40 cursor-not-allowed bg-slate-100/80 border-dashed border-slate-300'
                       : hasHostelFood
@@ -935,8 +940,8 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                       type="checkbox"
                       checked={hasHostelFood}
                       disabled={isHotelSelected}
-                      onChange={() => {}}
-                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                      readOnly
+                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 pointer-events-none"
                     />
                   </div>
                   <div>
@@ -950,7 +955,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                 {/* Service 4: Restaurant Food */}
                 <div
                   onClick={handleToggleRestaurantFood}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between relative ${
+                  className={`p-4 rounded-2xl border-2 transition-colors duration-150 flex flex-col justify-between relative ${
                     isHotelSelected
                       ? 'opacity-40 cursor-not-allowed bg-slate-100/80 border-dashed border-slate-300'
                       : hasRestaurantFood
@@ -971,8 +976,8 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
                       type="checkbox"
                       checked={hasRestaurantFood}
                       disabled={isHotelSelected}
-                      onChange={() => {}}
-                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                      readOnly
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 pointer-events-none"
                     />
                   </div>
                   <div>
@@ -986,7 +991,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
 
               {/* 1. ACCOMMODATION FORM SECTION */}
               {hasAccommodation && (
-                <div className="p-5 rounded-2xl border border-rose-200 bg-rose-50/30 space-y-4 animate-fade-in">
+                <div className="p-5 rounded-2xl border border-rose-200 bg-rose-50/30 space-y-4">
                   <div className="flex items-center gap-2 text-xs font-bold text-rose-700 uppercase tracking-wider">
                     <Hotel className="w-4 h-4" />
                     <span>Accommodation Details</span>
@@ -1076,7 +1081,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
 
               {/* 2. TEA & SNACKS FORM SECTION */}
               {hasTeaSnacks && (
-                <div className="p-5 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-4 animate-fade-in">
+                <div className="p-5 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-4">
                   <div className="flex items-center gap-2 text-xs font-bold text-purple-700 uppercase tracking-wider">
                     <Coffee className="w-4 h-4" />
                     <span>Tea &amp; Snacks Details</span>
@@ -1184,7 +1189,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
 
               {/* 3. HOSTEL FOOD FORM SECTION */}
               {hasHostelFood && (
-                <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50/30 space-y-4 animate-fade-in">
+                <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50/30 space-y-4">
                   <div className="flex items-center gap-2 text-xs font-bold text-amber-700 uppercase tracking-wider">
                     <Utensils className="w-4 h-4" />
                     <span>Hostel Food Details</span>
@@ -1291,7 +1296,7 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
 
               {/* 4. RESTAURANT FOOD FORM SECTION */}
               {hasRestaurantFood && (
-                <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/30 space-y-4 animate-fade-in">
+                <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/30 space-y-4">
                   <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 uppercase tracking-wider">
                     <UtensilsCrossed className="w-4 h-4" />
                     <span>Restaurant Food Details (Direct AO Coordination)</span>
