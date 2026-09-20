@@ -60,7 +60,7 @@ export const AODashboard: React.FC = () => {
   const [selectedTR, setSelectedTR] = useState<TransportRequest | null>(null);
   const [trActionType, setTrActionType] = useState<'APPROVE' | 'REJECT' | null>(null);
   const [allocatedVehicle, setAllocatedVehicle] = useState('');
-  const [allocatedVehicleCount, setAllocatedVehicleCount] = useState<number>(1);
+  const [allocatedVehicleCount, setAllocatedVehicleCount] = useState<number>(0);
   const [trRemarks, setTrRemarks] = useState('');
   const [isProcessingTR, setIsProcessingTR] = useState(false);
 
@@ -95,6 +95,11 @@ export const AODashboard: React.FC = () => {
   useEffect(() => {
     fetchSTRRequests();
     fetchTRRequests();
+    const poll = setInterval(() => {
+      fetchSTRRequests();
+      fetchTRRequests();
+    }, 3000);
+    return () => clearInterval(poll);
   }, [dashboardTick]);
 
   // STR Action Handlers
@@ -148,11 +153,11 @@ export const AODashboard: React.FC = () => {
           ? 'Maruti Suzuki Ertiga White (TS 09 EQ 4321)'
           : 'Hero Splendor (TS 08 AB 1122)';
       setAllocatedVehicle(defaultVehicleName);
-      setAllocatedVehicleCount(1);
+      setAllocatedVehicleCount(0);
       setTrRemarks('Vehicle allocated. Report at Main Gate porch 15 mins prior to departure.');
     } else {
       setAllocatedVehicle('');
-      setAllocatedVehicleCount(1);
+      setAllocatedVehicleCount(0);
       setTrRemarks('Vehicle unavailable due to scheduled departmental fleet maintenance.');
     }
   };
@@ -160,6 +165,11 @@ export const AODashboard: React.FC = () => {
   const handleConfirmTRAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTR || !trActionType) return;
+
+    if (trActionType === 'APPROVE' && allocatedVehicleCount <= 0) {
+      toast.error('Please enter the allocated vehicle count (must be at least 1).');
+      return;
+    }
 
     setIsProcessingTR(true);
     try {
@@ -828,11 +838,12 @@ export const AODashboard: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      min={1}
+                      min={0}
                       max={10}
                       required
+                      placeholder="0"
                       value={allocatedVehicleCount}
-                      onChange={(e) => setAllocatedVehicleCount(parseInt(e.target.value, 10) || 1)}
+                      onChange={(e) => setAllocatedVehicleCount(e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0)}
                       className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
                     />
                   </div>

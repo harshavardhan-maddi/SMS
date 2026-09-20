@@ -78,7 +78,7 @@ export async function seedData() {
 
   // 3. Initial Demo Users Seeding
   try {
-    const hashedPwd = await bcrypt.hash('password', 10);
+    const hashedPwd = await bcrypt.hash('nrtec@nec', 10);
 
     // Always ensure EEE HOD and EEE Asset Manager exist
     const eeeDept = await db.get("SELECT id FROM departments WHERE code = 'EEE' OR id = 3");
@@ -133,7 +133,7 @@ export async function seedData() {
     }
 
     // 5. Seed Allocator Demo Accounts for the 3 Halls
-    const hashedPwd = await bcrypt.hash('password', 10);
+    const hashedPwd = await bcrypt.hash('nrtec@nec', 10);
     const halls = await db.all("SELECT id, name FROM seminar_halls ORDER BY id ASC");
     
     if (halls && halls.length > 0) {

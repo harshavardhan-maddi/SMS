@@ -27,7 +27,8 @@ import {
   Play,
   Square,
   ShieldCheck,
-  CheckCheck
+  CheckCheck,
+  Lock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { TransportRequest, TransportType, TransportRequestStatus } from '../types';
@@ -61,7 +62,7 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
   // New Request Form State
   const [transportType, setTransportType] = useState<TransportType>('Car');
   const [purpose, setPurpose] = useState('');
-  const [personCount, setPersonCount] = useState<number | string>(4);
+  const [personCount, setPersonCount] = useState<number | string>(0);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('09:30 AM');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,9 +79,70 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
   const [deleteModalReq, setDeleteModalReq] = useState<TransportRequest | null>(null);
   const [actionProcessing, setActionProcessing] = useState(false);
 
+  // Live Clock Tick to accurately unlock Start Trip right when scheduled time arrives
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Determine whether the scheduled date and start timing has arrived
+  const getTripTimeStatus = (dateStr?: string, timeStr?: string) => {
+    if (!dateStr) return { arrived: true, label: 'Departure time arrived' };
+    try {
+      const now = new Date(currentTime);
+      const dateParts = dateStr.trim().split('-');
+      if (dateParts.length < 3) return { arrived: true, label: 'Departure time arrived' };
+      const year = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      const day = parseInt(dateParts[2], 10);
+
+      let hours = 0;
+      let minutes = 0;
+
+      if (timeStr && timeStr.trim()) {
+        const cleanTime = timeStr.trim().toUpperCase();
+        const isPM = cleanTime.includes('PM');
+        const isAM = cleanTime.includes('AM');
+        const numMatch = cleanTime.replace(/[A-Z]/g, '').trim().split(':');
+        if (numMatch.length >= 1) hours = parseInt(numMatch[0], 10) || 0;
+        if (numMatch.length >= 2) minutes = parseInt(numMatch[1], 10) || 0;
+
+        if (isPM && hours < 12) hours += 12;
+        else if (isAM && hours === 12) hours = 0;
+      }
+
+      const scheduledDate = new Date(year, month, day, hours, minutes, 0, 0);
+      const diffMs = scheduledDate.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        return { arrived: true, label: 'Departure time arrived' };
+      }
+
+      const diffSecs = Math.ceil(diffMs / 1000);
+      if (diffSecs < 60) {
+        return { arrived: false, label: `Unlocks in ${diffSecs}s (${timeStr || 'departure'})` };
+      }
+      const diffMins = Math.ceil(diffMs / (1000 * 60));
+      if (diffMins < 60) {
+        return { arrived: false, label: `Unlocks in ${diffMins} min (${timeStr || 'departure'})` };
+      }
+      const diffHours = Math.floor(diffMins / 60);
+      const remMins = diffMins % 60;
+      if (diffHours < 24) {
+        return { arrived: false, label: `Unlocks in ${diffHours}h ${remMins}m (${timeStr || 'departure'})` };
+      }
+      const days = Math.floor(diffHours / 24);
+      return { arrived: false, label: `Scheduled for ${dateStr} at ${timeStr} (in ${days} day${days > 1 ? 's' : ''})` };
+    } catch (err) {
+      return { arrived: true, label: 'Departure time arrived' };
+    }
+  };
+
   // Fetch Requests & Stats
   const fetchTransportData = async () => {
-    setLoading(true);
     try {
       const [reqsRes, statsRes] = await Promise.all([
         api.get('/transport/requests'),
@@ -90,7 +152,6 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
       setStats(statsRes.data || { total: 0, pendingAO: 0, approved: 0, started: 0, completed: 0, rejected: 0 });
     } catch (err) {
       console.error('Failed to load transport data:', err);
-      toast.error('Failed to load transport requests.');
     } finally {
       setLoading(false);
     }
@@ -98,6 +159,11 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
 
   useEffect(() => {
     fetchTransportData();
+    // Fast 3-second polling ensures immediate UI update when AO allocates vehicle
+    const pollInterval = setInterval(() => {
+      fetchTransportData();
+    }, 3000);
+    return () => clearInterval(pollInterval);
   }, [dashboardTick]);
 
   // Handle Form Submission
@@ -143,7 +209,7 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
   const resetForm = () => {
     setTransportType('Car');
     setPurpose('');
-    setPersonCount(4);
+    setPersonCount(0);
     setStartDate(new Date().toISOString().split('T')[0]);
     setStartTime('09:30 AM');
     setSubmittedTicket(null);
@@ -491,16 +557,48 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
                     </div>
 
                     {/* Live Trip Action Buttons */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      {trip.status === 'APPROVED' && (
-                        <button
-                          onClick={() => setConfirmStartModal(trip)}
-                          className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2"
-                        >
-                          <Play className="w-4 h-4 fill-white" />
-                          <span>Start Trip Now</span>
-                        </button>
-                      )}
+                    <div className="pt-2 border-t border-slate-100">
+                      {trip.status === 'APPROVED' && (() => {
+                        const timeStatus = getTripTimeStatus(trip.startDate, trip.startTime);
+                        return (
+                          <div className="space-y-1.5 w-full">
+                            <button
+                              disabled={!timeStatus.arrived}
+                              onClick={() => {
+                                if (timeStatus.arrived) setConfirmStartModal(trip);
+                              }}
+                              className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2 ${
+                                timeStatus.arrived
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer ring-2 ring-emerald-500/20 animate-pulse-once'
+                                  : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                              }`}
+                            >
+                              {timeStatus.arrived ? (
+                                <>
+                                  <Play className="w-4 h-4 fill-white" />
+                                  <span>Start Trip Now</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="w-4 h-4 text-slate-400" />
+                                  <span>Start Trip ({timeStatus.label})</span>
+                                </>
+                              )}
+                            </button>
+                            <div className="text-center">
+                              {timeStatus.arrived ? (
+                                <span className="text-[11px] font-semibold text-emerald-700">
+                                  ✓ Departure time has arrived. Click button to begin journey.
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-semibold text-amber-700">
+                                  ⏳ Scheduled for {trip.startDate} at {trip.startTime}. Button unlocks automatically when time arrives.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {trip.status === 'STARTED' && (
                         <div className="w-full flex items-center gap-3">
@@ -512,7 +610,7 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
                           </div>
                           <button
                             onClick={() => setConfirmEndModal(trip)}
-                            className="py-2.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-xs flex items-center gap-2"
+                            className="py-2.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-xs flex items-center gap-2 cursor-pointer"
                           >
                             <Square className="w-4 h-4 fill-white" />
                             <span>End Trip</span>
@@ -731,20 +829,40 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
                   {/* Actions Bar */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      {req.status === 'APPROVED' && (
-                        <button
-                          onClick={() => setConfirmStartModal(req)}
-                          className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs"
-                        >
-                          <Play className="w-3.5 h-3.5 fill-white" />
-                          <span>Start Trip</span>
-                        </button>
-                      )}
+                      {req.status === 'APPROVED' && (() => {
+                        const timeStatus = getTripTimeStatus(req.startDate, req.startTime);
+                        return (
+                          <button
+                            disabled={!timeStatus.arrived}
+                            onClick={() => {
+                              if (timeStatus.arrived) setConfirmStartModal(req);
+                            }}
+                            title={timeStatus.arrived ? 'Departure time has arrived. Click to Start Trip.' : `Scheduled for ${req.startDate} at ${req.startTime}. ${timeStatus.label}`}
+                            className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs ${
+                              timeStatus.arrived
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer ring-1 ring-emerald-500/30'
+                                : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {timeStatus.arrived ? (
+                              <>
+                                <Play className="w-3.5 h-3.5 fill-white" />
+                                <span>Start Trip</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Start ({timeStatus.label})</span>
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
 
                       {req.status === 'STARTED' && (
                         <button
                           onClick={() => setConfirmEndModal(req)}
-                          className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs"
+                          className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                         >
                           <Square className="w-3.5 h-3.5 fill-white" />
                           <span>End Trip</span>
@@ -777,63 +895,199 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
       {/* TAB 3: NEW REQUEST */}
       {activeTab === 'new_req' && (
         <div className="max-w-3xl mx-auto space-y-6">
-          {submittedTicket ? (
-            /* Submission Success Screen */
-            <div className="admin-card p-8 bg-white rounded-3xl border border-emerald-200 text-center shadow-xs space-y-6 animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
+          {submittedTicket ? (() => {
+            const liveTicket = requests.find((r) => r.id === submittedTicket.id) || submittedTicket;
+            const timeStatus = getTripTimeStatus(liveTicket.startDate, liveTicket.startTime);
 
-              <div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  Request Dispatched to Administrative Officer (AO)
-                </span>
-                <h2 className="text-2xl font-extrabold text-slate-900 mt-2">
-                  Transport Ticket #{submittedTicket.id}
-                </h2>
-                <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
-                  Your department transport booking for <strong>{submittedTicket.transportType}</strong> on <strong>{submittedTicket.startDate}</strong> ({submittedTicket.startTime}) has been forwarded to the AO for vehicle allotment.
-                </p>
-              </div>
+            return (
+              /* Submission Success & Live Allocation Screen */
+              <div className="admin-card p-8 bg-white rounded-3xl border border-emerald-200 text-center shadow-xs space-y-6 animate-fade-in">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner ${
+                  liveTicket.status === 'APPROVED'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                    : liveTicket.status === 'STARTED'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300 animate-pulse'
+                    : liveTicket.status === 'COMPLETED'
+                    ? 'bg-slate-100 text-emerald-700 border border-slate-300'
+                    : liveTicket.status === 'REJECTED'
+                    ? 'bg-red-100 text-red-600 border border-red-300'
+                    : 'bg-amber-100 text-amber-700 border border-amber-300'
+                }`}>
+                  {liveTicket.status === 'APPROVED' ? (
+                    <CheckCircle2 className="w-8 h-8" />
+                  ) : liveTicket.status === 'STARTED' ? (
+                    <Navigation className="w-8 h-8" />
+                  ) : liveTicket.status === 'COMPLETED' ? (
+                    <CheckCheck className="w-8 h-8 text-emerald-600" />
+                  ) : liveTicket.status === 'REJECTED' ? (
+                    <XCircle className="w-8 h-8" />
+                  ) : (
+                    <Clock className="w-8 h-8 animate-spin" />
+                  )}
+                </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 max-w-sm mx-auto text-left text-xs space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Vehicle Type:</span>
-                  <strong className="text-slate-800">{submittedTicket.transportType}</strong>
+                <div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                    liveTicket.status === 'APPROVED'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : liveTicket.status === 'STARTED'
+                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                      : liveTicket.status === 'COMPLETED'
+                      ? 'bg-slate-100 text-slate-800 border-slate-200'
+                      : liveTicket.status === 'REJECTED'
+                      ? 'bg-red-50 text-red-800 border-red-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                  }`}>
+                    {liveTicket.status === 'APPROVED'
+                      ? 'Vehicle Allocated by Administrative Officer (AO)!'
+                      : liveTicket.status === 'STARTED'
+                      ? 'Trip In Progress (Started)'
+                      : liveTicket.status === 'COMPLETED'
+                      ? 'Trip Completed'
+                      : liveTicket.status === 'REJECTED'
+                      ? 'Request Declined by AO'
+                      : 'Request Dispatched to Administrative Officer (AO)'}
+                  </span>
+                  <h2 className="text-2xl font-extrabold text-slate-900 mt-2">
+                    Transport Ticket #{liveTicket.id}
+                  </h2>
+                  <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
+                    {liveTicket.status === 'APPROVED'
+                      ? 'Vehicle has been allotted. You can click Start Trip once the scheduled departure time arrives.'
+                      : liveTicket.status === 'STARTED'
+                      ? 'Your journey is currently underway. Click End Trip immediately once travel is completed.'
+                      : liveTicket.status === 'COMPLETED'
+                      ? 'This trip has been concluded and recorded in your department travel history.'
+                      : `Your department transport booking for ${liveTicket.transportType} on ${liveTicket.startDate} (${liveTicket.startTime}) has been forwarded to the AO for vehicle allotment.`}
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Passengers:</span>
-                  <strong className="text-slate-800">{submittedTicket.personCount} Persons</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Timing:</span>
-                  <strong className="text-slate-800">{submittedTicket.startDate} at {submittedTicket.startTime}</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Current Status:</span>
-                  <span className="font-bold text-amber-700">Pending AO Allotment</span>
-                </div>
-              </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setActiveTab('history');
-                  }}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all shadow-xs"
-                >
-                  View in History
-                </button>
-                <button
-                  onClick={() => resetForm()}
-                  className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-colors"
-                >
-                  Raise Another Transport Request
-                </button>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 max-w-md mx-auto text-left text-xs space-y-2.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Vehicle Type:</span>
+                    <strong className="text-slate-800">{liveTicket.transportType}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Passengers:</span>
+                    <strong className="text-slate-800">{liveTicket.personCount} Persons</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Scheduled Departure:</span>
+                    <strong className="text-slate-800">{liveTicket.startDate} at {liveTicket.startTime}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Current Status:</span>
+                    {getStatusBadge(liveTicket.status)}
+                  </div>
+
+                  {liveTicket.allocatedVehicle && (
+                    <div className="mt-2 pt-2 border-t border-slate-200 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-emerald-900">Allotted Vehicle:</span>
+                        <span className="text-[10px] font-bold text-emerald-700">Count: {liveTicket.allocatedVehicleCount || 1}</span>
+                      </div>
+                      <p className="font-black text-slate-900 text-sm">{liveTicket.allocatedVehicle}</p>
+                      {liveTicket.aoRemarks && (
+                        <p className="text-slate-600 italic">AO Notes: "{liveTicket.aoRemarks}"</p>
+                      )}
+                    </div>
+                  )}
+
+                  {liveTicket.tripStartedAt && (
+                    <div className="flex justify-between pt-1 border-t border-slate-200 text-blue-700">
+                      <span>Trip Started At:</span>
+                      <strong>{new Date(liveTicket.tripStartedAt).toLocaleTimeString()}</strong>
+                    </div>
+                  )}
+                  {liveTicket.tripEndedAt && (
+                    <div className="flex justify-between text-slate-900">
+                      <span>Trip Ended At:</span>
+                      <strong>{new Date(liveTicket.tripEndedAt).toLocaleTimeString()}</strong>
+                    </div>
+                  )}
+                  {liveTicket.tripStartedAt && liveTicket.tripEndedAt && (
+                    <div className="flex justify-between font-bold text-emerald-800 pt-1 border-t border-slate-200">
+                      <span>Total Duration:</span>
+                      <span>{calculateDuration(liveTicket.tripStartedAt, liveTicket.tripEndedAt)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Trip Action Control (Start Trip / End Trip) */}
+                {liveTicket.status === 'APPROVED' && (
+                  <div className="max-w-md mx-auto space-y-2">
+                    <button
+                      disabled={!timeStatus.arrived}
+                      onClick={() => {
+                        if (timeStatus.arrived) setConfirmStartModal(liveTicket);
+                      }}
+                      className={`w-full py-3 px-6 rounded-2xl font-bold text-sm transition-all shadow-xs flex items-center justify-center gap-2 ${
+                        timeStatus.arrived
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer ring-2 ring-emerald-500/20 shadow-md'
+                          : 'bg-slate-100 border border-slate-300 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {timeStatus.arrived ? (
+                        <>
+                          <Play className="w-4 h-4 fill-white" />
+                          <span>Start Trip Now</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4 text-slate-400" />
+                          <span>Start Trip ({timeStatus.label})</span>
+                        </>
+                      )}
+                    </button>
+                    <div>
+                      {timeStatus.arrived ? (
+                        <span className="text-xs font-semibold text-emerald-700">
+                          ✓ Departure time has arrived. Click above to start trip.
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold text-amber-700">
+                          ⏳ Scheduled for {liveTicket.startDate} at {liveTicket.startTime}. Button unlocks automatically when time arrives.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {liveTicket.status === 'STARTED' && (
+                  <div className="max-w-md mx-auto space-y-2">
+                    <button
+                      onClick={() => setConfirmEndModal(liveTicket)}
+                      className="w-full py-3 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Square className="w-4 h-4 fill-white" />
+                      <span>End Trip Immediately</span>
+                    </button>
+                    <span className="text-xs font-semibold text-blue-700 block">
+                      ✓ Trip is in progress. Click whenever you reach destination.
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      resetForm();
+                      setActiveTab('history');
+                    }}
+                    className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all shadow-xs"
+                  >
+                    View in Department History
+                  </button>
+                  <button
+                    onClick={() => resetForm()}
+                    className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-colors"
+                  >
+                    Raise Another Transport Request
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
+            );
+          })() : (
             /* New Request Form */
             <form onSubmit={handleCreateRequest} className="space-y-6">
               <div className="admin-card p-6 sm:p-8 bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
@@ -883,7 +1137,7 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
                           key={item.type}
                           onClick={() => {
                             setTransportType(item.type);
-                            setPersonCount(item.defaultCount);
+                            setPersonCount(0);
                           }}
                           className={`cursor-pointer p-4 rounded-2xl border transition-all text-left flex flex-col justify-between ${
                             isSelected
@@ -949,11 +1203,12 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
                     <Users className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="number"
-                      min={1}
+                      min={0}
                       max={transportType === 'Bike' ? 2 : transportType === 'Car' ? 10 : 100}
                       required
+                      placeholder="0"
                       value={personCount}
-                      onChange={(e) => setPersonCount(e.target.value)}
+                      onChange={(e) => setPersonCount(e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0)}
                       className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 font-bold text-slate-900"
                     />
                   </div>
@@ -1258,10 +1513,57 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <div>
+                {selectedRequestDetails.status === 'APPROVED' && (() => {
+                  const timeStatus = getTripTimeStatus(selectedRequestDetails.startDate, selectedRequestDetails.startTime);
+                  return (
+                    <button
+                      disabled={!timeStatus.arrived}
+                      onClick={() => {
+                        if (timeStatus.arrived) {
+                          setConfirmStartModal(selectedRequestDetails);
+                          setSelectedRequestDetails(null);
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
+                        timeStatus.arrived
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs'
+                          : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {timeStatus.arrived ? (
+                        <>
+                          <Play className="w-3.5 h-3.5 fill-white" />
+                          <span>Start Trip Now</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Start Trip ({timeStatus.label})</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
+
+                {selectedRequestDetails.status === 'STARTED' && (
+                  <button
+                    onClick={() => {
+                      setConfirmEndModal(selectedRequestDetails);
+                      setSelectedRequestDetails(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-white" />
+                    <span>End Trip Now</span>
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={() => setSelectedRequestDetails(null)}
-                className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
               >
                 Close
               </button>

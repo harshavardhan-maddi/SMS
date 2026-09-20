@@ -60,10 +60,10 @@ router.post('/login', async (req, res) => {
       console.warn('bcrypt compare warning:', bcErr);
     }
 
-    // Auto-heal default password if user used 'password'
-    if (!passwordMatch && password === 'password') {
+    // Auto-heal default password if user used 'nrtec@nec' or legacy 'password'
+    if (!passwordMatch && (password === 'nrtec@nec' || password === 'password')) {
       try {
-        const repairedHash = await bcrypt.hash('password', 10);
+        const repairedHash = await bcrypt.hash('nrtec@nec', 10);
         await db.run('UPDATE users SET password = ? WHERE id = ?', [repairedHash, user.id]);
         user.password = repairedHash;
         passwordMatch = true;

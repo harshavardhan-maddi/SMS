@@ -50,7 +50,7 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
   // New Request Wizard State
   const [selectedHall, setSelectedHall] = useState<SeminarHall | null>(null);
   const [resourcePersonName, setResourcePersonName] = useState('');
-  const [participantsCount, setParticipantsCount] = useState<number | string>('');
+  const [participantsCount, setParticipantsCount] = useState<number | string>(0);
   const [noOfDays, setNoOfDays] = useState<number>(1);
   const [eventDate, setEventDate] = useState('');
   const [timeSlot, setTimeSlot] = useState<'FN' | 'AN' | 'Full Day'>('FN');
@@ -104,7 +104,7 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
   const resetForm = () => {
     setSelectedHall(null);
     setResourcePersonName('');
-    setParticipantsCount('');
+    setParticipantsCount(0);
     setNoOfDays(1);
     setEventDate('');
     setTimeSlot('FN');
@@ -755,11 +755,11 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                     <input
                       type="number"
                       required
-                      min={1}
+                      min={0}
                       max={selectedHall.capacity * 1.5}
-                      placeholder={`Expected number of attendees (Capacity: ${selectedHall.capacity})`}
+                      placeholder="0"
                       value={participantsCount}
-                      onChange={e => setParticipantsCount(e.target.value)}
+                      onChange={e => setParticipantsCount(e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0)}
                       className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>

@@ -66,7 +66,7 @@ export const StationaryDashboard: React.FC = () => {
       req.items?.map((it) => ({
         name: it.name,
         count: it.count,
-        allottedCount: it.allottedCount !== undefined ? it.allottedCount : it.count,
+        allottedCount: it.allottedCount !== undefined ? it.allottedCount : 0,
         category: it.category,
         unit: it.unit,
       })) || []

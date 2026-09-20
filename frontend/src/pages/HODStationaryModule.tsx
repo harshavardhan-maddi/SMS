@@ -130,10 +130,10 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
   const toggleItemSelection = (itemId: number) => {
     setSelectedItemsMap((prev) => {
       const next = { ...prev };
-      if (next[itemId]) {
+      if (itemId in next) {
         delete next[itemId];
       } else {
-        next[itemId] = 1; // Default quantity 1
+        next[itemId] = 0; // Default count 0, user will enter
       }
       return next;
     });
@@ -141,7 +141,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
   // Update item count
   const updateItemCount = (itemId: number, newCount: number) => {
-    const val = Math.max(1, newCount);
+    const val = Math.max(0, newCount);
     setSelectedItemsMap((prev) => ({
       ...prev,
       [itemId]: val,
@@ -154,7 +154,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
     Object.entries(selectedItemsMap).forEach(([idStr, count]) => {
       const id = parseInt(idStr, 10);
       const found = itemsCatalog.find((i) => i.id === id);
-      if (found && count > 0) {
+      if (found) {
         list.push({ item: found, count });
       }
     });
@@ -169,6 +169,12 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
     e.preventDefault();
     if (selectedItemsList.length === 0) {
       toast.error('Please select at least one stationary item from the catalog.');
+      return;
+    }
+
+    const unentered = selectedItemsList.find((i) => i.count <= 0);
+    if (unentered) {
+      toast.error(`Please enter a quantity greater than 0 for "${unentered.item.name}".`);
       return;
     }
 
@@ -567,8 +573,8 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {filteredItems.map((item) => {
-                  const isSelected = Boolean(selectedItemsMap[item.id]);
-                  const currentCount = selectedItemsMap[item.id] || 1;
+                  const isSelected = item.id in selectedItemsMap;
+                  const currentCount = selectedItemsMap[item.id] ?? 0;
 
                   return (
                     <div
@@ -614,7 +620,7 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (currentCount > 1) {
+                              if (currentCount > 0) {
                                 updateItemCount(item.id, currentCount - 1);
                               } else {
                                 toggleItemSelection(item.id);
@@ -628,12 +634,13 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
                           <input
                             type="number"
-                            min="1"
+                            min="0"
                             max="999"
                             value={currentCount}
+                            placeholder="0"
                             onChange={(e) => {
                               const val = parseInt(e.target.value, 10);
-                              updateItemCount(item.id, isNaN(val) ? 1 : val);
+                              updateItemCount(item.id, isNaN(val) ? 0 : Math.max(0, val));
                             }}
                             className="w-12 text-center text-xs font-black bg-transparent text-amber-700 focus:outline-none"
                           />

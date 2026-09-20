@@ -187,6 +187,10 @@ transportRouter.post('/requests', authenticateJWT, requireRole(['ROLE_HOD', 'ROL
       type: 'TRANSPORT_REQUEST_CREATED',
       payload: formatted,
     });
+    sendToTopic('/topic/dashboard', {
+      type: 'TRANSPORT_REQUEST_CREATED',
+      payload: formatted,
+    });
     if (user.deptId) {
       sendToTopic(`department:${user.deptId}`, {
         type: 'TRANSPORT_REQUEST_CREATED',
@@ -276,6 +280,7 @@ transportRouter.patch('/requests/:id/ao-action', authenticateJWT, requireRole(['
 
     sendToTopic('dashboard:admin', { type: 'TRANSPORT_REQUEST_UPDATED', payload: formatted });
     sendToTopic('dashboard:ao', { type: 'TRANSPORT_REQUEST_UPDATED', payload: formatted });
+    sendToTopic('/topic/dashboard', { type: 'TRANSPORT_REQUEST_UPDATED', payload: formatted });
     if (updatedRow.department_id) {
       sendToTopic(`department:${updatedRow.department_id}`, { type: 'TRANSPORT_REQUEST_UPDATED', payload: formatted });
     }
@@ -334,6 +339,7 @@ transportRouter.patch('/requests/:id/start', authenticateJWT, async (req, res) =
     const formatted = formatTransportRow(updatedRow);
     sendToTopic('dashboard:admin', { type: 'TRANSPORT_TRIP_STARTED', payload: formatted });
     sendToTopic('dashboard:ao', { type: 'TRANSPORT_TRIP_STARTED', payload: formatted });
+    sendToTopic('/topic/dashboard', { type: 'TRANSPORT_TRIP_STARTED', payload: formatted });
     if (updatedRow.department_id) {
       sendToTopic(`department:${updatedRow.department_id}`, { type: 'TRANSPORT_TRIP_STARTED', payload: formatted });
     }
@@ -392,6 +398,7 @@ transportRouter.patch('/requests/:id/end', authenticateJWT, async (req, res) => 
     const formatted = formatTransportRow(updatedRow);
     sendToTopic('dashboard:admin', { type: 'TRANSPORT_TRIP_COMPLETED', payload: formatted });
     sendToTopic('dashboard:ao', { type: 'TRANSPORT_TRIP_COMPLETED', payload: formatted });
+    sendToTopic('/topic/dashboard', { type: 'TRANSPORT_TRIP_COMPLETED', payload: formatted });
     if (updatedRow.department_id) {
       sendToTopic(`department:${updatedRow.department_id}`, { type: 'TRANSPORT_TRIP_COMPLETED', payload: formatted });
     }
@@ -423,6 +430,7 @@ transportRouter.delete('/requests/:id', authenticateJWT, async (req, res) => {
 
     sendToTopic('dashboard:admin', { type: 'TRANSPORT_REQUEST_DELETED', payload: { id } });
     sendToTopic('dashboard:ao', { type: 'TRANSPORT_REQUEST_DELETED', payload: { id } });
+    sendToTopic('/topic/dashboard', { type: 'TRANSPORT_REQUEST_DELETED', payload: { id } });
     if (existing.department_id) {
       sendToTopic(`department:${existing.department_id}`, { type: 'TRANSPORT_REQUEST_DELETED', payload: { id } });
     }
