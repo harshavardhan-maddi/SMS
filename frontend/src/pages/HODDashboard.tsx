@@ -29,6 +29,7 @@ import { RailwayTrackTimeline } from '../components/RailwayTrackTimeline';
 import { HODPortalLanding } from './HODPortalLanding';
 import { HODSHRModule } from './HODSHRModule';
 import { HODStationaryModule } from './HODStationaryModule';
+import { HODTRModule } from './HODTRModule';
 
 export const HODDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -50,11 +51,11 @@ export const HODDashboard: React.FC = () => {
     }
   };
 
-  // Portal Landing State: Every HOD sees the 3 cards upon login
-  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr' | 'str'>(() => {
+  // Portal Landing State: Every HOD sees the cards upon login
+  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr' | 'str' | 'tr'>(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mode = searchParams.get('mode');
-    if (mode === 'sms' || mode === 'shr' || mode === 'str') return mode;
+    if (mode === 'sms' || mode === 'shr' || mode === 'str' || mode === 'tr') return mode;
     return 'portal_selector';
   });
   
@@ -308,6 +309,8 @@ export const HODDashboard: React.FC = () => {
     return (
       <HODSHRModule
         onSwitchToSMS={() => setPortalMode('sms')}
+        onSwitchToSTR={() => setPortalMode('str')}
+        onSwitchToTR={() => setPortalMode('tr')}
       />
     );
   }
@@ -318,6 +321,18 @@ export const HODDashboard: React.FC = () => {
       <HODStationaryModule
         onSwitchToSMS={() => setPortalMode('sms')}
         onSwitchToSHR={() => setPortalMode('shr')}
+        onSwitchToTR={() => setPortalMode('tr')}
+      />
+    );
+  }
+
+  // 4. If portalMode is tr, show the TR Module (Dashboard, History, New Req)
+  if (portalMode === 'tr') {
+    return (
+      <HODTRModule
+        onSwitchToSMS={() => setPortalMode('sms')}
+        onSwitchToSHR={() => setPortalMode('shr')}
+        onSwitchToSTR={() => setPortalMode('str')}
       />
     );
   }
@@ -362,6 +377,13 @@ export const HODDashboard: React.FC = () => {
             className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
             <span>STR (Stationary)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setPortalMode('tr')}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+          >
+            <span>TR (Transport)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button

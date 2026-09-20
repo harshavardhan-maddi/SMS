@@ -142,3 +142,33 @@ export interface StationaryRequest {
   updatedAt?: string;
 }
 
+export type TransportType = 'BUS' | 'Car' | 'Bike';
+
+export type TransportRequestStatus =
+  | 'PENDING_AO'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'STARTED'
+  | 'COMPLETED';
+
+export interface TransportRequest {
+  id: string; // TR-1001
+  requester: User;
+  department?: Department | null;
+  transportType: TransportType;
+  purpose: string;
+  personCount: number;
+  startDate: string;
+  startTime: string;
+  status: TransportRequestStatus;
+  aoRemarks?: string;
+  aoActionBy?: { id: number; name: string } | null;
+  aoActionAt?: string;
+  allocatedVehicle?: string;
+  allocatedVehicleCount?: number;
+  tripStartedAt?: string;
+  tripEndedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+

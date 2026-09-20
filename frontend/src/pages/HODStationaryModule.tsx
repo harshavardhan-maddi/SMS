@@ -33,11 +33,13 @@ import { toast } from 'react-hot-toast';
 interface HODStationaryModuleProps {
   onSwitchToSMS: () => void;
   onSwitchToSHR?: () => void;
+  onSwitchToTR?: () => void;
 }
 
 export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
   onSwitchToSMS,
   onSwitchToSHR,
+  onSwitchToTR,
 }) => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
@@ -273,6 +275,15 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Switch to SHR</span>
+            </button>
+          )}
+
+          {onSwitchToTR && (
+            <button
+              onClick={onSwitchToTR}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold transition-all cursor-pointer"
+            >
+              <span>Switch to TR</span>
             </button>
           )}
 

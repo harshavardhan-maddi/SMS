@@ -15,13 +15,14 @@ import {
   Building2,
   Clock,
   User,
-  ShieldAlert
+  ShieldAlert,
+  Car
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
 
 interface UnifiedRequestItem {
-  cardType: 'SMS' | 'SHR' | 'STR';
+  cardType: 'SMS' | 'SHR' | 'STR' | 'TR';
   id: string | number;
   title: string;
   department: string;
@@ -32,7 +33,7 @@ interface UnifiedRequestItem {
 }
 
 export const PrincipalHistoryManagementPage: React.FC = () => {
-  const [activeCardFilter, setActiveCardFilter] = useState<'ALL' | 'SMS' | 'SHR' | 'STR'>('ALL');
+  const [activeCardFilter, setActiveCardFilter] = useState<'ALL' | 'SMS' | 'SHR' | 'STR' | 'TR'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +41,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
   const [smsRequests, setSmsRequests] = useState<any[]>([]);
   const [shrRequests, setShrRequests] = useState<any[]>([]);
   const [strRequests, setStrRequests] = useState<any[]>([]);
+  const [trRequests, setTrRequests] = useState<any[]>([]);
 
   // Selection state
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -48,15 +50,17 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
   const fetchAllHistory = async () => {
     setLoading(true);
     try {
-      const [smsRes, shrRes, strRes] = await Promise.allSettled([
+      const [smsRes, shrRes, strRes, trRes] = await Promise.allSettled([
         api.get('/repairs'),
         api.get('/seminar-requests'),
         api.get('/stationary/requests'),
+        api.get('/transport/requests'),
       ]);
 
       if (smsRes.status === 'fulfilled') setSmsRequests(smsRes.value.data || []);
       if (shrRes.status === 'fulfilled') setShrRequests(shrRes.value.data || []);
       if (strRes.status === 'fulfilled') setStrRequests(strRes.value.data || []);
+      if (trRes.status === 'fulfilled') setTrRequests(trRes.value.data || []);
     } catch (err) {
       console.error('Failed to load history items:', err);
       toast.error('Failed to refresh history records.');
@@ -119,9 +123,23 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       });
     });
 
+    // 4. TR (Transport)
+    trRequests.forEach((r) => {
+      list.push({
+        cardType: 'TR',
+        id: r.id,
+        title: r.purpose || 'Transport Indent',
+        department: r.department?.name || r.departmentCode || 'Department',
+        requesterName: r.requester?.name || 'HOD',
+        status: r.status || 'PENDING_AO',
+        createdAt: r.createdAt || new Date().toISOString(),
+        details: `${r.transportType} (${r.personCount} Persons) • ${r.startDate} at ${r.startTime}${r.allocatedVehicle ? ` • Allocated: ${r.allocatedVehicle}` : ''}`,
+      });
+    });
+
     // Sort descending by date
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [smsRequests, shrRequests, strRequests]);
+  }, [smsRequests, shrRequests, strRequests, trRequests]);
 
   // Filtered list
   const filteredItems = useMemo(() => {
@@ -176,6 +194,8 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
         await api.delete(`/seminar-requests/${item.id}`);
       } else if (item.cardType === 'STR') {
         await api.delete(`/stationary/requests/${item.id}`);
+      } else if (item.cardType === 'TR') {
+        await api.delete(`/transport/requests/${item.id}`);
       }
       toast.success(`${item.cardType} Request #${item.id} deleted successfully.`);
       fetchAllHistory();
@@ -201,18 +221,21 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const smsIds: number[] = [];
       const shrIds: string[] = [];
       const strIds: string[] = [];
+      const trIds: string[] = [];
 
       selectedKeys.forEach((key) => {
         const [type, id] = key.split(':');
         if (type === 'SMS') smsIds.push(Number(id));
         else if (type === 'SHR') shrIds.push(id);
         else if (type === 'STR') strIds.push(id);
+        else if (type === 'TR') trIds.push(id);
       });
 
       const promises: Promise<any>[] = [];
       if (smsIds.length > 0) promises.push(api.post('/repairs/bulk-delete', { ids: smsIds }));
       if (shrIds.length > 0) promises.push(api.post('/seminar-requests/bulk-delete', { ids: shrIds }));
       if (strIds.length > 0) promises.push(api.post('/stationary/requests/bulk-delete', { ids: strIds }));
+      if (trIds.length > 0) promises.push(api.post('/transport/requests/bulk-delete', { ids: trIds }));
 
       await Promise.all(promises);
       toast.success(`Successfully deleted ${total} selected requests!`);
@@ -249,17 +272,20 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
       const smsIds: number[] = [];
       const shrIds: string[] = [];
       const strIds: string[] = [];
+      const trIds: string[] = [];
 
       filteredItems.forEach((it) => {
         if (it.cardType === 'SMS') smsIds.push(Number(it.id));
         else if (it.cardType === 'SHR') shrIds.push(String(it.id));
         else if (it.cardType === 'STR') strIds.push(String(it.id));
+        else if (it.cardType === 'TR') trIds.push(String(it.id));
       });
 
       const promises: Promise<any>[] = [];
       if (smsIds.length > 0) promises.push(api.post('/repairs/bulk-delete', { ids: smsIds }));
       if (shrIds.length > 0) promises.push(api.post('/seminar-requests/bulk-delete', { ids: shrIds }));
       if (strIds.length > 0) promises.push(api.post('/stationary/requests/bulk-delete', { ids: strIds }));
+      if (trIds.length > 0) promises.push(api.post('/transport/requests/bulk-delete', { ids: trIds }));
 
       await Promise.all(promises);
       toast.success(`Successfully deleted all ${count} requests from ${cardLabel}!`);
@@ -272,7 +298,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
     }
   };
 
-  const getCardBadge = (type: 'SMS' | 'SHR' | 'STR') => {
+  const getCardBadge = (type: 'SMS' | 'SHR' | 'STR' | 'TR') => {
     switch (type) {
       case 'SMS':
         return (
@@ -290,6 +316,12 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
             <Package className="w-3 h-3" /> STR
+          </span>
+        );
+      case 'TR':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <Car className="w-3 h-3" /> TR
           </span>
         );
     }
@@ -326,6 +358,10 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
             <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">STR</span>
             <span className="text-base font-black text-amber-700">{strRequests.length}</span>
           </div>
+          <div className="px-3.5 py-2 rounded-xl bg-emerald-50/70 border border-emerald-200 text-center">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">TR</span>
+            <span className="text-base font-black text-emerald-700">{trRequests.length}</span>
+          </div>
           <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-center">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total</span>
             <span className="text-base font-black text-slate-800">{unifiedItems.length}</span>
@@ -347,6 +383,7 @@ export const PrincipalHistoryManagementPage: React.FC = () => {
                 { key: 'SMS', label: 'SMS (Repairs)' },
                 { key: 'SHR', label: 'SHR (Seminar Halls)' },
                 { key: 'STR', label: 'STR (Stationary)' },
+                { key: 'TR', label: 'TR (Transport)' },
               ] as const
             ).map((card) => (
               <button

@@ -170,6 +170,27 @@ CREATE TABLE IF NOT EXISTS stationary_requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS transport_requests (
+    id TEXT PRIMARY KEY,
+    requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    transport_type TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    person_count INTEGER NOT NULL DEFAULT 1,
+    start_date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING_AO',
+    ao_remarks TEXT,
+    ao_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    ao_action_at TIMESTAMP,
+    allocated_vehicle TEXT,
+    allocated_vehicle_count INTEGER DEFAULT 1,
+    trip_started_at TIMESTAMP,
+    trip_ended_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 export async function initSchema() {
@@ -273,6 +294,31 @@ export async function initSchema() {
           CREATE INDEX IF NOT EXISTS idx_str_requester ON stationary_requests(requester_id);
           CREATE INDEX IF NOT EXISTS idx_str_dept ON stationary_requests(department_id);
           CREATE INDEX IF NOT EXISTS idx_str_status ON stationary_requests(status);
+
+          CREATE TABLE IF NOT EXISTS transport_requests (
+            id VARCHAR(50) PRIMARY KEY,
+            requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+            transport_type VARCHAR(20) NOT NULL,
+            purpose TEXT NOT NULL,
+            person_count INTEGER NOT NULL DEFAULT 1,
+            start_date VARCHAR(50) NOT NULL,
+            start_time VARCHAR(50) NOT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'PENDING_AO',
+            ao_remarks TEXT,
+            ao_action_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            ao_action_at TIMESTAMP,
+            allocated_vehicle VARCHAR(255),
+            allocated_vehicle_count INTEGER DEFAULT 1,
+            trip_started_at TIMESTAMP,
+            trip_ended_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_tr_requester ON transport_requests(requester_id);
+          CREATE INDEX IF NOT EXISTS idx_tr_dept ON transport_requests(department_id);
+          CREATE INDEX IF NOT EXISTS idx_tr_status ON transport_requests(status);
         `);
       } catch (e) {}
     } else {
