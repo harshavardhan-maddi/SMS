@@ -24,7 +24,8 @@ import {
   Info,
   Trash2,
   AlertTriangle,
-  ShieldAlert
+  ShieldAlert,
+  Lock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SeminarHall, SeminarHallRequest, CalendarBooking } from '../types';
@@ -268,6 +269,35 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
   const hasConflictOnSlot = noOfDays === 1
     ? (timeSlot === 'Full Day' ? (!!fullDayBooking || !!fnBooking || !!anBooking) : (timeSlot === 'FN' ? (!!fullDayBooking || !!fnBooking) : (!!fullDayBooking || !!anBooking)))
     : multiDayConflicts.length > 0;
+
+  const handleSelectDate = (date: string) => {
+    setEventDate(date);
+    if (noOfDays > 1 && !startDate) setStartDate(date);
+
+    // Auto-select available slot if one half of the day is already reserved
+    const target = normalizeDateKey(date);
+    const dayBookings = calendarBookings.filter(b => {
+      const bDate = normalizeDateKey(b.eventDate);
+      const bStart = normalizeDateKey(b.startDate);
+      const bEnd = normalizeDateKey(b.endDate);
+      if (b.noOfDays === 1) return bDate === target;
+      return bStart && bEnd && target >= bStart && target <= bEnd;
+    });
+
+    const hasFull = dayBookings.some(b => b.noOfDays > 1 || b.timeSlot === 'Full Day');
+    const hasFN = dayBookings.some(b => b.noOfDays === 1 && b.timeSlot === 'FN');
+    const hasAN = dayBookings.some(b => b.noOfDays === 1 && b.timeSlot === 'AN');
+
+    if (!isPrincipal && !hasFull) {
+      if (hasFN && !hasAN) {
+        setTimeSlot('AN');
+      } else if (hasAN && !hasFN) {
+        setTimeSlot('FN');
+      } else if (!hasFN && !hasAN) {
+        setTimeSlot('FN');
+      }
+    }
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
@@ -813,11 +843,9 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                   <SeminarHallCalendar
                     bookings={calendarBookings}
                     selectedDate={eventDate}
-                    onSelectDate={(d) => {
-                      setEventDate(d);
-                      if (noOfDays > 1 && !startDate) setStartDate(d);
-                    }}
+                    onSelectDate={handleSelectDate}
                     hallName={selectedHall.name}
+                    isPrincipal={isPrincipal}
                   />
                 </div>
               )}
@@ -892,30 +920,67 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           {/* FN BUTTON */}
                           <button
                             type="button"
-                            disabled={isFNDisabled}
-                            onClick={() => setTimeSlot('FN')}
-                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all relative ${
-                              timeSlot === 'FN'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : isFNDisabled
-                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            disabled={isFNDisabled && !isPrincipal}
+                            onClick={() => {
+                              if (!isFNDisabled || isPrincipal) setTimeSlot('FN');
+                            }}
+                            className={`p-3.5 rounded-2xl text-xs font-bold border text-center transition-all relative flex flex-col items-center justify-between min-h-[105px] ${
+                              isFNDisabled && !isPrincipal
+                                ? fnBooking
+                                  ? 'bg-amber-100 text-amber-950 border-2 border-amber-400 cursor-not-allowed shadow-2xs pointer-events-none'
+                                  : 'bg-rose-100 text-rose-950 border-2 border-rose-400 cursor-not-allowed shadow-2xs pointer-events-none'
+                                : timeSlot === 'FN'
+                                ? 'bg-indigo-600 text-white border-2 border-indigo-600 shadow-md ring-2 ring-indigo-200'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                             }`}
                           >
-                            <span className="block font-black text-base mb-0.5">FN</span>
-                            <span className="text-[11px] opacity-85">Forenoon</span>
+                            <div className="w-full">
+                              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                                {isFNDisabled && !isPrincipal && <Lock className="w-3.5 h-3.5 text-amber-800" />}
+                                <span className="font-black text-base">FN</span>
+                              </div>
+                              <span className="text-[11px] opacity-85 block">Forenoon</span>
+                            </div>
+
                             {fnBooking && (
-                              <span className="block text-[9px] font-bold text-amber-600 truncate mt-1">
-                                Booked: {fnBooking.hodName}
-                              </span>
+                              <div className="w-full mt-2 pt-1.5 border-t border-amber-300/80 text-[10px] leading-tight">
+                                <span className="font-extrabold text-amber-950 block truncate">
+                                  🔒 Booked: {fnBooking.hodName}
+                                </span>
+                                <span className="text-[9px] text-amber-900 font-semibold block truncate">
+                                  {fnBooking.departmentCode ? `(${fnBooking.departmentCode}) • ` : ''}{fnBooking.status}
+                                </span>
+                                {!isPrincipal && (
+                                  <span className="text-[8px] font-black text-rose-700 uppercase tracking-wider block mt-0.5">
+                                    Access Restricted
+                                  </span>
+                                )}
+                              </div>
                             )}
-                            {fullDayBooking && (
-                              <span className="block text-[9px] font-bold text-rose-600 truncate mt-1">
-                                Day Booked
+
+                            {fullDayBooking && !fnBooking && (
+                              <div className="w-full mt-2 pt-1.5 border-t border-rose-300/80 text-[10px] leading-tight">
+                                <span className="font-extrabold text-rose-950 block truncate">
+                                  🔒 Full Day Booked
+                                </span>
+                                <span className="text-[9px] text-rose-900 font-semibold block truncate">
+                                  {fullDayBooking.hodName} ({fullDayBooking.departmentCode || 'Dept'})
+                                </span>
+                                {!isPrincipal && (
+                                  <span className="text-[8px] font-black text-rose-700 uppercase tracking-wider block mt-0.5">
+                                    Access Restricted
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {!isFNDisabled && (
+                              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-2">
+                                Available
                               </span>
                             )}
                           </button>
@@ -923,26 +988,63 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                           {/* AN BUTTON */}
                           <button
                             type="button"
-                            disabled={isANDisabled}
-                            onClick={() => setTimeSlot('AN')}
-                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all relative ${
-                              timeSlot === 'AN'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : isANDisabled
-                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            disabled={isANDisabled && !isPrincipal}
+                            onClick={() => {
+                              if (!isANDisabled || isPrincipal) setTimeSlot('AN');
+                            }}
+                            className={`p-3.5 rounded-2xl text-xs font-bold border text-center transition-all relative flex flex-col items-center justify-between min-h-[105px] ${
+                              isANDisabled && !isPrincipal
+                                ? anBooking
+                                  ? 'bg-blue-100 text-blue-950 border-2 border-blue-400 cursor-not-allowed shadow-2xs pointer-events-none'
+                                  : 'bg-rose-100 text-rose-950 border-2 border-rose-400 cursor-not-allowed shadow-2xs pointer-events-none'
+                                : timeSlot === 'AN'
+                                ? 'bg-indigo-600 text-white border-2 border-indigo-600 shadow-md ring-2 ring-indigo-200'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                             }`}
                           >
-                            <span className="block font-black text-base mb-0.5">AN</span>
-                            <span className="text-[11px] opacity-85">Afternoon</span>
+                            <div className="w-full">
+                              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                                {isANDisabled && !isPrincipal && <Lock className="w-3.5 h-3.5 text-blue-800" />}
+                                <span className="font-black text-base">AN</span>
+                              </div>
+                              <span className="text-[11px] opacity-85 block">Afternoon</span>
+                            </div>
+
                             {anBooking && (
-                              <span className="block text-[9px] font-bold text-blue-600 truncate mt-1">
-                                Booked: {anBooking.hodName}
-                              </span>
+                              <div className="w-full mt-2 pt-1.5 border-t border-blue-300/80 text-[10px] leading-tight">
+                                <span className="font-extrabold text-blue-950 block truncate">
+                                  🔒 Booked: {anBooking.hodName}
+                                </span>
+                                <span className="text-[9px] text-blue-900 font-semibold block truncate">
+                                  {anBooking.departmentCode ? `(${anBooking.departmentCode}) • ` : ''}{anBooking.status}
+                                </span>
+                                {!isPrincipal && (
+                                  <span className="text-[8px] font-black text-rose-700 uppercase tracking-wider block mt-0.5">
+                                    Access Restricted
+                                  </span>
+                                )}
+                              </div>
                             )}
-                            {fullDayBooking && (
-                              <span className="block text-[9px] font-bold text-rose-600 truncate mt-1">
-                                Day Booked
+
+                            {fullDayBooking && !anBooking && (
+                              <div className="w-full mt-2 pt-1.5 border-t border-rose-300/80 text-[10px] leading-tight">
+                                <span className="font-extrabold text-rose-950 block truncate">
+                                  🔒 Full Day Booked
+                                </span>
+                                <span className="text-[9px] text-rose-900 font-semibold block truncate">
+                                  {fullDayBooking.hodName} ({fullDayBooking.departmentCode || 'Dept'})
+                                </span>
+                                {!isPrincipal && (
+                                  <span className="text-[8px] font-black text-rose-700 uppercase tracking-wider block mt-0.5">
+                                    Access Restricted
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {!isANDisabled && (
+                              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-2">
+                                Available
                               </span>
                             )}
                           </button>
@@ -950,21 +1052,45 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                           {/* FULL DAY BUTTON */}
                           <button
                             type="button"
-                            disabled={isFullDayDisabled}
-                            onClick={() => setTimeSlot('Full Day')}
-                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all relative ${
-                              timeSlot === 'Full Day'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : isFullDayDisabled
-                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            disabled={isFullDayDisabled && !isPrincipal}
+                            onClick={() => {
+                              if (!isFullDayDisabled || isPrincipal) setTimeSlot('Full Day');
+                            }}
+                            className={`p-3.5 rounded-2xl text-xs font-bold border text-center transition-all relative flex flex-col items-center justify-between min-h-[105px] ${
+                              isFullDayDisabled && !isPrincipal
+                                ? 'bg-rose-100 text-rose-950 border-2 border-rose-400 cursor-not-allowed shadow-2xs pointer-events-none'
+                                : timeSlot === 'Full Day'
+                                ? 'bg-indigo-600 text-white border-2 border-indigo-600 shadow-md ring-2 ring-indigo-200'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                             }`}
                           >
-                            <span className="block font-black text-base mb-0.5">Full Day</span>
-                            <span className="text-[11px] opacity-85">Full Day</span>
-                            {fullDayBooking && (
-                              <span className="block text-[9px] font-bold text-rose-600 truncate mt-1">
-                                Booked: {fullDayBooking.hodName}
+                            <div className="w-full">
+                              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                                {isFullDayDisabled && !isPrincipal && <Lock className="w-3.5 h-3.5 text-rose-800" />}
+                                <span className="font-black text-base">Full Day</span>
+                              </div>
+                              <span className="text-[11px] opacity-85 block">Full Day</span>
+                            </div>
+
+                            {isFullDayDisabled && (
+                              <div className="w-full mt-2 pt-1.5 border-t border-rose-300/80 text-[10px] leading-tight">
+                                <span className="font-extrabold text-rose-950 block truncate">
+                                  🔒 Slot Conflict
+                                </span>
+                                <span className="text-[9px] text-rose-900 font-semibold block truncate">
+                                  {fullDayBooking ? `Booked: ${fullDayBooking.hodName}` : (fnBooking ? `FN: ${fnBooking.hodName}` : `AN: ${anBooking?.hodName}`)}
+                                </span>
+                                {!isPrincipal && (
+                                  <span className="text-[8px] font-black text-rose-700 uppercase tracking-wider block mt-0.5">
+                                    Access Restricted
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {!isFullDayDisabled && (
+                              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-2">
+                                Available
                               </span>
                             )}
                           </button>
@@ -973,17 +1099,32 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
 
                       {/* CONFLICT WARNING & PRINCIPAL OVERRIDE OPTION */}
                       {hasConflictOnSlot && (
-                        <div className={`p-3.5 rounded-xl border text-xs ${
-                          isPrincipal ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-rose-50 border-rose-200 text-rose-800'
+                        <div className={`p-4 rounded-2xl border text-xs shadow-xs ${
+                          isPrincipal ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-rose-50 border-2 border-rose-300 text-rose-900'
                         }`}>
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                            <div className="space-y-1">
-                              <p className="font-bold">
-                                Slot Conflict: This session is already reserved for {selectedHall.name}.
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-xl flex-shrink-0 mt-0.5 ${
+                              isPrincipal ? 'bg-amber-200/70 text-amber-800' : 'bg-rose-200 text-rose-800'
+                            }`}>
+                              <Lock className="w-4 h-4" />
+                            </div>
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-black text-sm">
+                                  {isPrincipal ? 'Slot Overlap Detected' : '⛔ Access Blocked: Hall Already Reserved by Another HOD'}
+                                </p>
+                              </div>
+                              <p className="text-xs">
+                                {fullDayBooking
+                                  ? `This hall is fully booked for this date by ${fullDayBooking.hodName} (${fullDayBooking.departmentCode || 'Dept'}).`
+                                  : fnBooking && timeSlot === 'FN'
+                                  ? `The Forenoon (FN) session is reserved by ${fnBooking.hodName} (${fnBooking.departmentCode || 'Dept'}). You can select the Afternoon (AN) session instead.`
+                                  : anBooking && timeSlot === 'AN'
+                                  ? `The Afternoon (AN) session is reserved by ${anBooking.hodName} (${anBooking.departmentCode || 'Dept'}). You can select the Forenoon (FN) session instead.`
+                                  : `This session is unavailable on the chosen date for ${selectedHall.name}.`}
                               </p>
                               {isPrincipal ? (
-                                <div className="pt-1">
+                                <div className="pt-2 border-t border-amber-200 mt-2">
                                   <label className="flex items-center gap-2 cursor-pointer font-extrabold text-indigo-900">
                                     <input
                                       type="checkbox"
@@ -998,8 +1139,8 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                                   </p>
                                 </div>
                               ) : (
-                                <p className="text-[11px]">
-                                  Please select an alternative session or date. Note: Only the Principal has permission to override existing department bookings.
+                                <p className="text-[11px] font-semibold text-rose-800 pt-1">
+                                  Another department's booking cannot be accessed or overridden. Only the Principal has permission to override existing bookings.
                                 </p>
                               )}
                             </div>
@@ -1156,10 +1297,19 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                     <button
                       type="submit"
                       disabled={isSubmitting || (hasConflictOnSlot && !principalOverride)}
-                      className="px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold uppercase tracking-wider transition-all transform active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                      className={`px-7 py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all transform active:scale-95 shadow-sm flex items-center gap-2 ${
+                        hasConflictOnSlot && !principalOverride
+                          ? 'bg-rose-500 text-white cursor-not-allowed opacity-90'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                      }`}
                     >
                       {isSubmitting ? (
                         <span>Processing Request...</span>
+                      ) : hasConflictOnSlot && !principalOverride ? (
+                        <>
+                          <Lock className="w-4 h-4 text-white" />
+                          <span>Hall Reserved by Another HOD – Access Restricted</span>
+                        </>
                       ) : (
                         <>
                           <span>{principalOverride ? 'Override & Confirm Reservation' : 'Submit Seminar Hall Request'}</span>

@@ -7,7 +7,8 @@ import {
   AlertTriangle,
   Clock,
   User,
-  Building
+  Building,
+  Lock
 } from 'lucide-react';
 import { CalendarBooking } from '../types';
 
@@ -16,6 +17,7 @@ interface SeminarHallCalendarProps {
   selectedDate: string; // YYYY-MM-DD
   onSelectDate: (date: string) => void;
   hallName?: string;
+  isPrincipal?: boolean;
 }
 
 export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
@@ -185,39 +187,84 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
           const dayFN = dayBookings.filter(b => b.noOfDays === 1 && b.timeSlot === 'FN');
           const dayAN = dayBookings.filter(b => b.noOfDays === 1 && b.timeSlot === 'AN');
 
+          const hasFull = dayFullDay.length > 0;
+          const hasFN = dayFN.length > 0;
+          const hasAN = dayAN.length > 0;
+
+          // Determine fixed color styling based on booked type
+          let cellTheme = 'bg-white hover:bg-emerald-50/30 border-slate-200/80';
+          let dayNumTheme = isToday
+            ? 'bg-indigo-600 text-white shadow-xs'
+            : isSelected
+            ? 'bg-indigo-100 text-indigo-800 font-extrabold'
+            : 'text-slate-700 group-hover:text-indigo-600';
+          let statusBadge = (
+            <span className="hidden sm:inline-block text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">
+              Free
+            </span>
+          );
+
+          if (hasFull) {
+            // FIXED RED/ROSE FOR FULL DAY
+            cellTheme = isSelected
+              ? 'bg-rose-100/95 ring-2 ring-rose-600 border-rose-400 z-10'
+              : 'bg-rose-50/90 hover:bg-rose-100/70 border-rose-300';
+            dayNumTheme = 'bg-rose-600 text-white shadow-xs';
+            statusBadge = (
+              <span className="text-[9px] font-black text-rose-800 bg-rose-200/90 px-1.5 py-0.5 rounded flex items-center gap-1 border border-rose-300 shadow-2xs">
+                <Lock className="w-2.5 h-2.5 text-rose-700" /> Full Day
+              </span>
+            );
+          } else if (hasFN && hasAN) {
+            // FIXED DUAL COLOR FOR BOTH FN & AN
+            cellTheme = isSelected
+              ? 'bg-gradient-to-b from-amber-100 to-blue-100 ring-2 ring-indigo-600 border-indigo-400 z-10'
+              : 'bg-gradient-to-b from-amber-50/90 to-blue-50/90 hover:opacity-95 border-indigo-200';
+            dayNumTheme = 'bg-indigo-700 text-white shadow-xs';
+            statusBadge = (
+              <span className="text-[9px] font-black text-slate-800 bg-white/95 px-1.5 py-0.5 rounded flex items-center gap-1 border border-slate-300 shadow-2xs">
+                <Lock className="w-2.5 h-2.5 text-slate-700" /> FN + AN
+              </span>
+            );
+          } else if (hasFN) {
+            // FIXED AMBER/ORANGE FOR FN
+            cellTheme = isSelected
+              ? 'bg-amber-100/95 ring-2 ring-amber-500 border-amber-400 z-10'
+              : 'bg-amber-50/80 hover:bg-amber-100/60 border-amber-300';
+            dayNumTheme = 'bg-amber-500 text-slate-950 font-black shadow-xs';
+            statusBadge = (
+              <span className="text-[9px] font-black text-amber-900 bg-amber-200/90 px-1.5 py-0.5 rounded flex items-center gap-1 border border-amber-300 shadow-2xs">
+                <Lock className="w-2.5 h-2.5 text-amber-700" /> FN Booked
+              </span>
+            );
+          } else if (hasAN) {
+            // FIXED BLUE/INDIGO FOR AN
+            cellTheme = isSelected
+              ? 'bg-blue-100/95 ring-2 ring-blue-500 border-blue-400 z-10'
+              : 'bg-blue-50/80 hover:bg-blue-100/60 border-blue-300';
+            dayNumTheme = 'bg-blue-600 text-white shadow-xs';
+            statusBadge = (
+              <span className="text-[9px] font-black text-blue-900 bg-blue-200/90 px-1.5 py-0.5 rounded flex items-center gap-1 border border-blue-300 shadow-2xs">
+                <Lock className="w-2.5 h-2.5 text-blue-700" /> AN Booked
+              </span>
+            );
+          }
+
           return (
             <div
               key={`day-${day}`}
               onClick={() => onSelectDate(dateStr)}
-              className={`bg-white min-h-[90px] p-1 sm:p-2 cursor-pointer transition-all relative flex flex-col justify-between group ${
-                isSelected
-                  ? 'ring-2 ring-indigo-600 bg-indigo-50/30 z-10'
-                  : 'hover:bg-slate-50/80'
-              }`}
+              className={`min-h-[92px] p-1.5 sm:p-2 cursor-pointer transition-all relative flex flex-col justify-between group border rounded-lg m-0.5 shadow-2xs ${cellTheme}`}
             >
               {/* Day Header */}
               <div className="flex items-center justify-between mb-1">
                 <span
-                  className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full transition-all ${
-                    isToday
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : isSelected
-                      ? 'bg-indigo-100 text-indigo-800 font-extrabold'
-                      : 'text-slate-700 group-hover:text-indigo-600'
-                  }`}
+                  className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full transition-all ${dayNumTheme}`}
                 >
                   {day}
                 </span>
 
-                {dayBookings.length === 0 ? (
-                  <span className="hidden sm:inline-block text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">
-                    Free
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-mono font-bold text-slate-400">
-                    {dayBookings.length} {dayBookings.length === 1 ? 'slot' : 'slots'}
-                  </span>
-                )}
+                {statusBadge}
               </div>
 
               {/* Badges for Booked Sessions */}
@@ -362,32 +409,32 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
             {/* Availability details for this date */}
             <div className="flex flex-wrap items-center gap-2 text-xs pt-1">
               {hasFullDay ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 border border-rose-200 font-bold">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  Full Day Booked
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900 border border-rose-300 font-extrabold shadow-2xs">
+                  <Lock className="w-3.5 h-3.5 text-rose-700" />
+                  Full Day Booked – Access Blocked for Other HODs
                 </span>
               ) : (
                 <>
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold border shadow-2xs ${
                       hasFN
-                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        ? 'bg-amber-100 text-amber-950 border-amber-300'
+                        : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                     }`}
                   >
-                    {hasFN ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
-                    FN: {hasFN ? 'Reserved' : 'Available'}
+                    {hasFN ? <Lock className="w-3.5 h-3.5 text-amber-700" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    FN: {hasFN ? 'Reserved (Locked)' : 'Available (Free)'}
                   </span>
 
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold border shadow-2xs ${
                       hasAN
-                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        ? 'bg-blue-100 text-blue-950 border-blue-300'
+                        : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                     }`}
                   >
-                    {hasAN ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
-                    AN: {hasAN ? 'Reserved' : 'Available'}
+                    {hasAN ? <Lock className="w-3.5 h-3.5 text-blue-700" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    AN: {hasAN ? 'Reserved (Locked)' : 'Available (Free)'}
                   </span>
                 </>
               )}
