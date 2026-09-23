@@ -69,6 +69,12 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  // Helper to normalize any date input (string, Date, ISO) to 'YYYY-MM-DD'
+  const normalizeDateKey = (val?: string | null): string => {
+    if (!val) return '';
+    return String(val).substring(0, 10);
+  };
+
   // Helper to format date string
   const formatDateKey = (day: number): string => {
     const m = String(currentMonth + 1).padStart(2, '0');
@@ -78,11 +84,16 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
 
   // Helper to get bookings for a given date
   const getBookingsForDate = (dateStr: string): CalendarBooking[] => {
+    const target = normalizeDateKey(dateStr);
+    if (!target) return [];
     return bookings.filter(b => {
+      const bDate = normalizeDateKey(b.eventDate);
+      const bStart = normalizeDateKey(b.startDate);
+      const bEnd = normalizeDateKey(b.endDate);
       if (b.noOfDays === 1) {
-        return b.eventDate === dateStr;
+        return bDate === target;
       } else {
-        return b.startDate && b.endDate && dateStr >= b.startDate && dateStr <= b.endDate;
+        return bStart && bEnd && target >= bStart && target <= bEnd;
       }
     });
   };
@@ -216,11 +227,18 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
                   <div
                     key={b.id}
                     className="p-1 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-[10px] leading-tight font-medium shadow-2xs"
-                    title={`Full Day Booked by ${b.hodName} (${b.departmentCode || 'Dept'}) - ${b.eventTitle || 'Event'}`}
+                    title={`Full Day Booked by ${b.hodName} (${b.departmentCode || 'Dept'}) - Status: ${b.status} - ${b.eventTitle || 'Event'}`}
                   >
-                    <div className="flex items-center gap-1 font-bold text-rose-900 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-600 flex-shrink-0" />
-                      <span className="uppercase text-[9px] font-black">Full Day</span>
+                    <div className="flex items-center justify-between gap-1 font-bold text-rose-900">
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 flex-shrink-0" />
+                        <span className="uppercase text-[9px] font-black">Full Day</span>
+                      </div>
+                      <span className={`text-[8px] font-bold px-1 rounded uppercase flex-shrink-0 ${
+                        b.status === 'Approved' ? 'bg-rose-200/80 text-rose-900' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {b.status}
+                      </span>
                     </div>
                     <div className="truncate text-rose-800 text-[9px] mt-0.5 font-semibold">
                       {b.hodName} {b.departmentCode ? `(${b.departmentCode})` : ''}
@@ -233,11 +251,18 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
                   <div
                     key={b.id}
                     className="p-1 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-[10px] leading-tight font-medium shadow-2xs"
-                    title={`FN Booked by ${b.hodName} (${b.departmentCode || 'Dept'}) - ${b.eventTitle || 'Event'}`}
+                    title={`FN Booked by ${b.hodName} (${b.departmentCode || 'Dept'}) - Status: ${b.status} - ${b.eventTitle || 'Event'}`}
                   >
-                    <div className="flex items-center gap-1 font-bold text-amber-900 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600 flex-shrink-0" />
-                      <span className="uppercase text-[9px] font-black">FN</span>
+                    <div className="flex items-center justify-between gap-1 font-bold text-amber-900">
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 flex-shrink-0" />
+                        <span className="uppercase text-[9px] font-black">FN</span>
+                      </div>
+                      <span className={`text-[8px] font-bold px-1 rounded uppercase flex-shrink-0 ${
+                        b.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-200/80 text-amber-900'
+                      }`}>
+                        {b.status}
+                      </span>
                     </div>
                     <div className="truncate text-amber-800 text-[9px] mt-0.5 font-semibold">
                       {b.hodName} {b.departmentCode ? `(${b.departmentCode})` : ''}
@@ -250,11 +275,18 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
                   <div
                     key={b.id}
                     className="p-1 rounded-md bg-blue-50 border border-blue-200 text-blue-900 text-[10px] leading-tight font-medium shadow-2xs"
-                    title={`AN Booked by ${b.hodName} (${b.departmentCode || 'Dept'}) - ${b.eventTitle || 'Event'}`}
+                    title={`AN Booked by ${b.hodName} (${b.departmentCode || 'Dept'}) - Status: ${b.status} - ${b.eventTitle || 'Event'}`}
                   >
-                    <div className="flex items-center gap-1 font-bold text-blue-900 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />
-                      <span className="uppercase text-[9px] font-black">AN</span>
+                    <div className="flex items-center justify-between gap-1 font-bold text-blue-900">
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />
+                        <span className="uppercase text-[9px] font-black">AN</span>
+                      </div>
+                      <span className={`text-[8px] font-bold px-1 rounded uppercase flex-shrink-0 ${
+                        b.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                      }`}>
+                        {b.status}
+                      </span>
                     </div>
                     <div className="truncate text-blue-800 text-[9px] mt-0.5 font-semibold">
                       {b.hodName} {b.departmentCode ? `(${b.departmentCode})` : ''}
@@ -385,6 +417,11 @@ export const SeminarHallCalendar: React.FC<SeminarHallCalendarProps> = ({
                   {b.departmentCode && (
                     <span className="text-slate-500">({b.departmentCode})</span>
                   )}
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                    b.status === 'Approved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                  }`}>
+                    {b.status}
+                  </span>
                   {b.eventTitle && (
                     <span className="text-slate-500 italic truncate max-w-[180px]">
                       - "{b.eventTitle}"

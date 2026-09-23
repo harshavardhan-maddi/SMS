@@ -1,6 +1,9 @@
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
+
+// Force node-postgres to return DATE (OID 1082) as plain 'YYYY-MM-DD' string instead of converting to JS Date object
+types.setTypeParser(1082, (val: string) => val);
 
 dotenv.config();
 

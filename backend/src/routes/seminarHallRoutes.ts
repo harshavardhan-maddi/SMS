@@ -205,6 +205,20 @@ hallsRouter.post('/allocators', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'
 // 2. SEMINAR HALL REQUESTS (requestsRouter)
 // ==========================================
 
+function toIsoDateStr(d: any): string | null {
+  if (!d) return null;
+  if (typeof d === 'string') {
+    return d.substring(0, 10);
+  }
+  if (d instanceof Date) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return String(d).substring(0, 10);
+}
+
 function formatShrRow(row: any) {
   if (!row) return null;
   return {
@@ -214,10 +228,10 @@ function formatShrRow(row: any) {
     eventTitle: row.event_title,
     eventDescription: row.event_description,
     noOfDays: row.no_of_days,
-    eventDate: row.event_date,
+    eventDate: toIsoDateStr(row.event_date),
     timeSlot: row.time_slot,
-    startDate: row.start_date,
-    endDate: row.end_date,
+    startDate: toIsoDateStr(row.start_date),
+    endDate: toIsoDateStr(row.end_date),
     selectedDates: row.selected_dates,
     status: row.status,
     allocatorRemarks: row.allocator_remarks,
@@ -317,7 +331,7 @@ requestsRouter.get('/calendar-bookings', authenticateJWT, async (req, res) => {
       JOIN seminar_halls sh ON r.seminar_hall_id = sh.id
       JOIN users u ON r.requester_id = u.id
       LEFT JOIN departments d ON r.department_id = d.id
-      WHERE r.status IN ('Pending', 'Approved')
+      WHERE LOWER(r.status) IN ('pending', 'approved')
     `;
     const params: any[] = [];
     if (seminarHallId) {
@@ -333,11 +347,11 @@ requestsRouter.get('/calendar-bookings', authenticateJWT, async (req, res) => {
       seminarHallName: r.seminar_hall_name,
       seminarHallCode: r.seminar_hall_code,
       seminarHallBlock: r.seminar_hall_block,
-      eventDate: r.event_date,
+      eventDate: toIsoDateStr(r.event_date),
       timeSlot: r.time_slot,
       noOfDays: r.no_of_days,
-      startDate: r.start_date,
-      endDate: r.end_date,
+      startDate: toIsoDateStr(r.start_date),
+      endDate: toIsoDateStr(r.end_date),
       selectedDates: r.selected_dates,
       status: r.status,
       hodName: r.requester_name,
@@ -367,24 +381,24 @@ async function checkBookingConflicts(
      FROM seminar_hall_requests r
      JOIN users u ON r.requester_id = u.id
      LEFT JOIN departments d ON r.department_id = d.id
-     WHERE r.seminar_hall_id = ? AND r.status IN ('Pending', 'Approved')`,
+     WHERE r.seminar_hall_id = ? AND LOWER(r.status) IN ('pending', 'approved')`,
     [seminarHallId]
   );
 
   const conflicts: any[] = [];
 
   const isCandidateMulti = noOfDays > 1;
-  const candStart = isCandidateMulti ? startDate! : eventDate!;
-  const candEnd = isCandidateMulti ? endDate! : eventDate!;
+  const candStart = toIsoDateStr(isCandidateMulti ? startDate : eventDate);
+  const candEnd = toIsoDateStr(isCandidateMulti ? endDate : eventDate);
   const candSlot = isCandidateMulti ? 'Full Day' : (timeSlot || 'Full Day');
 
   for (const b of activeBookings) {
     const isExistingMulti = b.no_of_days > 1;
-    const existStart = isExistingMulti ? b.start_date : b.event_date;
-    const existEnd = isExistingMulti ? b.end_date : b.event_date;
+    const existStart = toIsoDateStr(isExistingMulti ? b.start_date : b.event_date);
+    const existEnd = toIsoDateStr(isExistingMulti ? b.end_date : b.event_date);
     const existSlot = isExistingMulti ? 'Full Day' : (b.time_slot || 'Full Day');
 
-    if (!existStart || !existEnd) continue;
+    if (!existStart || !existEnd || !candStart || !candEnd) continue;
 
     // Check date range intersection: [candStart, candEnd] overlaps [existStart, existEnd]
     const dateOverlap = candStart <= existEnd && existStart <= candEnd;

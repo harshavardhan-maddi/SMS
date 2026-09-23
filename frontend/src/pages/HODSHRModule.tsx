@@ -232,10 +232,29 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
     return matchesStatus && matchesSearch;
   });
 
+  const normalizeDateKey = (val?: string | null): string => {
+    if (!val) return '';
+    return String(val).substring(0, 10);
+  };
+
   // Calculate bookings and slot availability for selected date
   const selectedDateBookings = eventDate ? calendarBookings.filter(b => {
-    if (b.noOfDays === 1) return b.eventDate === eventDate;
-    return b.startDate && b.endDate && eventDate >= b.startDate && eventDate <= b.endDate;
+    const target = normalizeDateKey(eventDate);
+    const bDate = normalizeDateKey(b.eventDate);
+    const bStart = normalizeDateKey(b.startDate);
+    const bEnd = normalizeDateKey(b.endDate);
+    if (b.noOfDays === 1) return bDate === target;
+    return bStart && bEnd && target >= bStart && target <= bEnd;
+  }) : [];
+
+  const multiDayConflicts = (noOfDays > 1 && startDate && endDate) ? calendarBookings.filter(b => {
+    const candStart = normalizeDateKey(startDate);
+    const candEnd = normalizeDateKey(endDate);
+    const isMulti = b.noOfDays > 1;
+    const existStart = normalizeDateKey(isMulti ? b.startDate : b.eventDate);
+    const existEnd = normalizeDateKey(isMulti ? b.endDate : b.eventDate);
+    if (!existStart || !existEnd) return false;
+    return candStart <= existEnd && existStart <= candEnd;
   }) : [];
 
   const fullDayBooking = selectedDateBookings.find(b => b.noOfDays > 1 || b.timeSlot === 'Full Day');
@@ -248,7 +267,7 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
 
   const hasConflictOnSlot = noOfDays === 1
     ? (timeSlot === 'Full Day' ? (!!fullDayBooking || !!fnBooking || !!anBooking) : (timeSlot === 'FN' ? (!!fullDayBooking || !!fnBooking) : (!!fullDayBooking || !!anBooking)))
-    : false;
+    : multiDayConflicts.length > 0;
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
@@ -1031,7 +1050,7 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                         </div>
                       </div>
 
-                      {isPrincipal && (
+                      {isPrincipal ? (
                         <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
                           <label className="flex items-center gap-2 cursor-pointer font-bold">
                             <input
@@ -1043,6 +1062,22 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                             <span>Override any overlapping bookings during this date range (Principal Authority)</span>
                           </label>
                         </div>
+                      ) : (
+                        multiDayConflicts.length > 0 && (
+                          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+                            <div className="flex items-center gap-1.5 font-bold text-rose-900">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                              <span>Date Range Conflict: The selected range conflicts with existing bookings for {selectedHall.name}.</span>
+                            </div>
+                            <div className="space-y-0.5 pt-1 pl-5">
+                              {multiDayConflicts.map(c => (
+                                <div key={c.id} className="text-[11px] text-rose-800 font-medium">
+                                  • {c.eventDate || `${c.startDate} to ${c.endDate}`} ({c.timeSlot || 'Full Day'}) - Booked by {c.hodName} ({c.departmentCode || 'Dept'}) [{c.status}]
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
                       )}
                     </div>
                   )}
