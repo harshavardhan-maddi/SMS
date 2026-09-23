@@ -525,54 +525,6 @@ export const HODRAModule: React.FC<HODRAModuleProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Bar with Switchers */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-2xl px-5 py-3 text-xs shadow-md backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-          <span className="text-brand-textMuted">
-            Active Module: <strong className="text-white">R&A (Refreshments & Accommodations)</strong>
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={onSwitchToSMS}
-            className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-medium transition-all border border-[#334155]/40 cursor-pointer"
-          >
-            SMS
-          </button>
-          {onSwitchToSHR && (
-            <button
-              onClick={onSwitchToSHR}
-              className="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <span>SHR</span>
-            </button>
-          )}
-          {onSwitchToSTR && (
-            <button
-              onClick={onSwitchToSTR}
-              className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <span>STR</span>
-            </button>
-          )}
-          {onSwitchToTR && (
-            <button
-              onClick={onSwitchToTR}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <span>TR</span>
-            </button>
-          )}
-          <button
-            onClick={onSwitchToSMS}
-            className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-medium transition-all border border-[#334155]/40 cursor-pointer"
-          >
-            Portal Hub
-          </button>
-        </div>
-      </div>
-
       {/* 2. Top Title & Tabs Banner */}
       <div className="admin-card p-6 bg-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>

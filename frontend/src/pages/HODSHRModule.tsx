@@ -315,33 +315,6 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
             Department: <span className="text-slate-800 font-semibold">{user?.departmentCode || 'HOD'}</span> • Logged in as <span className="text-slate-800 font-semibold">{user?.name}</span>
           </p>
         </div>
-
-        {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end text-xs">
-          <button
-            onClick={onSwitchToSMS}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold transition-all"
-          >
-            <Layers className="w-3.5 h-3.5 text-slate-600" />
-            <span>SMS Core</span>
-          </button>
-          {onSwitchToSTR && (
-            <button
-              onClick={onSwitchToSTR}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold transition-all"
-            >
-              <span>STR (Stationary)</span>
-            </button>
-          )}
-          {onSwitchToTR && (
-            <button
-              onClick={onSwitchToTR}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold transition-all"
-            >
-              <span>TR (Transport)</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Sub-Navigation Tabs: Dashboard, History, New Req */}

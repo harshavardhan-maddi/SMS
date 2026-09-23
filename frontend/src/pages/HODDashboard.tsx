@@ -26,7 +26,7 @@ import { toast } from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RequestDetailsModal } from '../components/RequestDetailsModal';
 import { RailwayTrackTimeline } from '../components/RailwayTrackTimeline';
-import { HODPortalLanding } from './HODPortalLanding';
+import { HODTopModuleCards, HODModuleFlow } from '../components/HODTopModuleCards';
 import { HODSHRModule } from './HODSHRModule';
 import { HODStationaryModule } from './HODStationaryModule';
 import { HODTRModule } from './HODTRModule';
@@ -52,12 +52,12 @@ export const HODDashboard: React.FC = () => {
     }
   };
 
-  // Portal Landing State: Every HOD sees the cards upon login
-  const [portalMode, setPortalMode] = useState<'portal_selector' | 'sms' | 'shr' | 'str' | 'tr' | 'ra'>(() => {
+  // Portal State: Top 5 cards visible at all times, in-place module switcher
+  const [portalMode, setPortalMode] = useState<HODModuleFlow>(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mode = searchParams.get('mode');
-    if (mode === 'sms' || mode === 'shr' || mode === 'str' || mode === 'tr' || mode === 'ra') return mode;
-    return 'portal_selector';
+    if (mode === 'sms' || mode === 'shr' || mode === 'str' || mode === 'tr' || mode === 'ra') return mode as HODModuleFlow;
+    return 'sms';
   });
   
   const [loading, setLoading] = useState(true);
@@ -300,64 +300,12 @@ export const HODDashboard: React.FC = () => {
     }
   };
 
-  // 1. If portalMode is portal_selector, show the 3 cards
-  if (portalMode === 'portal_selector') {
-    return <HODPortalLanding onSelectFlow={(flow) => setPortalMode(flow)} />;
-  }
-
-  // 2. If portalMode is shr, show the SHR Module (Dashboard, History, New Req)
-  if (portalMode === 'shr') {
-    return (
-      <HODSHRModule
-        onSwitchToSMS={() => setPortalMode('sms')}
-        onSwitchToSTR={() => setPortalMode('str')}
-        onSwitchToTR={() => setPortalMode('tr')}
-      />
-    );
-  }
-
-  // 3. If portalMode is str, show the STR Module (Dashboard, History, New Req with catalog)
-  if (portalMode === 'str') {
-    return (
-      <HODStationaryModule
-        onSwitchToSMS={() => setPortalMode('sms')}
-        onSwitchToSHR={() => setPortalMode('shr')}
-        onSwitchToTR={() => setPortalMode('tr')}
-      />
-    );
-  }
-
-  // 4. If portalMode is tr, show the TR Module (Dashboard, History, New Req)
-  if (portalMode === 'tr') {
-    return (
-      <HODTRModule
-        onSwitchToSMS={() => setPortalMode('sms')}
-        onSwitchToSHR={() => setPortalMode('shr')}
-        onSwitchToSTR={() => setPortalMode('str')}
-      />
-    );
-  }
-
-  // 5. If portalMode is ra, show the R&A Module (Dashboard, History, New Req)
-  if (portalMode === 'ra') {
-    return (
-      <HODRAModule
-        onSwitchToSMS={() => setPortalMode('sms')}
-        onSwitchToSHR={() => setPortalMode('shr')}
-        onSwitchToSTR={() => setPortalMode('str')}
-        onSwitchToTR={() => setPortalMode('tr')}
-      />
-    );
-  }
-
-  if (loading || !stats) {
-    return (
-      <div className="space-y-6">
-        <LoadingSkeleton type="grid" />
-        <LoadingSkeleton type="table" />
-      </div>
-    );
-  }
+  const handleSelectModule = (mode: HODModuleFlow) => {
+    setPortalMode(mode);
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('mode', mode);
+    window.history.replaceState({}, '', newUrl.toString());
+  };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
@@ -370,55 +318,57 @@ export const HODDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Module Switcher Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#1e293b]/90 via-[#0f172a]/95 to-[#1e293b]/90 border border-[#334155]/60 rounded-2xl px-5 py-3 text-xs shadow-md backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-brand-textMuted">Active Module: <strong className="text-white">SMS (Systems Management System)</strong></span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setPortalMode('shr')}
-            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-          >
-            <span>SHR (Seminar Halls)</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setPortalMode('str')}
-            className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-          >
-            <span>STR (Stationary)</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setPortalMode('tr')}
-            className="px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-          >
-            <span>TR (Transport)</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setPortalMode('ra')}
-            className="px-3.5 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-          >
-            <span>R&A (Hospitality)</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setPortalMode('portal_selector')}
-            className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-brand-textMuted hover:text-white font-medium transition-all border border-[#334155]/40 cursor-pointer"
-            title="Return to Portal Selector"
-          >
-            Portal Hub
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 pb-12 animate-fade-in">
+      {/* 5 Equal-Size Compact Cards Side-By-Side at the Top */}
+      <HODTopModuleCards
+        activeModule={portalMode}
+        onSelectModule={handleSelectModule}
+      />
 
-      {/* 1. Component Cards Row (CPU, Monitor, Keyboard, Mouse, Hotspot) */}
+      {/* Module Content Loaded In-Place Without Leaving Current Page */}
+      {portalMode === 'shr' && (
+        <HODSHRModule
+          onSwitchToSMS={() => handleSelectModule('sms')}
+          onSwitchToSTR={() => handleSelectModule('str')}
+          onSwitchToTR={() => handleSelectModule('tr')}
+        />
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {portalMode === 'str' && (
+        <HODStationaryModule
+          onSwitchToSMS={() => handleSelectModule('sms')}
+          onSwitchToSHR={() => handleSelectModule('shr')}
+          onSwitchToTR={() => handleSelectModule('tr')}
+        />
+      )}
+
+      {portalMode === 'tr' && (
+        <HODTRModule
+          onSwitchToSMS={() => handleSelectModule('sms')}
+          onSwitchToSHR={() => handleSelectModule('shr')}
+          onSwitchToSTR={() => handleSelectModule('str')}
+        />
+      )}
+
+      {portalMode === 'ra' && (
+        <HODRAModule
+          onSwitchToSMS={() => handleSelectModule('sms')}
+          onSwitchToSHR={() => handleSelectModule('shr')}
+          onSwitchToSTR={() => handleSelectModule('str')}
+          onSwitchToTR={() => handleSelectModule('tr')}
+        />
+      )}
+
+      {portalMode === 'sms' && (
+        loading || !stats ? (
+          <div className="space-y-6">
+            <LoadingSkeleton type="grid" />
+            <LoadingSkeleton type="table" />
+          </div>
+        ) : (
+          <div className="space-y-6 animate-fade-in">
+            {/* 1. Component Cards Row (CPU, Monitor, Keyboard, Mouse, Hotspot) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {['CPU', 'Monitor', 'Keyboard', 'Mouse', 'Hotspot'].map((type) => {
           const typeData = stats[type] || { Total: 0, Working: 0, Repairing: 0, Dead: 0, NewStock: 0 };
           return (
@@ -658,6 +608,9 @@ export const HODDashboard: React.FC = () => {
           </table>
         </div>
       </div>
+          </div>
+        )
+      )}
 
       {/* MODAL 1: Report Issue Form */}
       <Modal isOpen={reportModalOpen} onClose={handleCloseReportModal} title="Report System Repair Request">

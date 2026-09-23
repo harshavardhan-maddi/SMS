@@ -261,48 +261,6 @@ export const HODStationaryModule: React.FC<HODStationaryModuleProps> = ({
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
-      {/* Top Switcher Navigation Bar */}
-      <div className="admin-card p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-slate-600">
-            Active Module: <strong className="text-slate-800">STR (Stationary Requests)</strong>
-          </span>
-          <span className="hidden md:inline-block text-[11px] px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold">
-            AO &amp; Store Dispatch Flow
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {onSwitchToSHR && (
-            <button
-              onClick={onSwitchToSHR}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold transition-all cursor-pointer"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Switch to SHR</span>
-            </button>
-          )}
-
-          {onSwitchToTR && (
-            <button
-              onClick={onSwitchToTR}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold transition-all cursor-pointer"
-            >
-              <span>Switch to TR</span>
-            </button>
-          )}
-
-          <button
-            onClick={onSwitchToSMS}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold transition-all cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to SMS Core</span>
-          </button>
-        </div>
-      </div>
-
       {/* Main Header & Sub-Tabs Navigation */}
       <div className="admin-card p-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

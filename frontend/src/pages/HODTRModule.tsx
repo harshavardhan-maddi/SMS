@@ -367,32 +367,6 @@ export const HODTRModule: React.FC<HODTRModuleProps> = ({
             </h1>
           </div>
         </div>
-
-        {/* Quick Switch Buttons */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            onClick={onSwitchToSMS}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors flex items-center gap-1.5"
-          >
-            <span>Switch to SMS</span>
-          </button>
-          {onSwitchToSHR && (
-            <button
-              onClick={onSwitchToSHR}
-              className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold transition-colors flex items-center gap-1.5"
-            >
-              <span>Switch to SHR</span>
-            </button>
-          )}
-          {onSwitchToSTR && (
-            <button
-              onClick={onSwitchToSTR}
-              className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold transition-colors flex items-center gap-1.5"
-            >
-              <span>Switch to STR</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
