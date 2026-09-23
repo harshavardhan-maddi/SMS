@@ -104,6 +104,27 @@ export interface SeminarHallRequest {
   updatedAt?: string;
 }
 
+export interface CalendarBooking {
+  id: string;
+  seminarHallId: number;
+  seminarHallName: string;
+  seminarHallCode?: string;
+  seminarHallBlock?: string;
+  eventDate?: string;
+  timeSlot?: 'FN' | 'AN' | 'Full Day' | string;
+  noOfDays: number;
+  startDate?: string;
+  endDate?: string;
+  selectedDates?: string;
+  status: 'Pending' | 'Approved';
+  hodName: string;
+  requesterEmail?: string;
+  departmentCode?: string;
+  departmentName?: string;
+  eventTitle?: string;
+  resourcePersonName?: string;
+}
+
 export interface StationaryItem {
   id: number;
   name: string;

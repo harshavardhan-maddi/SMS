@@ -18,19 +18,24 @@ import {
   Edit,
   Sparkles,
   Layers,
-  FileText
+  FileText,
+  ShieldAlert,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { SeminarHall, SeminarHallRequest } from '../types';
+import { SeminarHall, SeminarHallRequest, CalendarBooking } from '../types';
+import { SeminarHallCalendar } from '../components/SeminarHallCalendar';
 
 export const PrincipalSeminarHallsPage: React.FC = () => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
 
-  const [activeTab, setActiveTab] = useState<'halls' | 'allocators' | 'bookings'>('halls');
+  const [activeTab, setActiveTab] = useState<'halls' | 'allocators' | 'bookings' | 'new_booking'>('halls');
   const [halls, setHalls] = useState<SeminarHall[]>([]);
   const [allocators, setAllocators] = useState<any[]>([]);
   const [bookings, setBookings] = useState<SeminarHallRequest[]>([]);
+  const [calendarBookings, setCalendarBookings] = useState<CalendarBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Add Hall Modal State
@@ -57,8 +62,39 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
   const [allocatorToDelete, setAllocatorToDelete] = useState<any | null>(null);
   const [isDeletingAllocator, setIsDeletingAllocator] = useState(false);
 
+  // Override Booking Modal State
+  const [bookingToOverride, setBookingToOverride] = useState<SeminarHallRequest | null>(null);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [isOverriding, setIsOverriding] = useState(false);
+
+  // Principal Booking Wizard State
+  const [bookingHall, setBookingHall] = useState<SeminarHall | null>(null);
+  const [resourcePersonName, setResourcePersonName] = useState('');
+  const [participantsCount, setParticipantsCount] = useState<number | string>(0);
+  const [noOfDays, setNoOfDays] = useState<number>(1);
+  const [eventDate, setEventDate] = useState('');
+  const [timeSlot, setTimeSlot] = useState<'FN' | 'AN' | 'Full Day'>('FN');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDescription, setEventDescription] = useState('');
+  const [overrideConfirm, setOverrideConfirm] = useState(true); // Default true for Principal
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+
   // Filter
   const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchCalendarBookings = async (hallId?: number) => {
+    try {
+      const url = hallId
+        ? `/seminar-requests/calendar-bookings?seminarHallId=${hallId}`
+        : '/seminar-requests/calendar-bookings';
+      const res = await api.get(url);
+      setCalendarBookings(res.data);
+    } catch (err) {
+      console.error('Failed to load calendar bookings:', err);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -68,6 +104,9 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
         api.get('/seminar-requests')
       ]);
       setHalls(hallsRes.data);
+      if (!bookingHall && hallsRes.data.length > 0) {
+        setBookingHall(hallsRes.data[0]);
+      }
       setAllocators(allocsRes.data);
       setBookings(bookingsRes.data);
     } catch (err) {
@@ -81,6 +120,118 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [dashboardTick]);
+
+  useEffect(() => {
+    if (bookingHall) {
+      fetchCalendarBookings(bookingHall.id);
+    } else {
+      fetchCalendarBookings();
+    }
+  }, [bookingHall?.id, dashboardTick]);
+
+  const handleDirectOverride = async () => {
+    if (!bookingToOverride) return;
+    if (!overrideReason.trim()) {
+      toast.error('Please enter a reason for overriding this reservation');
+      return;
+    }
+
+    setIsOverriding(true);
+    try {
+      await api.post(`/seminar-requests/${bookingToOverride.id}/override`, {
+        remarks: overrideReason.trim()
+      });
+      toast.success(`Booking ${bookingToOverride.id} overridden & cancelled successfully!`);
+      setBookingToOverride(null);
+      setOverrideReason('');
+      fetchData();
+      if (bookingHall) fetchCalendarBookings(bookingHall.id);
+    } catch (err: any) {
+      console.error('Failed to override booking:', err);
+      toast.error(err.response?.data || 'Failed to override booking');
+    } finally {
+      setIsOverriding(false);
+    }
+  };
+
+  const handlePrincipalCreateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingHall) {
+      toast.error('Please select a seminar hall');
+      return;
+    }
+    if (!resourcePersonName.trim()) {
+      toast.error('Please enter the name of the Resource Person');
+      return;
+    }
+    if (!participantsCount || Number(participantsCount) <= 0) {
+      toast.error('Please enter a valid participants count');
+      return;
+    }
+
+    if (noOfDays === 1) {
+      if (!eventDate) {
+        toast.error('Please select the event date from calendar');
+        return;
+      }
+      if (!timeSlot) {
+        toast.error('Please select a session (FN, AN, or Full Day)');
+        return;
+      }
+    } else {
+      if (!startDate || !endDate) {
+        toast.error('Please select both start date and end date');
+        return;
+      }
+      if (new Date(startDate) > new Date(endDate)) {
+        toast.error('Start date cannot be after end date');
+        return;
+      }
+    }
+
+    setIsSubmittingBooking(true);
+    try {
+      const payload = {
+        seminarHallId: bookingHall.id,
+        resourcePersonName: resourcePersonName.trim(),
+        participantsCount: Number(participantsCount),
+        eventTitle: eventTitle.trim() || `Event by ${resourcePersonName.trim()}`,
+        eventDescription: eventDescription.trim(),
+        noOfDays,
+        eventDate: noOfDays === 1 ? eventDate : null,
+        timeSlot: noOfDays === 1 ? timeSlot : null,
+        startDate: noOfDays > 1 ? startDate : null,
+        endDate: noOfDays > 1 ? endDate : null,
+        override: overrideConfirm
+      };
+
+      const res = await api.post('/seminar-requests', payload);
+      toast.success(`Reservation ${res.data.id} created & approved by Principal!`);
+      // Reset
+      setResourcePersonName('');
+      setParticipantsCount(0);
+      setNoOfDays(1);
+      setEventDate('');
+      setTimeSlot('FN');
+      setStartDate('');
+      setEndDate('');
+      setEventTitle('');
+      setEventDescription('');
+      setActiveTab('bookings');
+      fetchData();
+      if (bookingHall) fetchCalendarBookings(bookingHall.id);
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        const errorData = err.response.data;
+        toast.error(errorData?.message || 'Slot has a conflict. Enable override to proceed as Principal.');
+      } else {
+        const msg = err.response?.data || 'Failed to create booking';
+        toast.error(typeof msg === 'string' ? msg : 'Error creating booking');
+      }
+    } finally {
+      setIsSubmittingBooking(false);
+    }
+  };
 
   const handleAddHall = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,10 +345,21 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              setActiveTab('new_booking');
+              if (!bookingHall && halls.length > 0) setBookingHall(halls[0]);
+            }}
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+          >
+            <CalendarCheck2 className="w-4 h-4" />
+            Book &amp; Override
+          </button>
+
           <button
             onClick={() => setHallModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Add Seminar Hall
@@ -205,7 +367,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
           <button
             onClick={() => setAllocatorModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-2 border border-slate-200 cursor-pointer"
           >
             <Users className="w-4 h-4" />
             Add Hall Allocator
@@ -214,10 +376,10 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab('halls')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'halls'
               ? 'bg-indigo-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
@@ -229,7 +391,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('allocators')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'allocators'
               ? 'bg-indigo-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
@@ -241,7 +403,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('bookings')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'bookings'
               ? 'bg-indigo-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
@@ -249,6 +411,21 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
         >
           <CalendarCheck2 className="w-4 h-4" />
           All Bookings ({bookings.length})
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('new_booking');
+            if (!bookingHall && halls.length > 0) setBookingHall(halls[0]);
+          }}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'new_booking'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          Book Hall &amp; Override
         </button>
       </div>
 
@@ -374,8 +551,18 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
       {/* TAB 3: ALL BOOKINGS */}
       {activeTab === 'bookings' && (
         <div className="admin-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs animate-fade-in">
-          <div className="p-4 border-b border-slate-100">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-800">College-Wide Seminar Hall Reservations</h3>
+            <button
+              onClick={() => {
+                setActiveTab('new_booking');
+                if (!bookingHall && halls.length > 0) setBookingHall(halls[0]);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Book Seminar Hall
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -389,6 +576,7 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                   <th className="py-3 px-4">Attendees</th>
                   <th className="py-3 px-4">Timing</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Principal Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -406,17 +594,430 @@ export const PrincipalSeminarHallsPage: React.FC = () => {
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
                         b.status === 'Approved'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : b.status === 'Rejected'
+                          : b.status === 'Rejected' || b.status === 'Cancelled'
                           ? 'bg-red-50 text-red-700 border border-red-200'
                           : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
                         {b.status}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-right">
+                      {b.status !== 'Cancelled' && b.status !== 'Rejected' && (
+                        <button
+                          onClick={() => {
+                            setBookingToOverride(b);
+                            setOverrideReason('');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                          title="Override or Cancel this Department Booking"
+                        >
+                          <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Override</span>
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: PRINCIPAL BOOKING CONSOLE & OVERRIDE */}
+      {activeTab === 'new_booking' && (
+        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+          <div className="admin-card p-6 sm:p-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="mb-6">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">
+                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                Principal Direct Booking &amp; Override Authority
+              </div>
+              <h2 className="text-xl font-bold text-slate-800">Book Seminar Hall (Principal Console)</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Select any institutional hall, inspect date availability, and create reservations with full override authority over department bookings.
+              </p>
+            </div>
+
+            {/* STEP 1: SELECT HALL */}
+            <div className="mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700 mb-3">
+                Step 1: Select Seminar Hall <span className="text-red-500">*</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {halls.map((hall, idx) => {
+                  const isSelected = bookingHall?.id === hall.id;
+                  return (
+                    <div
+                      key={hall.id}
+                      onClick={() => setBookingHall(hall)}
+                      className={`cursor-pointer rounded-xl p-4 border transition-all relative ${
+                        isSelected
+                          ? 'bg-indigo-50/70 border-indigo-500 shadow-xs ring-1 ring-indigo-500'
+                          : 'bg-slate-50/60 border-slate-200 hover:border-indigo-300 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                          {idx + 1}. {hall.block}
+                        </span>
+                        {isSelected && (
+                          <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                        )}
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800 mb-1">{hall.name}</h4>
+                      <p className="text-[11px] text-slate-500">Capacity: {hall.capacity} seats</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* STEP 2: SELECT DATE FROM INTERACTIVE CALENDAR */}
+            {bookingHall && (
+              <div className="mb-6 animate-fade-in">
+                <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700 mb-2">
+                  Step 2: Check Availability &amp; Select Date from Calendar <span className="text-red-500">*</span>
+                </label>
+                <SeminarHallCalendar
+                  bookings={calendarBookings}
+                  selectedDate={eventDate}
+                  onSelectDate={(d) => {
+                    setEventDate(d);
+                    if (noOfDays > 1 && !startDate) setStartDate(d);
+                  }}
+                  hallName={bookingHall.name}
+                />
+              </div>
+            )}
+
+            {/* STEP 3: DETAILS FORM */}
+            {bookingHall && (
+              <form onSubmit={handlePrincipalCreateBooking} className="space-y-5 animate-fade-in border-t border-slate-100 pt-6">
+                <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700">
+                  Step 3: Reservation Details &amp; Override Settings
+                </label>
+
+                {/* Event Duration */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Event Duration <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setNoOfDays(1)}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                        noOfDays === 1
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      1 Day Event
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (noOfDays === 1) {
+                          setNoOfDays(2);
+                          if (!startDate && eventDate) setStartDate(eventDate);
+                        }
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                        noOfDays > 1
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      More than 1 Day
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1 Day Event Session */}
+                {noOfDays === 1 ? (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Selected Event Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={eventDate}
+                        onChange={e => setEventDate(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold text-slate-700">
+                          Select Session <span className="text-red-500">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500">
+                          FN (Forenoon) • AN (Afternoon) • Full Day
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setTimeSlot('FN')}
+                          className={`p-3 rounded-xl text-xs font-bold border text-center transition-all ${
+                            timeSlot === 'FN'
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="block font-black text-base mb-0.5">FN</span>
+                          <span className="text-[11px] opacity-85">Forenoon</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setTimeSlot('AN')}
+                          className={`p-3 rounded-xl text-xs font-bold border text-center transition-all ${
+                            timeSlot === 'AN'
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="block font-black text-base mb-0.5">AN</span>
+                          <span className="text-[11px] opacity-85">Afternoon</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setTimeSlot('Full Day')}
+                          className={`p-3 rounded-xl text-xs font-bold border text-center transition-all ${
+                            timeSlot === 'Full Day'
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="block font-black text-base mb-0.5">Full Day</span>
+                          <span className="text-[11px] opacity-85">Full Day</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs font-bold text-slate-700">Event Duration (Days):</label>
+                      <input
+                        type="number"
+                        min={2}
+                        max={30}
+                        value={noOfDays}
+                        onChange={e => setNoOfDays(Math.max(2, parseInt(e.target.value) || 2))}
+                        className="w-24 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs text-center font-bold focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Event Start Date (From) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={startDate}
+                          onChange={e => setStartDate(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Event End Date (To) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={endDate}
+                          onChange={e => setEndDate(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resource Person */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Name of the Resource Person <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Chief Guest / Keynote Speaker"
+                    value={resourcePersonName}
+                    onChange={e => setResourcePersonName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Event or Topic */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Event or Topic <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Institutional Academic Senate Meeting"
+                    value={eventTitle}
+                    onChange={e => setEventTitle(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Specific AV / Facility Requirements (Optional) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Specific AV / Facility Requirements (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Recording equipment, wireless mic, presidential podium"
+                    value={eventDescription}
+                    onChange={e => setEventDescription(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Participants Count */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Participants Count <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={bookingHall.capacity * 1.5}
+                    placeholder="0"
+                    value={participantsCount}
+                    onChange={e => setParticipantsCount(e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Principal Override Confirmation Box */}
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                  <label className="flex items-center gap-2.5 cursor-pointer font-bold">
+                    <input
+                      type="checkbox"
+                      checked={overrideConfirm}
+                      onChange={e => setOverrideConfirm(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                    />
+                    <span>Automatically override any conflicting department reservations (Principal Privilege)</span>
+                  </label>
+                  <p className="text-[11px] text-slate-600 mt-1 pl-6">
+                    If any department has booked this hall on the selected dates/session, that reservation will be superseded, marked as cancelled, and the HOD notified.
+                  </p>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('bookings')}
+                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingBooking}
+                    className="px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold uppercase tracking-wider transition-all transform active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSubmittingBooking ? (
+                      <span>Reserving Hall...</span>
+                    ) : (
+                      <>
+                        <span>Confirm Principal Reservation</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: PRINCIPAL OVERRIDE RESERVATION */}
+      {bookingToOverride && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Override Reservation</h3>
+                  <span className="text-xs text-slate-500 font-mono">Ticket {bookingToOverride.id}</span>
+                </div>
+              </div>
+              <button onClick={() => setBookingToOverride(null)} className="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 mb-4">
+              <div className="text-slate-800 font-semibold">
+                Hall: {bookingToOverride.seminarHall?.name} ({bookingToOverride.seminarHall?.block})
+              </div>
+              <div className="text-slate-600">
+                Booked by: <strong>{bookingToOverride.requester?.name}</strong> ({bookingToOverride.department?.code || 'HOD'})
+              </div>
+              <div className="text-slate-600">
+                Event: {bookingToOverride.eventTitle || bookingToOverride.resourcePersonName}
+              </div>
+              <div className="text-amber-700 font-bold">
+                Timing: {bookingToOverride.noOfDays === 1 ? `${bookingToOverride.eventDate} (${bookingToOverride.timeSlot})` : `${bookingToOverride.startDate} to ${bookingToOverride.endDate}`}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Reason for Overriding / Cancelling (Notified to HOD) *
+              </label>
+              <textarea
+                rows={3}
+                required
+                placeholder="e.g. Overridden for College Annual Academic Council Meeting convened by Principal"
+                value={overrideReason}
+                onChange={e => setOverrideReason(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setBookingToOverride(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isOverriding || !overrideReason.trim()}
+                onClick={handleDirectOverride}
+                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs text-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {isOverriding ? 'Processing...' : 'Confirm Override'}
+              </button>
+            </div>
           </div>
         </div>
       )}

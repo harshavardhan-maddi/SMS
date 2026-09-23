@@ -302,6 +302,112 @@ requestsRouter.get('/', authenticateJWT, async (req, res) => {
   }
 });
 
+// GET /api/seminar-requests/calendar-bookings - Get active bookings for calendar display
+requestsRouter.get('/calendar-bookings', authenticateJWT, async (req, res) => {
+  const { seminarHallId } = req.query;
+  try {
+    let sql = `
+      SELECT r.id, r.seminar_hall_id, r.event_title, r.resource_person_name,
+             r.no_of_days, r.event_date, r.time_slot, r.start_date, r.end_date, r.selected_dates,
+             r.status, r.created_at,
+             sh.name as seminar_hall_name, sh.code as seminar_hall_code, sh.block as seminar_hall_block,
+             u.name as requester_name, u.email as requester_email,
+             d.name as dept_name, d.code as dept_code
+      FROM seminar_hall_requests r
+      JOIN seminar_halls sh ON r.seminar_hall_id = sh.id
+      JOIN users u ON r.requester_id = u.id
+      LEFT JOIN departments d ON r.department_id = d.id
+      WHERE r.status IN ('Pending', 'Approved')
+    `;
+    const params: any[] = [];
+    if (seminarHallId) {
+      sql += ` AND r.seminar_hall_id = ?`;
+      params.push(Number(seminarHallId));
+    }
+    sql += ` ORDER BY COALESCE(r.event_date, r.start_date) ASC`;
+    const rows = await db.all(sql, params);
+
+    res.json(rows.map(r => ({
+      id: r.id,
+      seminarHallId: r.seminar_hall_id,
+      seminarHallName: r.seminar_hall_name,
+      seminarHallCode: r.seminar_hall_code,
+      seminarHallBlock: r.seminar_hall_block,
+      eventDate: r.event_date,
+      timeSlot: r.time_slot,
+      noOfDays: r.no_of_days,
+      startDate: r.start_date,
+      endDate: r.end_date,
+      selectedDates: r.selected_dates,
+      status: r.status,
+      hodName: r.requester_name,
+      requesterEmail: r.requester_email,
+      departmentCode: r.dept_code,
+      departmentName: r.dept_name,
+      eventTitle: r.event_title,
+      resourcePersonName: r.resource_person_name,
+    })));
+  } catch (err) {
+    console.error('Failed to get calendar bookings:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
+// Helper to detect conflicting bookings
+async function checkBookingConflicts(
+  seminarHallId: number,
+  noOfDays: number,
+  eventDate?: string | null,
+  timeSlot?: string | null,
+  startDate?: string | null,
+  endDate?: string | null
+) {
+  const activeBookings = await db.all(
+    `SELECT r.*, u.name as requester_name, d.code as dept_code, d.name as dept_name
+     FROM seminar_hall_requests r
+     JOIN users u ON r.requester_id = u.id
+     LEFT JOIN departments d ON r.department_id = d.id
+     WHERE r.seminar_hall_id = ? AND r.status IN ('Pending', 'Approved')`,
+    [seminarHallId]
+  );
+
+  const conflicts: any[] = [];
+
+  const isCandidateMulti = noOfDays > 1;
+  const candStart = isCandidateMulti ? startDate! : eventDate!;
+  const candEnd = isCandidateMulti ? endDate! : eventDate!;
+  const candSlot = isCandidateMulti ? 'Full Day' : (timeSlot || 'Full Day');
+
+  for (const b of activeBookings) {
+    const isExistingMulti = b.no_of_days > 1;
+    const existStart = isExistingMulti ? b.start_date : b.event_date;
+    const existEnd = isExistingMulti ? b.end_date : b.event_date;
+    const existSlot = isExistingMulti ? 'Full Day' : (b.time_slot || 'Full Day');
+
+    if (!existStart || !existEnd) continue;
+
+    // Check date range intersection: [candStart, candEnd] overlaps [existStart, existEnd]
+    const dateOverlap = candStart <= existEnd && existStart <= candEnd;
+    if (!dateOverlap) continue;
+
+    // If dates overlap, check slot intersection
+    if (candStart === candEnd && existStart === existEnd && candStart === existStart) {
+      // Exactly same single day
+      if (candSlot === 'Full Day' || existSlot === 'Full Day') {
+        conflicts.push(b);
+      } else if (candSlot === existSlot) {
+        conflicts.push(b);
+      }
+      // If one is FN and one is AN, no conflict
+    } else {
+      // Spans multiple dates
+      conflicts.push(b);
+    }
+  }
+
+  return conflicts;
+}
+
 // Get request statistics
 requestsRouter.get('/stats', authenticateJWT, async (req, res) => {
   const userReq = (req as any).user;
@@ -372,10 +478,12 @@ requestsRouter.post('/', authenticateJWT, async (req, res) => {
     timeSlot,
     startDate,
     endDate,
-    selectedDates
+    selectedDates,
+    override
   } = req.body;
 
   const userReq = (req as any).user;
+  const userRole = userReq.role;
   const userId = userReq.userId || userReq.id;
   const deptId = userReq.departmentId || null;
 
@@ -395,6 +503,9 @@ requestsRouter.post('/', authenticateJWT, async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).send('Start date and end date are required for multi-day events');
     }
+    if (new Date(startDate) > new Date(endDate)) {
+      return res.status(400).send('Start date cannot be after end date');
+    }
   }
 
   try {
@@ -403,14 +514,74 @@ requestsRouter.post('/', authenticateJWT, async (req, res) => {
       return res.status(404).send('Seminar Hall not found');
     }
 
+    // Check for conflicting bookings on this hall
+    const conflicts = await checkBookingConflicts(
+      Number(seminarHallId),
+      days,
+      days === 1 ? eventDate : null,
+      days === 1 ? timeSlot : null,
+      days > 1 ? startDate : null,
+      days > 1 ? endDate : null
+    );
+
+    const isPrincipal = userRole === 'ROLE_PRINCIPAL';
+
+    if (conflicts.length > 0) {
+      if (!isPrincipal) {
+        const first = conflicts[0];
+        const conflictHod = first.requester_name || 'Another department';
+        const conflictDept = first.dept_code ? `(${first.dept_code})` : '';
+        const conflictSlot = first.time_slot || (first.no_of_days > 1 ? 'Full Day Multi-day' : 'Full Day');
+        const conflictTitle = first.event_title || first.resource_person_name;
+        return res.status(409).send(
+          `Slot already booked by ${conflictHod} ${conflictDept} for "${conflictTitle}" (${conflictSlot}). Only Principal can override existing bookings.`
+        );
+      } else {
+        // Principal booking: Check if override was confirmed
+        if (!override) {
+          const conflictNames = conflicts.map(c => `${c.requester_name} (${c.dept_code || 'Dept'})`).join(', ');
+          return res.status(409).json({
+            canOverride: true,
+            message: `This slot is already booked by ${conflictNames}. Do you want to override this booking?`,
+            conflicts: conflicts.map(c => ({
+              id: c.id,
+              hodName: c.requester_name,
+              departmentCode: c.dept_code,
+              eventTitle: c.event_title,
+              timeSlot: c.time_slot
+            }))
+          });
+        }
+
+        // Principal override confirmed: Cancel conflicting bookings and notify affected HODs
+        for (const c of conflicts) {
+          await db.run(
+            `UPDATE seminar_hall_requests
+             SET status = 'Cancelled', allocator_remarks = ?, allocated_by_id = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [`Overridden by Principal for "${eventTitle || resourcePersonName}"`, userId, c.id]
+          );
+
+          const timingStr = days === 1 ? `${eventDate} (${timeSlot})` : `${startDate} to ${endDate}`;
+          const cancelMsg = `Your seminar hall booking ${c.id} for ${hall.name} on ${timingStr} has been overridden by the Principal for "${eventTitle || resourcePersonName}".`;
+          await notificationService.sendToUser(c.requester_id, cancelMsg, 'SHR_OVERRIDDEN_BY_PRINCIPAL');
+        }
+      }
+    }
+
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const requestId = `SHR-${randomSuffix}`;
+    const initialStatus = isPrincipal ? 'Approved' : 'Pending';
+    const initialAllocatedBy = isPrincipal ? userId : null;
+    const initialRemarks = isPrincipal
+      ? (conflicts.length > 0 ? 'Approved by Principal (Overridden previous department booking)' : 'Directly Approved by Principal')
+      : null;
 
     await db.run(
       `INSERT INTO seminar_hall_requests 
        (id, seminar_hall_id, requester_id, department_id, resource_person_name, participants_count,
-        event_title, event_description, no_of_days, event_date, time_slot, start_date, end_date, selected_dates, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+        event_title, event_description, no_of_days, event_date, time_slot, start_date, end_date, selected_dates, status, allocated_by_id, allocator_remarks)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         requestId,
         seminarHallId,
@@ -425,7 +596,10 @@ requestsRouter.post('/', authenticateJWT, async (req, res) => {
         timeSlot || null,
         startDate || null,
         endDate || null,
-        selectedDates || null
+        selectedDates || null,
+        initialStatus,
+        initialAllocatedBy,
+        initialRemarks
       ]
     );
 
@@ -439,7 +613,9 @@ requestsRouter.post('/', authenticateJWT, async (req, res) => {
     );
 
     const timingStr = days === 1 ? `${eventDate} (${timeSlot})` : `${startDate} to ${endDate} (${days} days)`;
-    const notifMsg = `New booking request ${requestId} for ${hall.name} from ${userReq.name}: "${eventTitle || resourcePersonName}" on ${timingStr}`;
+    const notifMsg = isPrincipal
+      ? `Principal created & approved booking ${requestId} for ${hall.name}: "${eventTitle || resourcePersonName}" on ${timingStr}`
+      : `New booking request ${requestId} for ${hall.name} from ${userReq.name}: "${eventTitle || resourcePersonName}" on ${timingStr}`;
 
     for (const alloc of allocators) {
       await notificationService.sendToUser(alloc.id, notifMsg, 'SHR_NEW_REQUEST');
@@ -463,6 +639,52 @@ requestsRouter.post('/', authenticateJWT, async (req, res) => {
     res.json(formatShrRow(createdRow));
   } catch (err) {
     console.error('Failed to create seminar hall request:', err);
+    res.status(400).send((err as Error).message);
+  }
+});
+
+// Principal direct override endpoint (POST /:id/override)
+requestsRouter.post('/:id/override', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (req, res) => {
+  const { id } = req.params;
+  const { remarks } = req.body;
+  const userReq = (req as any).user;
+  const userId = userReq.userId || userReq.id;
+
+  try {
+    const existing = await db.get(
+      `SELECT r.*, sh.name as seminar_hall_name, u.id as req_user_id, u.name as req_name
+       FROM seminar_hall_requests r
+       JOIN seminar_halls sh ON r.seminar_hall_id = sh.id
+       JOIN users u ON r.requester_id = u.id
+       WHERE r.id = ?`,
+      [id]
+    );
+
+    if (!existing) {
+      return res.status(404).send('Seminar hall request not found');
+    }
+
+    const overrideReason = remarks ? remarks.trim() : 'Overridden by Principal decision';
+
+    await db.run(
+      `UPDATE seminar_hall_requests
+       SET status = 'Cancelled', allocator_remarks = ?, allocated_by_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [overrideReason, userId, id]
+    );
+
+    const timingStr = existing.no_of_days === 1
+      ? `${existing.event_date} (${existing.time_slot})`
+      : `${existing.start_date} to ${existing.end_date}`;
+
+    const notifMsg = `Your seminar hall booking ${id} for ${existing.seminar_hall_name} on ${timingStr} has been cancelled/overridden by Principal: "${overrideReason}"`;
+    await notificationService.sendToUser(existing.req_user_id, notifMsg, 'SHR_OVERRIDDEN_BY_PRINCIPAL');
+
+    sendToTopic('/topic/dashboard-tick', { type: 'SHR_STATUS_CHANGED', requestId: id, status: 'Cancelled' });
+
+    res.json({ message: `Request ${id} overridden successfully` });
+  } catch (err) {
+    console.error('Failed to override seminar hall request:', err);
     res.status(400).send((err as Error).message);
   }
 });

@@ -22,10 +22,13 @@ import {
   FileText,
   ChevronRight,
   Info,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  ShieldAlert
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { SeminarHall, SeminarHallRequest } from '../types';
+import { SeminarHall, SeminarHallRequest, CalendarBooking } from '../types';
+import { SeminarHallCalendar } from '../components/SeminarHallCalendar';
 
 interface HODSHRModuleProps {
   onSwitchToSMS: () => void;
@@ -40,12 +43,16 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
 }) => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
+  const isPrincipal = user?.role === 'ROLE_PRINCIPAL';
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'new_req'>('dashboard');
   const [halls, setHalls] = useState<SeminarHall[]>([]);
   const [requests, setRequests] = useState<SeminarHallRequest[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
+
+  // Calendar bookings across all departments
+  const [calendarBookings, setCalendarBookings] = useState<CalendarBooking[]>([]);
 
   // New Request Wizard State
   const [selectedHall, setSelectedHall] = useState<SeminarHall | null>(null);
@@ -60,6 +67,7 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
   const [eventDescription, setEventDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<SeminarHallRequest | null>(null);
+  const [principalOverride, setPrincipalOverride] = useState(false);
 
   // History Filter
   const [historySearch, setHistorySearch] = useState('');
@@ -73,9 +81,22 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
       await api.delete(`/seminar-requests/${requestId}`);
       toast.success(`Request ${requestId} deleted successfully.`);
       fetchData();
+      if (selectedHall) fetchCalendarBookings(selectedHall.id);
     } catch (err: any) {
       console.error('Failed to delete seminar hall request:', err);
       toast.error(err.response?.data || 'Failed to delete request.');
+    }
+  };
+
+  const fetchCalendarBookings = async (hallId?: number) => {
+    try {
+      const url = hallId
+        ? `/seminar-requests/calendar-bookings?seminarHallId=${hallId}`
+        : '/seminar-requests/calendar-bookings';
+      const res = await api.get(url);
+      setCalendarBookings(res.data);
+    } catch (err) {
+      console.error('Failed to load calendar bookings:', err);
     }
   };
 
@@ -87,6 +108,9 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
         api.get('/seminar-requests/stats')
       ]);
       setHalls(hallsRes.data);
+      if (!selectedHall && hallsRes.data.length > 0) {
+        setSelectedHall(hallsRes.data[0]);
+      }
       setRequests(requestsRes.data);
       setStats(statsRes.data);
     } catch (err) {
@@ -101,8 +125,15 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
     fetchData();
   }, [dashboardTick]);
 
+  useEffect(() => {
+    if (selectedHall) {
+      fetchCalendarBookings(selectedHall.id);
+    } else {
+      fetchCalendarBookings();
+    }
+  }, [selectedHall?.id, dashboardTick]);
+
   const resetForm = () => {
-    setSelectedHall(null);
     setResourcePersonName('');
     setParticipantsCount(0);
     setNoOfDays(1);
@@ -113,6 +144,7 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
     setEventTitle('');
     setEventDescription('');
     setSubmittedTicket(null);
+    setPrincipalOverride(false);
   };
 
   const handleCreateRequest = async (e: React.FormEvent) => {
@@ -132,11 +164,11 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
 
     if (noOfDays === 1) {
       if (!eventDate) {
-        toast.error('Please select the event date');
+        toast.error('Please select the event date from calendar');
         return;
       }
       if (!timeSlot) {
-        toast.error('Please select a time slot (FN, AN, or Full Day)');
+        toast.error('Please select a session (FN, AN, or Full Day)');
         return;
       }
     } else {
@@ -162,16 +194,29 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
         eventDate: noOfDays === 1 ? eventDate : null,
         timeSlot: noOfDays === 1 ? timeSlot : null,
         startDate: noOfDays > 1 ? startDate : null,
-        endDate: noOfDays > 1 ? endDate : null
+        endDate: noOfDays > 1 ? endDate : null,
+        override: isPrincipal ? principalOverride : false
       };
 
       const res = await api.post('/seminar-requests', payload);
       setSubmittedTicket(res.data);
       toast.success(`Request ${res.data.id} submitted successfully!`);
       fetchData();
+      if (selectedHall) fetchCalendarBookings(selectedHall.id);
     } catch (err: any) {
-      const msg = err.response?.data || 'Failed to submit seminar hall request';
-      toast.error(typeof msg === 'string' ? msg : 'Error submitting request');
+      if (err.response?.status === 409) {
+        const errorData = err.response.data;
+        if (errorData?.canOverride && isPrincipal) {
+          setPrincipalOverride(true);
+          toast.error(errorData.message || 'Slot already booked. Check the override option to proceed as Principal.');
+        } else {
+          const msg = typeof errorData === 'string' ? errorData : (errorData?.error || errorData?.message || 'Slot already booked by another department.');
+          toast.error(msg, { duration: 6000 });
+        }
+      } else {
+        const msg = err.response?.data || 'Failed to submit seminar hall request';
+        toast.error(typeof msg === 'string' ? msg : 'Error submitting request');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -186,6 +231,24 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
       (r.seminarHall?.name && r.seminarHall.name.toLowerCase().includes(historySearch.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
+
+  // Calculate bookings and slot availability for selected date
+  const selectedDateBookings = eventDate ? calendarBookings.filter(b => {
+    if (b.noOfDays === 1) return b.eventDate === eventDate;
+    return b.startDate && b.endDate && eventDate >= b.startDate && eventDate <= b.endDate;
+  }) : [];
+
+  const fullDayBooking = selectedDateBookings.find(b => b.noOfDays > 1 || b.timeSlot === 'Full Day');
+  const fnBooking = selectedDateBookings.find(b => b.noOfDays === 1 && b.timeSlot === 'FN');
+  const anBooking = selectedDateBookings.find(b => b.noOfDays === 1 && b.timeSlot === 'AN');
+
+  const isFNDisabled = !isPrincipal && (!!fullDayBooking || !!fnBooking);
+  const isANDisabled = !isPrincipal && (!!fullDayBooking || !!anBooking);
+  const isFullDayDisabled = !isPrincipal && (!!fullDayBooking || !!fnBooking || !!anBooking);
+
+  const hasConflictOnSlot = noOfDays === 1
+    ? (timeSlot === 'Full Day' ? (!!fullDayBooking || !!fnBooking || !!anBooking) : (timeSlot === 'FN' ? (!!fullDayBooking || !!fnBooking) : (!!fullDayBooking || !!anBooking)))
+    : false;
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
@@ -683,14 +746,14 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-slate-800">Create New Seminar Hall Request</h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Select your requested seminar hall and provide event details for allocator approval.
+                  Select a seminar hall and choose your dates directly from the interactive availability calendar.
                 </p>
               </div>
 
               {/* STEP 1: WHICH SEMINAR HALL? */}
               <div className="mb-6">
                 <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700 mb-3">
-                  Step 1: Which Hall to be Requested? <span className="text-red-500">*</span>
+                  Step 1: Select Seminar Hall <span className="text-red-500">*</span>
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -722,15 +785,267 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                 </div>
               </div>
 
-              {/* STEP 2: EVENT & RESOURCE PERSON DETAILS */}
+              {/* STEP 2: SELECT DATE FROM INTERACTIVE CALENDAR */}
+              {selectedHall && (
+                <div className="mb-6 animate-fade-in">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700 mb-2">
+                    Step 2: Check Availability &amp; Select Date from Calendar <span className="text-red-500">*</span>
+                  </label>
+                  <SeminarHallCalendar
+                    bookings={calendarBookings}
+                    selectedDate={eventDate}
+                    onSelectDate={(d) => {
+                      setEventDate(d);
+                      if (noOfDays > 1 && !startDate) setStartDate(d);
+                    }}
+                    hallName={selectedHall.name}
+                  />
+                </div>
+              )}
+
+              {/* STEP 3: EVENT & SESSION DETAILS */}
               {selectedHall && (
                 <form onSubmit={handleCreateRequest} className="space-y-5 animate-fade-in border-t border-slate-100 pt-6">
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-800">
-                    <Building2 className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                    <span>
-                      Booking Request for: <strong className="text-slate-800">{selectedHall.name}</strong> ({selectedHall.block} • Max Capacity: {selectedHall.capacity})
-                    </span>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700">
+                    Step 3: Reservation Details &amp; Requirements
+                  </label>
+
+                  {/* Duration Selector */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                      Event Duration <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setNoOfDays(1)}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                          noOfDays === 1
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        }`}
+                      >
+                        1 Day Event
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (noOfDays === 1) {
+                            setNoOfDays(2);
+                            if (!startDate && eventDate) setStartDate(eventDate);
+                          }
+                        }}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                          noOfDays > 1
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        }`}
+                      >
+                        More than 1 Day
+                      </button>
+                    </div>
                   </div>
+
+                  {/* CONDITION A: IF 1 DAY */}
+                  {noOfDays === 1 ? (
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Selected Event Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={eventDate}
+                          onChange={e => setEventDate(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold"
+                        />
+                      </div>
+
+                      {/* SESSION SELECTION: FN, AN, FULL DAY (NO TIMINGS AS REQUESTED) */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs font-bold text-slate-700">
+                            Select Session <span className="text-red-500">*</span>
+                          </label>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            FN (Forenoon) • AN (Afternoon) • Full Day
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          {/* FN BUTTON */}
+                          <button
+                            type="button"
+                            disabled={isFNDisabled}
+                            onClick={() => setTimeSlot('FN')}
+                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all relative ${
+                              timeSlot === 'FN'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                : isFNDisabled
+                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="block font-black text-base mb-0.5">FN</span>
+                            <span className="text-[11px] opacity-85">Forenoon</span>
+                            {fnBooking && (
+                              <span className="block text-[9px] font-bold text-amber-600 truncate mt-1">
+                                Booked: {fnBooking.hodName}
+                              </span>
+                            )}
+                            {fullDayBooking && (
+                              <span className="block text-[9px] font-bold text-rose-600 truncate mt-1">
+                                Day Booked
+                              </span>
+                            )}
+                          </button>
+
+                          {/* AN BUTTON */}
+                          <button
+                            type="button"
+                            disabled={isANDisabled}
+                            onClick={() => setTimeSlot('AN')}
+                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all relative ${
+                              timeSlot === 'AN'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                : isANDisabled
+                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="block font-black text-base mb-0.5">AN</span>
+                            <span className="text-[11px] opacity-85">Afternoon</span>
+                            {anBooking && (
+                              <span className="block text-[9px] font-bold text-blue-600 truncate mt-1">
+                                Booked: {anBooking.hodName}
+                              </span>
+                            )}
+                            {fullDayBooking && (
+                              <span className="block text-[9px] font-bold text-rose-600 truncate mt-1">
+                                Day Booked
+                              </span>
+                            )}
+                          </button>
+
+                          {/* FULL DAY BUTTON */}
+                          <button
+                            type="button"
+                            disabled={isFullDayDisabled}
+                            onClick={() => setTimeSlot('Full Day')}
+                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all relative ${
+                              timeSlot === 'Full Day'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                : isFullDayDisabled
+                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="block font-black text-base mb-0.5">Full Day</span>
+                            <span className="text-[11px] opacity-85">Full Day</span>
+                            {fullDayBooking && (
+                              <span className="block text-[9px] font-bold text-rose-600 truncate mt-1">
+                                Booked: {fullDayBooking.hodName}
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* CONFLICT WARNING & PRINCIPAL OVERRIDE OPTION */}
+                      {hasConflictOnSlot && (
+                        <div className={`p-3.5 rounded-xl border text-xs ${
+                          isPrincipal ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-rose-50 border-rose-200 text-rose-800'
+                        }`}>
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                              <p className="font-bold">
+                                Slot Conflict: This session is already reserved for {selectedHall.name}.
+                              </p>
+                              {isPrincipal ? (
+                                <div className="pt-1">
+                                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-indigo-900">
+                                    <input
+                                      type="checkbox"
+                                      checked={principalOverride}
+                                      onChange={e => setPrincipalOverride(e.target.checked)}
+                                      className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                                    />
+                                    <span>Principal Override: Supersede existing department booking</span>
+                                  </label>
+                                  <p className="text-[11px] text-slate-600 mt-1">
+                                    Checking this will cancel the conflicting department booking, notify the HOD, and confirm your reservation.
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-[11px]">
+                                  Please select an alternative session or date. Note: Only the Principal has permission to override existing department bookings.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* CONDITION B: IF MORE THAN 1 DAY */
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <label className="text-xs font-bold text-slate-700">Event Duration (Days):</label>
+                        <input
+                          type="number"
+                          min={2}
+                          max={30}
+                          value={noOfDays}
+                          onChange={e => setNoOfDays(Math.max(2, parseInt(e.target.value) || 2))}
+                          className="w-24 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs text-center font-bold focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Event Start Date (From) <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Event End Date (To) <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={endDate}
+                            onChange={e => setEndDate(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      {isPrincipal && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                          <label className="flex items-center gap-2 cursor-pointer font-bold">
+                            <input
+                              type="checkbox"
+                              checked={principalOverride}
+                              onChange={e => setPrincipalOverride(e.target.checked)}
+                              className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                            />
+                            <span>Override any overlapping bookings during this date range (Principal Authority)</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Resource Person Name */}
                   <div>
@@ -747,169 +1062,15 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                     />
                   </div>
 
-                  {/* Participants Count */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Participants Count <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      max={selectedHall.capacity * 1.5}
-                      placeholder="0"
-                      value={participantsCount}
-                      onChange={e => setParticipantsCount(e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  {/* No of Days */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      Number of Days <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setNoOfDays(1)}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
-                          noOfDays === 1
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                        }`}
-                      >
-                        1 Day Event
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { if (noOfDays === 1) setNoOfDays(2); }}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
-                          noOfDays > 1
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                        }`}
-                      >
-                        More than 1 Day
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* CONDITION A: IF 1 DAY */}
-                  {noOfDays === 1 ? (
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Event Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          required
-                          value={eventDate}
-                          onChange={e => setEventDate(e.target.value)}
-                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-2">
-                          Select Time Slot <span className="text-red-500">*</span>
-                        </label>
-                        <div className="grid grid-cols-3 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setTimeSlot('FN')}
-                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all ${
-                              timeSlot === 'FN'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            <span className="block font-black text-sm mb-0.5">FN</span>
-                            <span className="text-[10px] opacity-80">Forenoon (09:00 - 13:00)</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setTimeSlot('AN')}
-                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all ${
-                              timeSlot === 'AN'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            <span className="block font-black text-sm mb-0.5">AN</span>
-                            <span className="text-[10px] opacity-80">Afternoon (13:30 - 17:00)</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setTimeSlot('Full Day')}
-                            className={`p-3 rounded-xl text-xs font-bold border text-center transition-all ${
-                              timeSlot === 'Full Day'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            <span className="block font-black text-sm mb-0.5">Full Day</span>
-                            <span className="text-[10px] opacity-80">All Day (09:00 - 17:00)</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* CONDITION B: IF MORE THAN 1 DAY */
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
-                      <div className="flex items-center gap-3">
-                        <label className="text-xs font-bold text-slate-700">Event Duration (Days):</label>
-                        <input
-                          type="number"
-                          min={2}
-                          max={30}
-                          value={noOfDays}
-                          onChange={e => setNoOfDays(Math.max(2, parseInt(e.target.value) || 2))}
-                          className="w-24 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs text-center font-bold focus:outline-none focus:border-indigo-500"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Event Start Date <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="date"
-                            required
-                            value={startDate}
-                            onChange={e => setStartDate(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Event End Date <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="date"
-                            required
-                            value={endDate}
-                            onChange={e => setEndDate(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Event Title / Topic */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Event Title / Topic (Optional)
+                      Event or Topic <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. 2-Day Hands-on Workshop on Cloud Security"
+                      required
+                      placeholder="e.g. Hands-on Workshop on Cloud Security & AI Infrastructure"
                       value={eventTitle}
                       onChange={e => setEventTitle(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -930,6 +1091,23 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
                     />
                   </div>
 
+                  {/* Participants Count */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Participants Count <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={selectedHall.capacity * 1.5}
+                      placeholder="0"
+                      value={participantsCount}
+                      onChange={e => setParticipantsCount(e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0)}
+                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+
                   {/* Submit Button */}
                   <div className="pt-4 flex items-center justify-end gap-3">
                     <button
@@ -942,14 +1120,14 @@ export const HODSHRModule: React.FC<HODSHRModuleProps> = ({
 
                     <button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold uppercase tracking-wider transition-all transform active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50"
+                      disabled={isSubmitting || (hasConflictOnSlot && !principalOverride)}
+                      className="px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold uppercase tracking-wider transition-all transform active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <span>Dispatching to Allocator...</span>
+                        <span>Processing Request...</span>
                       ) : (
                         <>
-                          <span>Submit Seminar Hall Request</span>
+                          <span>{principalOverride ? 'Override & Confirm Reservation' : 'Submit Seminar Hall Request'}</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
