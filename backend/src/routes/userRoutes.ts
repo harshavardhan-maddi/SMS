@@ -36,7 +36,7 @@ router.get('/technicians', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL', 'RO
       `SELECT u.id, u.name, u.email 
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
-       WHERE (r.name = 'ROLE_TECHNICIAN' OR u.role_id = 4)`
+       WHERE (r.name IN ('ROLE_TECHNICIAN', 'ROLE_AC_TECHNICIAN') OR u.role_id IN (4, 11))`
     );
     res.json(rows);
   } catch (err) {

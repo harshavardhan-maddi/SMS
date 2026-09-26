@@ -18,11 +18,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export const HardwareTechnicianDashboard: React.FC = () => {
+interface HardwareTechnicianDashboardProps {
+  isACTechnician?: boolean;
+}
+
+export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardProps> = ({ isACTechnician }) => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<any[]>([]);
+
+  const isAC = isACTechnician || user?.role === 'ROLE_AC_TECHNICIAN';
 
   // Modals state
   const [selectedReq, setSelectedReq] = useState<any>(null);
@@ -62,7 +68,18 @@ export const HardwareTechnicianDashboard: React.FC = () => {
     fetchTechData();
   }, [dashboardTick]);
 
-  const myRequests = requests.filter(r => r.assignedTo?.id === user?.userId);
+  const myRequests = requests.filter(r => {
+    if (r.assignedTo?.id === user?.userId) return true;
+    if (isAC) {
+      const titleStr = (r.title || '').toLowerCase();
+      const descStr = (r.description || '').toLowerCase();
+      const typeStr = (r.inventory?.type || '').toLowerCase();
+      const brandStr = (r.inventory?.brand || '').toLowerCase();
+      return titleStr.includes('ac') || descStr.includes('ac') || typeStr.includes('ac') || brandStr.includes('ac') ||
+             titleStr.includes('air conditioner') || descStr.includes('air conditioner');
+    }
+    return false;
+  });
 
   const handleStartRepair = async (req: any) => {
     if (!window.confirm(`Are you sure you want to start work on repair request ${req.id}?`)) {
@@ -80,7 +97,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
   const handleRequestPartsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq || !requiredParts) return;
-    if (!window.confirm(`Are you sure you want to update progress and request spare parts for request ${selectedReq.id}?`)) {
+    if (!window.confirm(`Are you sure you want to update progress with state "Approval needed" for request ${selectedReq.id}?`)) {
       return;
     }
 
@@ -91,16 +108,17 @@ export const HardwareTechnicianDashboard: React.FC = () => {
         requiredParts,
         problemFound,
         solution,
-        remarks
+        remarks,
+        status: 'Approval needed'
       });
-      toast.success(`Progress updated for request ${selectedReq.id}`);
+      toast.success(`Progress updated to "Approval needed" for request ${selectedReq.id}`);
       setPartsModalOpen(false);
       setRequiredParts('');
       setCompletedCount(0);
       setRemainingCount(1);
       fetchTechData();
     } catch (err) {
-      toast.error('Failed to request parts.');
+      toast.error('Failed to update progress.');
     }
   };
 
@@ -176,6 +194,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'initiated': return 'bg-amber-100 text-amber-700';
       case 'accepted': return 'bg-purple-100 text-purple-700';
+      case 'approval needed':
       case 'approval pending': return 'bg-yellow-100 text-yellow-700';
       case 'approved': return 'bg-green-100 text-green-700';
       case 'items ordered': return 'bg-indigo-100 text-indigo-700';
@@ -198,7 +217,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
   // Metric calculation for assigned requests
   const assignedCount = myRequests.length;
   const inProgressCount = 0;
-  const partsRequestedCount = myRequests.filter(r => ['Approval pending', 'Approved', 'Items ordered'].includes(r.status)).length;
+  const partsRequestedCount = myRequests.filter(r => ['Approval pending', 'Approval needed', 'Approved', 'Items ordered'].includes(r.status)).length;
   const resolvedCount = myRequests.filter(r => r.status === 'Resolved').length;
 
   return (
@@ -206,9 +225,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
       {/* 1. Statistics Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Assigned Requests"
+          title={isAC ? 'Assigned AC Requests' : 'Assigned Requests'}
           value={assignedCount}
-          subtext="Total repairs delegated to you"
+          subtext={isAC ? 'Total AC repairs delegated to you' : 'Total repairs delegated to you'}
           icon={FolderOpen}
           iconBgColor="bg-blue-50"
           iconTextColor="text-blue-600"
@@ -222,9 +241,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
           iconTextColor="text-amber-600"
         />
         <StatCard
-          title="Parts / Approval"
+          title="Approval Needed"
           value={partsRequestedCount}
-          subtext="Approval pending, Approved, Items ordered"
+          subtext="Approval needed, Approved, Items ordered"
           icon={ShoppingBag}
           iconBgColor="bg-indigo-50"
           iconTextColor="text-indigo-600"
@@ -241,11 +260,13 @@ export const HardwareTechnicianDashboard: React.FC = () => {
 
       {/* 2. Large Assigned Repairs Table */}
       <div className="admin-card bg-white p-6">
-        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">My Assigned Repair Requests</h4>
+        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+          {isAC ? 'My Assigned AC Repair Requests' : 'My Assigned Repair Requests'}
+        </h4>
         
         {myRequests.length === 0 ? (
           <div className="p-12 text-center text-xs text-brand-textMuted font-medium border border-dashed border-slate-200 rounded-2xl">
-            You do not have any repair tasks assigned at this moment.
+            {isAC ? 'You do not have any AC repair tasks assigned at this moment.' : 'You do not have any repair tasks assigned at this moment.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -289,7 +310,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
                     <td className="py-3.5 px-4 text-center relative">
                       <div className="inline-flex items-center gap-1">
                         
-                        {req.status === 'Accepted' && (
+                        {['Initiated', 'Accepted'].includes(req.status) && (
                           <button
                             onClick={() => handleStartRepair(req)}
                             className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-600 rounded-lg border border-blue-200 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
@@ -299,7 +320,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
                           </button>
                         )}
 
-                        {['In Progress', 'Approval pending', 'Approved', 'Items ordered'].includes(req.status) && (
+                        {['In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered'].includes(req.status) && (
                           <div className="relative">
                             <button
                               onClick={() => {
@@ -313,33 +334,36 @@ export const HardwareTechnicianDashboard: React.FC = () => {
                             </button>
 
                             {activeDropdownRow === req.id && (
-                              <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-[#e2e8f0] shadow-premium z-50 overflow-hidden text-left">
+                              <div className="absolute right-0 mt-1 w-40 bg-white rounded-xl border border-[#e2e8f0] shadow-premium z-50 overflow-hidden text-left">
                                 <button
                                   onClick={() => {
                                     setPartsModalOpen(true);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-amber-600 hover:bg-amber-50 transition-colors flex items-center gap-1.5"
                                 >
-                                  Request Parts
+                                  <Clock className="w-3 h-3" />
+                                  <span>Approval needed</span>
                                 </button>
                                 <button
                                   onClick={() => {
                                     setResolveModalOpen(true);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-100"
+                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-100 flex items-center gap-1.5"
                                 >
-                                  Resolve Issue
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span>Resolved</span>
                                 </button>
                                 <button
                                   onClick={() => {
                                     setDeadModalOpen(true);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100"
+                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100 flex items-center gap-1.5"
                                 >
-                                  Mark Dead Stock
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>Dead Stock</span>
                                 </button>
                               </div>
                             )}
@@ -366,9 +390,13 @@ export const HardwareTechnicianDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* POPUP 1: Request Parts Modal */}
-      <Modal isOpen={partsModalOpen} onClose={() => setPartsModalOpen(false)} title={`Update Device Progress & Request Spare Parts - Request: ${selectedReq?.id}`}>
+      {/* POPUP 1: Approval Needed Modal */}
+      <Modal isOpen={partsModalOpen} onClose={() => setPartsModalOpen(false)} title={`Update Progress: Approval Needed - Request: ${selectedReq?.id}`}>
         <form onSubmit={handleRequestPartsSubmit} className="space-y-4 text-left">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            <strong>State: Approval needed</strong>. Provide progress information and specify parts or approvals required to proceed with repair.
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">Devices Completed</label>
@@ -381,7 +409,7 @@ export const HardwareTechnicianDashboard: React.FC = () => {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">Remaining Needing Parts</label>
+              <label className="text-xs font-bold text-slate-700 block">Remaining Needing Approval / Parts</label>
               <input
                 type="number"
                 min={1}
@@ -393,11 +421,11 @@ export const HardwareTechnicianDashboard: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 block">Required Spare Parts for Remaining Devices</label>
+            <label className="text-xs font-bold text-slate-700 block">Required Spare Parts / Approval Details <span className="text-red-500">*</span></label>
             <textarea
               required
               rows={3}
-              placeholder="e.g. CPU Heat Sink, thermal paste, 8GB RAM Module..."
+              placeholder="e.g. Compressor capacitor, refrigerant R32 gas refill, copper pipe soldering approval..."
               value={requiredParts}
               onChange={(e) => setRequiredParts(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
@@ -406,9 +434,9 @@ export const HardwareTechnicianDashboard: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-4"
+            className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-4"
           >
-            <span>Save Progress & Submit Parts Request</span>
+            <span>Submit Progress: Approval Needed</span>
           </button>
         </form>
       </Modal>

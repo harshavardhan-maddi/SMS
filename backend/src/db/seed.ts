@@ -17,6 +17,12 @@ export async function seedData() {
     await db.run("INSERT INTO roles (id, name) VALUES (8, 'ROLE_SEMINAR_HALL_ALLOCATOR') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (9, 'ROLE_AO') ON CONFLICT (id) DO NOTHING");
     await db.run("INSERT INTO roles (id, name) VALUES (10, 'ROLE_STATIONARY') ON CONFLICT (id) DO NOTHING");
+    const existingAcRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_AC_TECHNICIAN'");
+    if (!existingAcRole) {
+      const maxRole = await db.get("SELECT MAX(id) as max_id FROM roles");
+      const nextRoleId = ((maxRole?.max_id || maxRole?.maxId || 12) as number) + 1;
+      await db.run("INSERT INTO roles (id, name) VALUES (?, 'ROLE_AC_TECHNICIAN') ON CONFLICT (id) DO NOTHING", [nextRoleId]);
+    }
   } catch (e) {
     // SQLite fallback for ON CONFLICT
     try {
@@ -30,6 +36,10 @@ export async function seedData() {
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (8, 'ROLE_SEMINAR_HALL_ALLOCATOR')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (9, 'ROLE_AO')");
       await db.run("INSERT OR IGNORE INTO roles (id, name) VALUES (10, 'ROLE_STATIONARY')");
+      const existingAcRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_AC_TECHNICIAN'");
+      if (!existingAcRole) {
+        await db.run("INSERT INTO roles (name) VALUES ('ROLE_AC_TECHNICIAN')");
+      }
     } catch (e2) {}
   }
 
@@ -94,7 +104,8 @@ export async function seedData() {
       { id: 7, name: 'EEE Asset Manager', email: 'eee.manager@sms.edu', roleId: 6, deptId: eeeDeptId },
       { id: 8, name: 'Electrical Complainter', email: 'elec.complainter@sms.edu', roleId: 7, deptId: null },
       { id: 9, name: 'Administrative Officer', email: 'ao@sms.edu', roleId: 9, deptId: null },
-      { id: 10, name: 'Stationary Incharge', email: 'stationary@sms.edu', roleId: 10, deptId: null }
+      { id: 10, name: 'Stationary Incharge', email: 'stationary@sms.edu', roleId: 10, deptId: null },
+      { id: 11, name: 'AC Repair Technician', email: 'actech@sms.edu', roleId: 11, deptId: null }
     ];
 
     for (const u of demoUsers) {
@@ -108,6 +119,25 @@ export async function seedData() {
         } catch (err) {}
       }
     }
+
+    // Ensure AC Repair Technician role and user always exist
+    try {
+      let acRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_AC_TECHNICIAN'");
+      if (!acRole) {
+        await db.run("INSERT INTO roles (name) VALUES ('ROLE_AC_TECHNICIAN')");
+        acRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_AC_TECHNICIAN'");
+      }
+      const acRoleId = acRole ? acRole.id : 11;
+      const acUser = await db.get("SELECT id FROM users WHERE email = 'actech@sms.edu'");
+      if (!acUser) {
+        await db.run(
+          "INSERT INTO users (name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, null, true)",
+          ['AC Repair Technician', 'actech@sms.edu', hashedPwd, acRoleId]
+        );
+      } else {
+        await db.run("UPDATE users SET role_id = ? WHERE email = 'actech@sms.edu'", [acRoleId]);
+      }
+    } catch (eAc) {}
   } catch (e) {}
 
   // 4. Initial Seminar Halls Seeding

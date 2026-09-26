@@ -28,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
       return `HOD${dept}`;
     }
     if (user.role === 'ROLE_TECHNICIAN') return 'Hardware Technician';
+    if (user.role === 'ROLE_AC_TECHNICIAN') return 'AC Repair Technician';
     if (user.role === 'ROLE_PROGRAMMER') return 'Lab Assistant / Programmer';
     return user.role;
   };
@@ -39,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
     if (user.role === 'ROLE_ELEC_COMPLAINTER') return 'Electrical Complaint Portal - Cross-Department Tickets';
     if (user.role === 'ROLE_HOD') return `${user.departmentCode || 'Department'} Head Dashboard - Lab Hardware Overview`;
     if (user.role === 'ROLE_TECHNICIAN') return 'Hardware Technician Workspace - Maintenance Queue';
+    if (user.role === 'ROLE_AC_TECHNICIAN') return 'AC Repair Technician Workspace - AC Maintenance Queue';
     if (user.role === 'ROLE_PROGRAMMER') return 'Programmer / Lab Assistant Workspace - Repair Operations';
     return 'Campus Asset Management Dashboard';
   };

@@ -1,6 +1,6 @@
 export interface Role {
   id: number;
-  name: string; // ROLE_PRINCIPAL, ROLE_HOD, ROLE_DEAN, ROLE_TECHNICIAN, ROLE_PROGRAMMER, ROLE_EEE_ASSET_MANAGER, ROLE_ELEC_COMPLAINTER
+  name: string; // ROLE_PRINCIPAL, ROLE_HOD, ROLE_DEAN, ROLE_TECHNICIAN, ROLE_AC_TECHNICIAN, ROLE_PROGRAMMER, ROLE_EEE_ASSET_MANAGER, ROLE_ELEC_COMPLAINTER
 }
 
 export interface Department {
@@ -40,7 +40,7 @@ export interface RepairRequest {
   title: string;
   description: string;
   priority: 'Low' | 'Medium' | 'High';
-  status: 'Initiated' | 'Accepted' | 'In Progress' | 'Approval pending' | 'Approved' | 'Items ordered' | 'Resolved' | 'Dead Stock';
+  status: 'Initiated' | 'Accepted' | 'In Progress' | 'Approval pending' | 'Approval needed' | 'Approved' | 'Items ordered' | 'Resolved' | 'Dead Stock';
   initiatedDate: string;
   initiatedTime: string;
 }

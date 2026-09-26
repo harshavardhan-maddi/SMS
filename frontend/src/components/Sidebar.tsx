@@ -161,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const getMenu = () => {
     if (user.role === 'ROLE_PRINCIPAL') return getPrincipalMenu();
     if (user.role === 'ROLE_HOD') return getHodMenu();
-    if (user.role === 'ROLE_TECHNICIAN') return getTechnicianMenu();
+    if (user.role === 'ROLE_TECHNICIAN' || user.role === 'ROLE_AC_TECHNICIAN') return getTechnicianMenu();
     if (user.role === 'ROLE_PROGRAMMER') return getProgrammerMenu();
     if (user.role === 'ROLE_EEE_ASSET_MANAGER') return getEEEAssetManagerMenu();
     if (user.role === 'ROLE_ELEC_COMPLAINTER') return getElecComplainterMenu();

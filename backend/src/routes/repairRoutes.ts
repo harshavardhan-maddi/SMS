@@ -166,6 +166,20 @@ router.get('/', authenticateJWT, async (req: any, res) => {
       });
     }
 
+    const isACTechnician = req.user?.role === 'ROLE_AC_TECHNICIAN';
+    if (isACTechnician) {
+      formatted = formatted.filter((r: any) => {
+        const isAssigned = r.assignedTo?.id === req.user?.id;
+        const typeStr = (r.inventory?.type || '').toLowerCase();
+        const brandStr = (r.inventory?.brand || '').toLowerCase();
+        const titleStr = (r.title || '').toLowerCase();
+        const descStr = (r.description || '').toLowerCase();
+        const isAC = typeStr.includes('ac') || brandStr.includes('ac') || titleStr.includes('ac') || descStr.includes('ac') ||
+                     typeStr.includes('air conditioner') || brandStr.includes('air conditioner') || titleStr.includes('air conditioner');
+        return isAssigned || isAC;
+      });
+    }
+
     res.json(formatted);
   } catch (err) {
     console.error('Get repairs error:', err);
@@ -297,27 +311,57 @@ router.post('/initiate', authenticateJWT, async (req, res) => {
 
     const { todayStr, timeStr } = getLocalDates();
 
+    const isACRequest = (inventory.type && (inventory.type.toLowerCase().includes('ac') || inventory.type.toLowerCase().includes('air conditioner'))) ||
+                        (title && (title.toLowerCase().includes('ac') || title.toLowerCase().includes('air conditioner'))) ||
+                        (description && (description.toLowerCase().includes('ac') || description.toLowerCase().includes('air conditioner')));
+    let assignedTechId: number | null = null;
+    let initialStatus = 'Initiated';
+    let assignedTechName = '';
+    if (isACRequest) {
+      const acTech = await db.get("SELECT u.id, u.name FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE r.name = 'ROLE_AC_TECHNICIAN' OR u.email = 'actech@sms.edu' LIMIT 1");
+      if (acTech) {
+        assignedTechId = acTech.id;
+        assignedTechName = acTech.name;
+        initialStatus = 'Accepted';
+      }
+    }
+
     await db.transaction(async () => {
       // Update inventory status to Repairing
       await db.run("UPDATE inventory SET status = 'Repairing' WHERE id = ?", [assetId]);
 
       // Insert repair request
       await db.run(
-        `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time, device_count)
-         VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?, 1)`,
-        [requestId, assetId, requesterId, title, description || null, priority, todayStr, timeStr]
+        `INSERT INTO repair_requests (id, inventory_id, requester_id, assigned_to_id, title, description, priority, status, initiated_date, initiated_time, device_count)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [requestId, assetId, requesterId, assignedTechId, title, description || null, priority, initialStatus, todayStr, timeStr]
       );
 
       // Create history timeline entry
       await db.run(
         `INSERT INTO repair_history (request_id, status, description, status_date, status_time, updated_by_id)
-         VALUES (?, 'Initiated', ?, ?, ?, ?)`,
-        [requestId, `Issue reported by HOD: ${description || title}`, todayStr, timeStr, requesterId]
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          requestId, 
+          initialStatus, 
+          assignedTechId 
+            ? `Issue reported by HOD: ${description || title}. Automatically forwarded to AC Repair Technician (${assignedTechName}).`
+            : `Issue reported by HOD: ${description || title}`, 
+          todayStr, 
+          timeStr, 
+          requesterId
+        ]
       );
     });
 
     // Send notifications async
-    if (inventory.type === 'Electrical Hardware') {
+    if (isACRequest) {
+      notificationService.sendToRole(
+        'ROLE_AC_TECHNICIAN',
+        `New AC repair request ${requestId} forwarded from HOD (${requester.name})`,
+        'NEW_REPAIR'
+      );
+    } else if (inventory.type === 'Electrical Hardware') {
       notificationService.sendToRole(
         'ROLE_EEE_ASSET_MANAGER',
         `New Electrical Hardware repair request ${requestId} (${inventory.type}) initiated by ${requester.name}`,
@@ -1118,20 +1162,50 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
             ? `Location: ${labStr || 'Department Systems'}. Quantity: ${count} Units of ${type}, Brand: ${brand}. ${description || ''}`
             : `Location: ${labStr || 'Department Systems'}. Hardware item: ${type}, Brand: ${brand}. ${description || ''}`;
 
+          const isACIssue = (brand && (brand.toUpperCase().includes('AC') || brand.toUpperCase().includes('AIR CONDITIONER'))) ||
+                            (type && (type.toUpperCase().includes('AC') || type.toUpperCase().includes('AIR CONDITIONER'))) ||
+                            (description && (description.toUpperCase().includes('AC') || description.toUpperCase().includes('AIR CONDITIONER')));
+
+          let assignedTechId: number | null = null;
+          let initialStatus = 'Initiated';
+          let assignedTechName = '';
+          if (isACIssue) {
+            const acTech = await db.get("SELECT u.id, u.name FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE r.name = 'ROLE_AC_TECHNICIAN' OR u.email = 'actech@sms.edu' LIMIT 1");
+            if (acTech) {
+              assignedTechId = acTech.id;
+              assignedTechName = acTech.name;
+              initialStatus = 'Accepted';
+            }
+          }
+
           await db.run(
-            `INSERT INTO repair_requests (id, inventory_id, requester_id, title, description, priority, status, initiated_date, initiated_time, device_count)
-             VALUES (?, ?, ?, ?, ?, ?, 'Initiated', ?, ?, ?)`,
-            [requestId, primaryAssetId, requesterId, reqTitle, reqDesc, priority, todayStr, timeStr, count]
+            `INSERT INTO repair_requests (id, inventory_id, requester_id, assigned_to_id, title, description, priority, status, initiated_date, initiated_time, device_count)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [requestId, primaryAssetId, requesterId, assignedTechId, reqTitle, reqDesc, priority, initialStatus, todayStr, timeStr, count]
           );
 
           await db.run(
             `INSERT INTO repair_history (request_id, status, description, status_date, status_time, updated_by_id)
-             VALUES (?, 'Initiated', ?, ?, ?, ?)`,
-            [requestId, `Issue reported by HOD: ${reqTitle}. ${reqDesc}`, todayStr, timeStr, requesterId]
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              requestId, 
+              initialStatus, 
+              assignedTechId 
+                ? `Issue reported by HOD: ${reqTitle}. Automatically forwarded to AC Repair Technician (${assignedTechName}).`
+                : `Issue reported by HOD: ${reqTitle}. ${reqDesc}`, 
+              todayStr, 
+              timeStr, 
+              requesterId
+            ]
           );
         }
       }
     });
+
+    const hasAC = issues.some(i => 
+      (typeof i.type === 'string' && (i.type.toUpperCase().includes('AC') || i.type.toUpperCase().includes('AIR CONDITIONER'))) ||
+      (typeof i.brand === 'string' && (i.brand.toUpperCase().includes('AC') || i.brand.toUpperCase().includes('AIR CONDITIONER')))
+    );
 
     const hasElectrical = issues.some(i => 
       i.type === 'Electrical Hardware' || 
@@ -1140,7 +1214,13 @@ router.post('/initiate-wizard', authenticateJWT, async (req, res) => {
     );
 
     for (const reqId of generatedRequests) {
-      if (hasElectrical) {
+      if (hasAC) {
+        notificationService.sendToRole(
+          'ROLE_AC_TECHNICIAN',
+          `New AC repair request ${reqId} forwarded from HOD (${requester.name})`,
+          'NEW_REPAIR'
+        );
+      } else if (hasElectrical) {
         notificationService.sendToRole(
           'ROLE_EEE_ASSET_MANAGER',
           `New Electrical Hardware repair request ${reqId} initiated by ${requester.name}`,
@@ -1186,21 +1266,22 @@ router.post('/:id/partial-progress', authenticateJWT, async (req, res) => {
     const { todayStr, timeStr } = getLocalDates();
 
     await db.transaction(async () => {
-      const parts = requiredParts || 'Spare parts required for remaining units';
-      await db.run("UPDATE repair_requests SET status = 'Approval pending' WHERE id = ?", [id]);
+      const parts = requiredParts || 'Spare parts / approval required for remaining units';
+      const targetStatus = req.body.status || 'Approval needed';
+      await db.run("UPDATE repair_requests SET status = ? WHERE id = ?", [targetStatus, id]);
 
-      const logDesc = `Technician update: ${completedCount || 0} device(s) completed repair. ${remainingCount || 0} device(s) awaiting parts: ${parts}.`;
+      const logDesc = `Technician update (${targetStatus}): ${completedCount || 0} device(s) completed repair. ${remainingCount || 0} device(s) awaiting approval/parts: ${parts}.`;
       
       await db.run(
         `INSERT INTO repair_history (request_id, status, description, required_parts, problem_found, solution, remarks, status_date, status_time, updated_by_id)
-         VALUES (?, 'Approval pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, logDesc, parts, problemFound || null, solution || null, remarks || null, todayStr, timeStr, technicianId]
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, targetStatus, logDesc, parts, problemFound || null, solution || null, remarks || null, todayStr, timeStr, technicianId]
       );
     });
 
     notificationService.sendToRole(
       'ROLE_DEAN',
-      `Technician reported partial progress & parts request for ${id}: ${requiredParts}`,
+      `Technician reported progress (${req.body.status || 'Approval needed'}) for ${id}: ${requiredParts || 'Parts/Approval needed'}`,
       'NEW_REPAIR'
     );
     notificationService.broadcastDashboardUpdate();
@@ -1244,7 +1325,7 @@ router.delete('/bulk', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async 
           for (const assetId of assetIds) {
             const activeCount = await db.get(
               `SELECT COUNT(*) as count FROM repair_requests 
-               WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered')`,
+               WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered')`,
               [assetId]
             );
 
@@ -1291,7 +1372,7 @@ router.delete('/:id', authenticateJWT, authorizeRoles('ROLE_PRINCIPAL'), async (
       for (const assetId of assetIds) {
         const activeCount = await db.get(
           `SELECT COUNT(*) as count FROM repair_requests 
-           WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered')`,
+           WHERE inventory_id = ? AND status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered')`,
           [assetId]
         );
 

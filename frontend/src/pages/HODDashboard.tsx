@@ -91,7 +91,8 @@ export const HODDashboard: React.FC = () => {
   // Current Type Configuration States
   const [typeTotalCount, setTypeTotalCount] = useState<number | string>('');
   const [customTypeName, setCustomTypeName] = useState('');
-  const [electricalIssueName, setElectricalIssueName] = useState('');
+  const [electricalIssueName, setElectricalIssueName] = useState('Ceiling Fan');
+  const [elecSubCategory, setElecSubCategory] = useState<'Fan' | 'Light' | 'AC' | 'Others' | ''>('Fan');
   const [electricalQuantity, setElectricalQuantity] = useState<number | string>(1);
   const [electricalDescription, setElectricalDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -724,7 +725,8 @@ export const HODDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setElectricalIssueName('');
+                    setElecSubCategory('Fan');
+                    setElectricalIssueName('Ceiling Fan');
                     setElectricalQuantity(1);
                     setElectricalDescription('');
                     setWizardStage('enter_electrical_type');
@@ -769,22 +771,128 @@ export const HODDashboard: React.FC = () => {
             <div className="space-y-4">
               <div className="text-center pb-2 border-b border-slate-100">
                 <span className="text-[10px] bg-amber-100 px-2.5 py-0.5 rounded-md text-amber-800 font-bold uppercase tracking-wider">Electrical Hardware</span>
-                <h3 className="text-sm font-bold text-slate-800 mt-1">Electrical Hardware Details</h3>
-                <p className="text-[11px] text-brand-textMuted mt-0.5">Specify the electrical hardware issue and details</p>
+                <h3 className="text-sm font-bold text-slate-800 mt-1">Select Electrical Appliance</h3>
+                <p className="text-[11px] text-brand-textMuted mt-0.5">Select the electrical equipment with issue. AC repair requests will be routed to AC Repair Technician.</p>
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">What is the electric hardware with issue? <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ceiling Fan, Tube light, AC Unit, Switchboard"
-                    value={electricalIssueName}
-                    onChange={(e) => setElectricalIssueName(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
-                  />
+              {/* 3D Electrical Item Selection Cards (Fans, Lights, AC, Others for HOD Login) */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setElecSubCategory('Fan');
+                    setElectricalIssueName('Ceiling Fan');
+                  }}
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer relative ${
+                    elecSubCategory === 'Fan'
+                      ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20 shadow-md shadow-amber-500/10'
+                      : 'border-slate-200 hover:border-amber-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {elecSubCategory === 'Fan' && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
+                  )}
+                  <div className="w-16 h-16 flex items-center justify-center">
+                    <HardwareThreeDViewer type="Fan" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">Ceiling Fan</span>
+                  <span className="text-[10px] text-brand-textMuted">Fans & Motor</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setElecSubCategory('Light');
+                    setElectricalIssueName('Tube Light');
+                  }}
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer relative ${
+                    elecSubCategory === 'Light'
+                      ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20 shadow-md shadow-amber-500/10'
+                      : 'border-slate-200 hover:border-amber-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {elecSubCategory === 'Light' && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
+                  )}
+                  <div className="w-16 h-16 flex items-center justify-center">
+                    <HardwareThreeDViewer type="Light" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">Tube Light</span>
+                  <span className="text-[10px] text-brand-textMuted">Lights & Choke</span>
+                </button>
+
+                {/* AC (Air Conditioner) - AVAILABLE FROM HOD LOGIN ONLY */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setElecSubCategory('AC');
+                    setElectricalIssueName('AC (Air Conditioner)');
+                  }}
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer relative ${
+                    elecSubCategory === 'AC'
+                      ? 'border-cyan-500 bg-cyan-50/60 ring-2 ring-cyan-500/30 shadow-md shadow-cyan-500/10'
+                      : 'border-cyan-200 bg-cyan-50/20 hover:border-cyan-400 hover:bg-cyan-50/40'
+                  }`}
+                >
+                  <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-cyan-600 text-[8px] font-extrabold text-white uppercase tracking-wider">
+                    AC Tech
+                  </span>
+                  <div className="w-16 h-16 flex items-center justify-center">
+                    <HardwareThreeDViewer type="AC" />
+                  </div>
+                  <span className="text-xs font-bold text-cyan-900">AC (Air Conditioner)</span>
+                  <span className="text-[10px] text-cyan-600 font-medium">Split / Cassette AC</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setElecSubCategory('Others');
+                    if (['Ceiling Fan', 'Tube Light', 'AC (Air Conditioner)'].includes(electricalIssueName)) {
+                      setElectricalIssueName('');
+                    }
+                  }}
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer relative ${
+                    elecSubCategory === 'Others'
+                      ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20 shadow-md shadow-amber-500/10'
+                      : 'border-slate-200 hover:border-amber-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {elecSubCategory === 'Others' && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
+                  )}
+                  <div className="w-16 h-16 flex items-center justify-center">
+                    <HardwareThreeDViewer type="Others" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">Others</span>
+                  <span className="text-[10px] text-brand-textMuted">Switchboard, etc.</span>
+                </button>
+              </div>
+
+              {/* Special info banner when AC is selected */}
+              {elecSubCategory === 'AC' && (
+                <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-xl flex items-center gap-2.5 text-xs text-cyan-800 font-semibold">
+                  <span className="text-base">❄️</span>
+                  <span>This repair request will be <strong>forwarded directly to the AC Repair Technician</strong> upon submission.</span>
                 </div>
+              )}
+
+              <div className="space-y-3 pt-2">
+                {elecSubCategory === 'Others' && (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Specify Electrical Equipment Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Switchboard, 16A Socket, Extension strip, Wiring"
+                      value={electricalIssueName}
+                      onChange={(e) => setElectricalIssueName(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 bg-white"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">Quantity <span className="text-red-500">*</span></label>
@@ -802,7 +910,7 @@ export const HODDashboard: React.FC = () => {
                         setElectricalQuantity(Math.max(1, parseInt(val) || 1));
                       }
                     }}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 bg-white"
                   />
                 </div>
 
@@ -810,10 +918,10 @@ export const HODDashboard: React.FC = () => {
                   <label className="text-xs font-bold text-slate-700 block mb-1">Description (Optional)</label>
                   <textarea
                     rows={2}
-                    placeholder="Optional details or location info..."
+                    placeholder="Optional details or location info (e.g. Compressor not cooling, water leakage, strange vibration)..."
                     value={electricalDescription}
                     onChange={(e) => setElectricalDescription(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 bg-white"
                   />
                 </div>
               </div>
@@ -861,7 +969,7 @@ export const HODDashboard: React.FC = () => {
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all cursor-pointer text-center"
                 >
-                  Raise Issue
+                  Add Issue & Proceed
                 </button>
               </div>
             </div>

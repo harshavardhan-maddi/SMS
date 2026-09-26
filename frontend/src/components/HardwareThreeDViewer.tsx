@@ -70,6 +70,7 @@ export const HardwareThreeDViewer: React.FC<HardwareThreeDViewerProps> = ({ type
 
     // 5. Model building based on type
     const modelGroup = new THREE.Group();
+    let bladesGroup: THREE.Group | null = null;
 
     const normalizedType = type.trim().toUpperCase();
 
@@ -170,6 +171,155 @@ export const HardwareThreeDViewer: React.FC<HardwareThreeDViewerProps> = ({ type
       ant2.position.set(0.38, 0.3, -0.32);
       modelGroup.add(ant2);
 
+    } else if (normalizedType.includes('FAN')) {
+      // 3D Ceiling Fan Model
+      const fanGroup = new THREE.Group();
+
+      // Top Canopy Mount
+      const canopyGeo = new THREE.ConeGeometry(0.18, 0.12, 16);
+      const canopyMesh = new THREE.Mesh(canopyGeo, metallicGrey);
+      canopyMesh.position.y = 0.55;
+      fanGroup.add(canopyMesh);
+
+      // Downrod (Vertical bar)
+      const rodGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.5, 16);
+      const rodMesh = new THREE.Mesh(rodGeo, metallicGrey);
+      rodMesh.position.y = 0.28;
+      fanGroup.add(rodMesh);
+
+      // Motor Hub Housing
+      const motorGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.16, 24);
+      const motorMesh = new THREE.Mesh(motorGeo, activeIndigo);
+      motorMesh.position.y = 0.0;
+      fanGroup.add(motorMesh);
+
+      // Bottom Decorative Dome
+      const domeGeo = new THREE.SphereGeometry(0.18, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+      const domeMesh = new THREE.Mesh(domeGeo, metallicGrey);
+      domeMesh.position.y = -0.08;
+      domeMesh.rotation.x = Math.PI;
+      fanGroup.add(domeMesh);
+
+      // Aerodynamic Blades (3 blades at 120 degrees)
+      bladesGroup = new THREE.Group();
+      bladesGroup.position.y = 0.0;
+
+      for (let i = 0; i < 3; i++) {
+        const angle = (i * Math.PI * 2) / 3;
+        const bladeGeo = new THREE.BoxGeometry(0.85, 0.015, 0.16);
+        const bladeMesh = new THREE.Mesh(bladeGeo, metallicGrey);
+        bladeMesh.position.set(Math.cos(angle) * 0.48, 0, Math.sin(angle) * 0.48);
+        bladeMesh.rotation.y = -angle;
+        bladeMesh.rotation.z = 0.08; // Pitch angle
+        bladesGroup.add(bladeMesh);
+
+        // Blade attachment bracket
+        const bracketGeo = new THREE.BoxGeometry(0.14, 0.03, 0.06);
+        const bracketMesh = new THREE.Mesh(bracketGeo, activeIndigo);
+        bracketMesh.position.set(Math.cos(angle) * 0.22, 0.01, Math.sin(angle) * 0.22);
+        bracketMesh.rotation.y = -angle;
+        bladesGroup.add(bracketMesh);
+      }
+      fanGroup.add(bladesGroup);
+      modelGroup.add(fanGroup);
+
+    } else if (normalizedType.includes('LIGHT') || normalizedType.includes('TUBE')) {
+      // 3D Tube Light Fixture
+      const lightGroup = new THREE.Group();
+
+      // Slim Mounting Rail / Backplate
+      const railGeo = new THREE.BoxGeometry(1.65, 0.06, 0.2);
+      const railMesh = new THREE.Mesh(railGeo, metallicGrey);
+      railMesh.position.set(0, 0.05, -0.06);
+      lightGroup.add(railMesh);
+
+      // Luminescent Glowing Tube Material
+      const tubeMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        emissive: 0x93c5fd,
+        emissiveIntensity: 1.8,
+        roughness: 0.1,
+        metalness: 0.1,
+        clearcoat: 1.0,
+      });
+
+      // Horizontal Glass Tube
+      const tubeGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.46, 24);
+      const tubeMesh = new THREE.Mesh(tubeGeo, tubeMaterial);
+      tubeMesh.rotation.z = Math.PI / 2;
+      tubeMesh.position.set(0, 0, 0);
+      lightGroup.add(tubeMesh);
+
+      // Left & Right Sockets / End Caps
+      const capGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.08, 16);
+      const leftCap = new THREE.Mesh(capGeo, activeIndigo);
+      leftCap.rotation.z = Math.PI / 2;
+      leftCap.position.set(-0.75, 0, 0);
+      lightGroup.add(leftCap);
+
+      const rightCap = new THREE.Mesh(capGeo, activeIndigo);
+      rightCap.rotation.z = Math.PI / 2;
+      rightCap.position.set(0.75, 0, 0);
+      lightGroup.add(rightCap);
+
+      // Soft glow point light
+      const pointLight = new THREE.PointLight(0x60a5fa, 1.2, 2.5);
+      pointLight.position.set(0, 0, 0.15);
+      lightGroup.add(pointLight);
+
+      modelGroup.add(lightGroup);
+
+    } else if (
+      normalizedType === 'AC' ||
+      normalizedType.includes('AIR CONDITIONER') ||
+      normalizedType.includes('AC UNIT') ||
+      normalizedType.startsWith('AC')
+    ) {
+      // 3D Split AC Indoor Unit
+      const acGroup = new THREE.Group();
+
+      // Main AC Chassis
+      const acChassisGeo = new THREE.BoxGeometry(1.6, 0.65, 0.42);
+      const acChassisMesh = new THREE.Mesh(acChassisGeo, metallicGrey);
+      acGroup.add(acChassisMesh);
+
+      // Front Curved Panel Accent
+      const frontPanelGeo = new THREE.BoxGeometry(1.58, 0.58, 0.06);
+      const frontPanelMesh = new THREE.Mesh(frontPanelGeo, activeIndigo);
+      frontPanelMesh.position.set(0, -0.02, 0.22);
+      acGroup.add(frontPanelMesh);
+
+      // Top Air Intake Louvers (Slats)
+      for (let i = 0; i < 4; i++) {
+        const slatGeo = new THREE.BoxGeometry(1.4, 0.015, 0.25);
+        const slatMesh = new THREE.Mesh(slatGeo, screenMaterial);
+        slatMesh.position.set(0, 0.33, -0.1 + i * 0.07);
+        acGroup.add(slatMesh);
+      }
+
+      // Bottom Air Swing Louver / Discharge Flap
+      const flapGeo = new THREE.BoxGeometry(1.45, 0.03, 0.15);
+      const flapMesh = new THREE.Mesh(flapGeo, screenMaterial);
+      flapMesh.position.set(0, -0.32, 0.16);
+      flapMesh.rotation.x = 0.35;
+      acGroup.add(flapMesh);
+
+      // Digital LED Temperature Readout (Glowing cyan display)
+      const ledDisplayMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+      const displayGeo = new THREE.BoxGeometry(0.16, 0.08, 0.02);
+      const displayMesh = new THREE.Mesh(displayGeo, ledDisplayMat);
+      displayMesh.position.set(0.55, 0.05, 0.26);
+      acGroup.add(displayMesh);
+
+      // Chrome Branding Line
+      const stripGeo = new THREE.BoxGeometry(1.5, 0.015, 0.01);
+      const stripMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
+      const stripMesh = new THREE.Mesh(stripGeo, stripMat);
+      stripMesh.position.set(0, -0.18, 0.26);
+      acGroup.add(stripMesh);
+
+      modelGroup.add(acGroup);
+
     } else if (normalizedType.includes('ELECTRICAL')) {
       // Electrical Box / Transformer / Fixture
       const electricalAmber = new THREE.MeshPhysicalMaterial({
@@ -216,9 +366,14 @@ export const HardwareThreeDViewer: React.FC<HardwareThreeDViewerProps> = ({ type
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
+      // Dynamic blade rotation for Fan
+      if (bladesGroup) {
+        bladesGroup.rotation.y += 0.08;
+      }
+
       // Rotate model
       modelGroup.rotation.y += 0.015;
-      modelGroup.rotation.x = Math.sin(Date.now() * 0.001) * 0.1;
+      modelGroup.rotation.x = Math.sin(Date.now() * 0.001) * 0.08;
 
       renderer.render(scene, camera);
     };

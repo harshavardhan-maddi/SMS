@@ -317,8 +317,8 @@ export const ReportsPage: React.FC = () => {
           } else if (rawStatus === 'dead stock' || rawStatus === 'deadstock') {
             finalResult = 'Dead Stock';
             badgeClass = 'dead-stock';
-          } else if (rawStatus === 'approval pending') {
-            finalResult = 'Approval Pending';
+          } else if (rawStatus === 'approval pending' || rawStatus === 'approval needed') {
+            finalResult = 'Approval Needed';
             badgeClass = 'spare-parts-needed';
           } else if (rawStatus === 'approved') {
             finalResult = 'Approved';

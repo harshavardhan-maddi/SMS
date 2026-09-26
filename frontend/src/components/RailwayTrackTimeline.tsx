@@ -56,7 +56,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
   };
 
   const acceptedLog = getStationLog(['Accepted']);
-  const inProgressLog = getStationLog(['In Progress', 'Approval pending', 'Approved', 'Items ordered']);
+  const inProgressLog = getStationLog(['In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered']);
   const terminalLog = getStationLog(['Resolved', 'Dead Stock']);
 
   // Construct standardized Railway Stations from history and current status
@@ -84,7 +84,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       title: 'Station 2: Dean Delegation & Accept',
       stationType: 'MIDDLE',
       statusName: 'Accepted',
-      isCompleted: ['accepted', 'in progress', 'approval pending', 'approved', 'items ordered', 'resolved', 'dead stock'].includes(currentStatus),
+      isCompleted: ['accepted', 'in progress', 'approval pending', 'approval needed', 'approved', 'items ordered', 'resolved', 'dead stock'].includes(currentStatus),
       isActive: currentStatus === 'accepted',
       date: formatDateOnly(acceptedLog?.statusDate || request.initiatedDate),
       time: acceptedLog?.statusTime ? acceptedLog.statusTime.substring(0, 5) : (request.initiatedTime ? request.initiatedTime.substring(0, 5) : '--:--'),
@@ -99,7 +99,7 @@ export const RailwayTrackTimeline: React.FC<RailwayTrackTimelineProps> = ({
       stationType: 'MIDDLE',
       statusName: 'In Progress',
       isCompleted: ['resolved', 'dead stock'].includes(currentStatus),
-      isActive: ['in progress', 'approval pending', 'approved', 'items ordered'].includes(currentStatus),
+      isActive: ['in progress', 'approval pending', 'approval needed', 'approved', 'items ordered'].includes(currentStatus),
       date: inProgressLog?.statusDate ? formatDateOnly(inProgressLog.statusDate) : 'Pending',
       time: inProgressLog?.statusTime ? inProgressLog.statusTime.substring(0, 5) : '--:--',
       personnel: request.assignedTo?.name || 'Hardware Technician',

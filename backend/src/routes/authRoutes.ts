@@ -26,6 +26,9 @@ router.post('/login', async (req, res) => {
     'hod.ece@sms.edu': 'ecehod@sms.edu',
     'elec.complainter@sms.edu': 'eleccomplainter@sms.edu',
     'eee.manager@sms.edu': 'assetmanager@sms.edu',
+    'ac.tech@sms.edu': 'actech@sms.edu',
+    'acrepair@sms.edu': 'actech@sms.edu',
+    'ac.repair@sms.edu': 'actech@sms.edu',
   };
 
   if (emailAliases[cleanEmail]) {

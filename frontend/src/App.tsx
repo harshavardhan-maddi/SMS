@@ -54,7 +54,10 @@ const DynamicDashboard: React.FC = () => {
     return <HODDashboard />;
   }
   if (user.role === 'ROLE_TECHNICIAN') {
-    return <HardwareTechnicianDashboard />;
+    return <HardwareTechnicianDashboard isACTechnician={false} />;
+  }
+  if (user.role === 'ROLE_AC_TECHNICIAN') {
+    return <HardwareTechnicianDashboard isACTechnician={true} />;
   }
   if (user.role === 'ROLE_PROGRAMMER') {
     return <ProgrammerDashboard />;

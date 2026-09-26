@@ -245,6 +245,53 @@ export const Login: React.FC = () => {
           >
             {submitting ? 'Authenticating...' : 'Sign In to Portal'}
           </button>
+
+          {/* Quick Demo Access Chips */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-2 text-center">Quick Demo Login</span>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('hod.cse@sms.edu');
+                  setPassword('nrtec@nec');
+                }}
+                className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[10px] font-bold text-purple-400 border border-slate-800 transition-all text-center cursor-pointer"
+              >
+                HOD (CSE)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('tech@sms.edu');
+                  setPassword('nrtec@nec');
+                }}
+                className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[10px] font-bold text-amber-400 border border-slate-800 transition-all text-center cursor-pointer"
+              >
+                Hardware Tech
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('actech@sms.edu');
+                  setPassword('nrtec@nec');
+                }}
+                className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 text-[10px] font-bold text-cyan-400 border border-cyan-900/50 transition-all text-center cursor-pointer"
+              >
+                ⚡ AC Repair Tech
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('principal@sms.edu');
+                  setPassword('nrtec@nec');
+                }}
+                className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[10px] font-bold text-emerald-400 border border-slate-800 transition-all text-center cursor-pointer"
+              >
+                Principal
+              </button>
+            </div>
+          </div>
         </form>
       </div>
     </div>

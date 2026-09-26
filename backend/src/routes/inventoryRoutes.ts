@@ -150,7 +150,7 @@ router.get('/counts', authenticateJWT, async (req, res) => {
       `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
        FROM repair_requests r 
        JOIN inventory i ON r.inventory_id = i.id 
-       WHERE r.status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered') 
+       WHERE r.status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered') 
        GROUP BY i.type`
     );
 
@@ -257,7 +257,7 @@ router.get('/counts/department/:deptId', authenticateJWT, async (req, res) => {
       `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
        FROM repair_requests r 
        JOIN inventory i ON r.inventory_id = i.id 
-       WHERE i.department_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered')
+       WHERE i.department_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered')
        GROUP BY i.type`,
       [numericDeptId]
     );
@@ -349,7 +349,7 @@ router.get('/counts/lab/:labId', authenticateJWT, async (req, res) => {
       `SELECT i.type, SUM(COALESCE(r.device_count, 1)) as count 
        FROM repair_requests r 
        JOIN inventory i ON r.inventory_id = i.id 
-       WHERE i.lab_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approved', 'Items ordered')
+       WHERE i.lab_id = ? AND r.status IN ('Initiated', 'Accepted', 'In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered')
        GROUP BY i.type`,
       [numericLabId]
     );
