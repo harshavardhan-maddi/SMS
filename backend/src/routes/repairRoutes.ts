@@ -180,6 +180,23 @@ router.get('/', authenticateJWT, async (req: any, res) => {
       });
     }
 
+    const isElectrician = req.user?.role === 'ROLE_ELECTRICIAN';
+    if (isElectrician) {
+      formatted = formatted.filter((r: any) => {
+        const isAssigned = r.assignedTo?.id === req.user?.id;
+        const assignedElec = (r.assignedElectricianName || '').toLowerCase();
+        const myName = (req.user?.name || '').toLowerCase();
+        const typeStr = (r.inventory?.type || '').toLowerCase();
+        const titleStr = (r.title || '').toLowerCase();
+        const descStr = (r.description || '').toLowerCase();
+        const isElecIssue = typeStr.includes('electrical') || titleStr.includes('electrical') || descStr.includes('electrical') ||
+                            typeStr.includes('fan') || typeStr.includes('light') || typeStr.includes('switch') || typeStr.includes('wiring') ||
+                            titleStr.includes('fan') || titleStr.includes('light') || descStr.includes('fan') || descStr.includes('light');
+        const matchesElecName = assignedElec && (myName.includes(assignedElec) || assignedElec.includes(myName) || assignedElec.includes('electrician'));
+        return isAssigned || matchesElecName || isElecIssue;
+      });
+    }
+
     res.json(formatted);
   } catch (err) {
     console.error('Get repairs error:', err);

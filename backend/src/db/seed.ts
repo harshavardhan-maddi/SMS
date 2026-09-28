@@ -23,6 +23,12 @@ export async function seedData() {
       const nextRoleId = ((maxRole?.max_id || maxRole?.maxId || 12) as number) + 1;
       await db.run("INSERT INTO roles (id, name) VALUES (?, 'ROLE_AC_TECHNICIAN') ON CONFLICT (id) DO NOTHING", [nextRoleId]);
     }
+    const existingElecRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_ELECTRICIAN'");
+    if (!existingElecRole) {
+      const maxRole = await db.get("SELECT MAX(id) as max_id FROM roles");
+      const nextRoleId = ((maxRole?.max_id || maxRole?.maxId || 12) as number) + 1;
+      await db.run("INSERT INTO roles (id, name) VALUES (?, 'ROLE_ELECTRICIAN') ON CONFLICT (id) DO NOTHING", [nextRoleId]);
+    }
   } catch (e) {
     // SQLite fallback for ON CONFLICT
     try {
@@ -39,6 +45,10 @@ export async function seedData() {
       const existingAcRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_AC_TECHNICIAN'");
       if (!existingAcRole) {
         await db.run("INSERT INTO roles (name) VALUES ('ROLE_AC_TECHNICIAN')");
+      }
+      const existingElecRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_ELECTRICIAN'");
+      if (!existingElecRole) {
+        await db.run("INSERT INTO roles (name) VALUES ('ROLE_ELECTRICIAN')");
       }
     } catch (e2) {}
   }
@@ -138,6 +148,30 @@ export async function seedData() {
         await db.run("UPDATE users SET role_id = ? WHERE email = 'actech@sms.edu'", [acRoleId]);
       }
     } catch (eAc) {}
+
+    // Ensure Campus Electrician role and user always exist
+    try {
+      let elecRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_ELECTRICIAN'");
+      if (!elecRole) {
+        await db.run("INSERT INTO roles (name) VALUES ('ROLE_ELECTRICIAN')");
+        elecRole = await db.get("SELECT id FROM roles WHERE name = 'ROLE_ELECTRICIAN'");
+      }
+      const elecRoleId = elecRole ? elecRole.id : 12;
+      const elecUser = await db.get("SELECT id FROM users WHERE email = 'electrician@sms.edu'");
+      if (!elecUser) {
+        await db.run(
+          "INSERT INTO users (name, email, password, role_id, department_id, active) VALUES (?, ?, ?, ?, 3, true)",
+          ['Campus Electrician', 'electrician@sms.edu', hashedPwd, elecRoleId]
+        );
+      } else {
+        await db.run("UPDATE users SET role_id = ? WHERE email = 'electrician@sms.edu'", [elecRoleId]);
+      }
+
+      const elecTableItem = await db.get("SELECT id FROM electricians WHERE name = 'Campus Electrician'");
+      if (!elecTableItem) {
+        await db.run("INSERT INTO electricians (name) VALUES ('Campus Electrician')");
+      }
+    } catch (eElec) {}
   } catch (e) {}
 
   // 4. Initial Seminar Halls Seeding

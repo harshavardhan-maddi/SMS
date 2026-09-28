@@ -20,15 +20,17 @@ import { toast } from 'react-hot-toast';
 
 interface HardwareTechnicianDashboardProps {
   isACTechnician?: boolean;
+  isElectrician?: boolean;
 }
 
-export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardProps> = ({ isACTechnician }) => {
+export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardProps> = ({ isACTechnician, isElectrician }) => {
   const { user } = useAuth();
   const { dashboardTick } = useWebSocket();
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<any[]>([]);
 
   const isAC = isACTechnician || user?.role === 'ROLE_AC_TECHNICIAN';
+  const isElec = isElectrician || user?.role === 'ROLE_ELECTRICIAN';
 
   // Modals state
   const [selectedReq, setSelectedReq] = useState<any>(null);
@@ -78,7 +80,19 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
       return titleStr.includes('ac') || descStr.includes('ac') || typeStr.includes('ac') || brandStr.includes('ac') ||
              titleStr.includes('air conditioner') || descStr.includes('air conditioner');
     }
-    return false;
+    if (isElec) {
+      const titleStr = (r.title || '').toLowerCase();
+      const descStr = (r.description || '').toLowerCase();
+      const typeStr = (r.inventory?.type || '').toLowerCase();
+      const assignedElec = (r.assignedElectricianName || '').toLowerCase();
+      const myName = (user?.name || '').toLowerCase();
+      const isElecIssue = typeStr.includes('electrical') || titleStr.includes('electrical') || descStr.includes('electrical') ||
+                          typeStr.includes('fan') || typeStr.includes('light') || typeStr.includes('switch') || typeStr.includes('wiring') ||
+                          titleStr.includes('fan') || titleStr.includes('light') || descStr.includes('fan') || descStr.includes('light');
+      const matchesElecName = assignedElec && (myName.includes(assignedElec) || assignedElec.includes(myName) || assignedElec.includes('electrician'));
+      return matchesElecName || isElecIssue;
+    }
+    return true;
   });
 
   const handleStartRepair = async (req: any) => {
@@ -225,9 +239,9 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
       {/* 1. Statistics Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title={isAC ? 'Assigned AC Requests' : 'Assigned Requests'}
+          title={isAC ? 'Assigned AC Requests' : isElec ? 'Assigned Electrical Requests' : 'Assigned Requests'}
           value={assignedCount}
-          subtext={isAC ? 'Total AC repairs delegated to you' : 'Total repairs delegated to you'}
+          subtext={isAC ? 'Total AC repairs delegated to you' : isElec ? 'Total electrical tickets delegated to you' : 'Total repairs delegated to you'}
           icon={FolderOpen}
           iconBgColor="bg-blue-50"
           iconTextColor="text-blue-600"
@@ -261,12 +275,12 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
       {/* 2. Large Assigned Repairs Table */}
       <div className="admin-card bg-white p-6">
         <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
-          {isAC ? 'My Assigned AC Repair Requests' : 'My Assigned Repair Requests'}
+          {isAC ? 'My Assigned AC Repair Requests' : isElec ? 'My Assigned Electrical Repair Requests' : 'My Assigned Repair Requests'}
         </h4>
         
         {myRequests.length === 0 ? (
           <div className="p-12 text-center text-xs text-brand-textMuted font-medium border border-dashed border-slate-200 rounded-2xl">
-            {isAC ? 'You do not have any AC repair tasks assigned at this moment.' : 'You do not have any repair tasks assigned at this moment.'}
+            {isAC ? 'You do not have any AC repair tasks assigned at this moment.' : isElec ? 'You do not have any electrical repair tasks assigned at this moment.' : 'You do not have any repair tasks assigned at this moment.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -320,7 +334,7 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
                           </button>
                         )}
 
-                        {['In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered'].includes(req.status) && (
+                        {['Accepted', 'In Progress', 'Approval pending', 'Approval needed', 'Approved', 'Items ordered'].includes(req.status) && (
                           <div className="relative">
                             <button
                               onClick={() => {
@@ -334,15 +348,18 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
                             </button>
 
                             {activeDropdownRow === req.id && (
-                              <div className="absolute right-0 mt-1 w-40 bg-white rounded-xl border border-[#e2e8f0] shadow-premium z-50 overflow-hidden text-left">
+                              <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl border border-[#e2e8f0] shadow-premium z-50 overflow-hidden text-left py-1">
+                                <div className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border-b border-slate-100">
+                                  Update Progress
+                                </div>
                                 <button
                                   onClick={() => {
                                     setPartsModalOpen(true);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-amber-600 hover:bg-amber-50 transition-colors flex items-center gap-1.5"
+                                  className="w-full text-left px-3.5 py-2 text-[10px] font-bold text-amber-600 hover:bg-amber-50 transition-colors flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  <Clock className="w-3 h-3" />
+                                  <Clock className="w-3.5 h-3.5 text-amber-500" />
                                   <span>Approval needed</span>
                                 </button>
                                 <button
@@ -350,9 +367,9 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
                                     setResolveModalOpen(true);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-100 flex items-center gap-1.5"
+                                  className="w-full text-left px-3.5 py-2 text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-100 flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  <CheckCircle className="w-3 h-3" />
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
                                   <span>Resolved</span>
                                 </button>
                                 <button
@@ -360,9 +377,9 @@ export const HardwareTechnicianDashboard: React.FC<HardwareTechnicianDashboardPr
                                     setDeadModalOpen(true);
                                     setActiveDropdownRow(null);
                                   }}
-                                  className="w-full text-left px-3 py-2 text-[10px] font-bold text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100 flex items-center gap-1.5"
+                                  className="w-full text-left px-3.5 py-2 text-[10px] font-bold text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100 flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  <AlertTriangle className="w-3 h-3" />
+                                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
                                   <span>Dead Stock</span>
                                 </button>
                               </div>

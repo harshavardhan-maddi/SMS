@@ -895,12 +895,13 @@ export const EEEAssetManagerDashboard: React.FC = () => {
               onChange={(e) => setProgressStatus(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-blue-500 bg-white"
             >
+              <option value="Approval needed">Approval needed</option>
+              <option value="Resolved">Resolved (Repair completed & asset restored)</option>
+              <option value="Dead Stock">Dead Stock (Decommission asset to Dead Stock)</option>
               <option value="In Progress">In Progress (Electrician working on repair)</option>
               <option value="Approval pending">Approval pending</option>
               <option value="Approved">Approved</option>
               <option value="Items ordered">Items ordered</option>
-              <option value="Resolved">Resolved (Repair completed & asset restored)</option>
-              <option value="Dead Stock">Dead Stock (Decommission asset to Dead Stock)</option>
             </select>
           </div>
 
@@ -916,7 +917,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
             />
           </div>
 
-          {['Approval pending', 'Approved', 'Items ordered'].includes(progressStatus) && (
+          {['Approval needed', 'Approval pending', 'Approved', 'Items ordered'].includes(progressStatus) && (
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">Required Spare Parts</label>
               <input
