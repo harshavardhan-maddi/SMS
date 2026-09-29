@@ -1430,16 +1430,17 @@ router.post('/:id/update-progress', authenticateJWT, async (req, res) => {
 
     const { todayStr, timeStr } = getLocalDates();
     const isResolved = status.toLowerCase() === 'resolved';
-    const isDead = status.toLowerCase() === 'dead stock';
+    const isDead = status.toLowerCase() === 'dead stock' || status.toLowerCase() === 'deadstock';
+    const canonicalStatus = isDead ? 'Dead Stock' : (isResolved ? 'Resolved' : status);
 
     await db.transaction(async () => {
       if (isResolved || isDead) {
         await db.run(
           "UPDATE repair_requests SET status = ?, completed_date = ?, completed_time = ? WHERE id = ?",
-          [status, todayStr, timeStr, id]
+          [canonicalStatus, todayStr, timeStr, id]
         );
       } else {
-        await db.run("UPDATE repair_requests SET status = ? WHERE id = ?", [status, id]);
+        await db.run("UPDATE repair_requests SET status = ? WHERE id = ?", [canonicalStatus, id]);
       }
 
       // Update inventory status if resolved or dead stock
@@ -1451,17 +1452,29 @@ router.post('/:id/update-progress', authenticateJWT, async (req, res) => {
       } else if (isDead) {
         for (const assetId of assetIds) {
           await db.run("UPDATE inventory SET status = 'Dead Stock' WHERE id = ?", [assetId]);
+
+          const asset = await db.get("SELECT department_id, lab_id, type FROM inventory WHERE id = ?", [assetId]);
+          if (asset && asset.department_id) {
+            const targetLabId = asset.lab_id || 0;
+            const countToMove = (request.device_count && assetIds.length <= 1) ? request.device_count : 1;
+            await db.run(
+              `UPDATE finalized_hardware_counts 
+               SET working = GREATEST(0, working - ?), not_working = not_working + ?, updated_at = CURRENT_TIMESTAMP
+               WHERE department_id = ? AND lab_id = ? AND type = ?`,
+              [countToMove, countToMove, asset.department_id, targetLabId, asset.type]
+            );
+          }
         }
       }
 
       // Create history log entry
-      const logDescription = description || `Progress updated to ${status}`;
+      const logDescription = description || `Progress updated to ${canonicalStatus}`;
       await db.run(
         `INSERT INTO repair_history (request_id, status, description, problem_found, solution, required_parts, status_date, status_time, updated_by_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
-          status,
+          canonicalStatus,
           logDescription,
           problemFound || null,
           solution || null,
@@ -1476,7 +1489,7 @@ router.post('/:id/update-progress', authenticateJWT, async (req, res) => {
     if (request.requester_id) {
       notificationService.sendToUser(
         request.requester_id,
-        `Progress updated for repair request ${id}: Status changed to ${status}`,
+        `Progress updated for repair request ${id}: Status changed to ${canonicalStatus}`,
         isResolved ? 'REPAIR_COMPLETED' : 'REPAIR_STARTED'
       );
     }

@@ -53,7 +53,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
   const [deadDesc, setDeadDesc] = useState('');
   // Progress Update States
   const [progressModalOpen, setProgressModalOpen] = useState(false);
-  const [progressStatus, setProgressStatus] = useState<string>('In Progress');
+  const [progressStatus, setProgressStatus] = useState<string>('Approval needed');
   const [progressDescription, setProgressDescription] = useState<string>('');
   const [requiredParts, setRequiredParts] = useState<string>('');
   const [problemFound, setProblemFound] = useState<string>('');
@@ -563,7 +563,11 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                                       <button
                                         onClick={() => {
                                           setSelectedReq(req);
-                                          setProgressStatus(req.status === 'Accepted' || req.status === 'Initiated' ? 'In Progress' : req.status);
+                                          const currentStatus = req.status;
+                                          const initialStatus = ['Approval needed', 'Resolved', 'Dead Stock', 'Deadstock'].includes(currentStatus)
+                                            ? (currentStatus === 'Deadstock' ? 'Dead Stock' : currentStatus)
+                                            : 'Approval needed';
+                                          setProgressStatus(initialStatus);
                                           setProgressDescription('');
                                           setRequiredParts('');
                                           setProblemFound('');
@@ -896,12 +900,8 @@ export const EEEAssetManagerDashboard: React.FC = () => {
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-hidden focus:border-blue-500 bg-white"
             >
               <option value="Approval needed">Approval needed</option>
-              <option value="Resolved">Resolved (Repair completed & asset restored)</option>
-              <option value="Dead Stock">Dead Stock (Decommission asset to Dead Stock)</option>
-              <option value="In Progress">In Progress (Electrician working on repair)</option>
-              <option value="Approval pending">Approval pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Items ordered">Items ordered</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Dead Stock">Deadstock</option>
             </select>
           </div>
 
@@ -917,9 +917,9 @@ export const EEEAssetManagerDashboard: React.FC = () => {
             />
           </div>
 
-          {['Approval needed', 'Approval pending', 'Approved', 'Items ordered'].includes(progressStatus) && (
+          {progressStatus === 'Approval needed' && (
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">Required Spare Parts</label>
+              <label className="text-xs font-bold text-slate-700 block">Required Spare Parts / Approvals</label>
               <input
                 type="text"
                 required
@@ -928,6 +928,12 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                 onChange={(e) => setRequiredParts(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 outline-hidden focus:border-blue-500"
               />
+            </div>
+          )}
+
+          {(progressStatus === 'Dead Stock' || progressStatus === 'Deadstock') && (
+            <div className="p-3 bg-red-50 border border-red-200/60 rounded-xl text-xs text-red-700 font-medium">
+              Note: Marking as Deadstock will decommission this electrical asset as beyond repair.
             </div>
           )}
 
