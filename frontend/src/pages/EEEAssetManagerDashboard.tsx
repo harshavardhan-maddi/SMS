@@ -559,40 +559,26 @@ export const EEEAssetManagerDashboard: React.FC = () => {
                                   )}
 
                                   {isAssigned && (
-                                    <>
-                                      <button
-                                        onClick={() => {
-                                          setSelectedReq(req);
-                                          const currentStatus = req.status;
-                                          const initialStatus = ['Approval needed', 'Resolved', 'Dead Stock', 'Deadstock'].includes(currentStatus)
-                                            ? (currentStatus === 'Deadstock' ? 'Dead Stock' : currentStatus)
-                                            : 'Approval needed';
-                                          setProgressStatus(initialStatus);
-                                          setProgressDescription('');
-                                          setRequiredParts('');
-                                          setProblemFound('');
-                                          setSolution('');
-                                          setProgressModalOpen(true);
-                                          setActiveDropdownRow(null);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
-                                      >
-                                        <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-                                        <span>Update Progress</span>
-                                      </button>
-
-                                      <button
-                                        onClick={() => {
-                                          setSelectedReq(req);
-                                          setDeadModalOpen(true);
-                                          setActiveDropdownRow(null);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                        <span>Mark as Dead Stock</span>
-                                      </button>
-                                    </>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedReq(req);
+                                        const currentStatus = req.status;
+                                        const initialStatus = ['Approval needed', 'Resolved', 'Dead Stock', 'Deadstock'].includes(currentStatus)
+                                          ? (currentStatus === 'Deadstock' ? 'Dead Stock' : currentStatus)
+                                          : 'Approval needed';
+                                        setProgressStatus(initialStatus);
+                                        setProgressDescription('');
+                                        setRequiredParts('');
+                                        setProblemFound('');
+                                        setSolution('');
+                                        setProgressModalOpen(true);
+                                        setActiveDropdownRow(null);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                                      <span>Update Progress</span>
+                                    </button>
                                   )}
 
                                   <button
@@ -901,7 +887,7 @@ export const EEEAssetManagerDashboard: React.FC = () => {
             >
               <option value="Approval needed">Approval needed</option>
               <option value="Resolved">Resolved</option>
-              <option value="Dead Stock">Deadstock</option>
+              <option value="Dead Stock">Dead Stock</option>
             </select>
           </div>
 
